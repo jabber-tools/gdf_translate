@@ -1,0 +1,17 @@
+[package]
+name = "gdf_translate"
+description = "CLI utility for tranlating of Google DialogFlow agents by Google Translation API"
+version = "0.1.0"
+authors = ["abezecny"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde_json = "=1.0.44"
+indicatif = "0.14.0"
+ctrlc = "3.1.4"
+log = "0.4.0"
+env_logger = "0.7.1"
+clap = "2.33.0"
