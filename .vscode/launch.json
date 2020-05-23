@@ -5,39 +5,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch gdf-testing (gdf)",
+            "name": "gdf-translate",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/target/debug/gdf_testing.exe",
+            "program": "${workspaceRoot}/target/debug/gdf_translate.exe",
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "args": [
-                "--suite-file",
-                "c:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_testing/examples/sample_gdf.yaml"
+                "--foo",
+                "bar"
             ]
         },
         {
-            "name": "Launch gdf-testing (vap)",
+            "name": "gdf-translate - unit tests",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/target/debug/gdf_testing.exe",
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "args": [
-                "--suite-file",
-                "c:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_testing/examples/sample_vap.yaml",
-                "--disable-stdout-report"
-            ]
-        },
-        {
-            "name": "Launch gdf-testing - unit tests",
-            "type": "cppvsdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/target/debug/gdf_testing-88b4993cab1777e5.exe",
+            "program": "${workspaceRoot}/target/debug/gdf_translate-684e40cd8df8827e.exe",
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -46,20 +31,6 @@
                 "--nocapture"
             ]
 
-        },
-
-        {
-            "name": "Example - dump yaml",
-            "type": "cppvsdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/target/debug/dump_yaml.exe",
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "args": [
-                "./examples/sample.yaml"
-            ]
-        }        
+        }
     ]
 }
