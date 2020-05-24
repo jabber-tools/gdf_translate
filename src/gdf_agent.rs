@@ -173,6 +173,140 @@ pub struct AgentManifest {
     pub base_action_packages_url: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IntentEvent {
+    name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IntentResponseAffectedContext {
+    pub name: String,
+    pub parameters: std::collections::HashMap<String, String>, // ??
+    pub lifespan: i8,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IntentResponseParameter {
+    id: String,
+    required: bool,
+
+    #[serde(rename = "dataType")]
+    data_type: String,
+
+    name: String,
+    value: String,
+
+    #[serde(rename = "promptMessages")]
+    prompt_messages: Vec<String>, // ??
+
+    #[serde(rename = "noMatchPromptMessages")]
+    no_match_prompt_messages: Vec<String>, // ??
+
+    #[serde(rename = "noInputPromptMessages")]
+    no_input_prompt_messages: Vec<String>, // ??
+
+    #[serde(rename = "outputDialogContexts")]
+    output_dialog_contexts: Vec<String>, // ??
+
+    #[serde(rename = "isList")]
+    is_list: bool,
+}
+
+// TBD: definitelly not covering all message types, need more love!
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IntentResponseMessage {
+    #[serde(rename = "type")]
+    pub message_type: String,
+    pub platform: String,
+    pub lang: String,
+    pub condition: String,
+
+    //
+    // https://stackoverflow.com/questions/46993079/how-do-i-change-serdes-default-implementation-to-return-an-empty-object-instead
+    // https://serde.rs/field-attrs.html
+    //
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speech: Option<String>,
+
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssml: Option<String>,
+
+    #[serde(rename = "displayText")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_text: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IntentResponse {
+    #[serde(rename = "resetContexts")]
+    pub reset_contexts: bool,
+
+    pub action: String,
+
+    #[serde(rename = "affectedContexts")]
+    pub affected_contexts: Vec<IntentResponseAffectedContext>,
+
+    pub parameters: Vec<IntentResponseParameter>,
+
+    pub messages: Vec<IntentResponseMessage>,
+
+    #[serde(rename = "defaultResponsePlatforms")]
+    pub default_response_platforms: std::collections::HashMap<String, bool>,
+
+    pub speech: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Intent {
+    pub id: String,
+    pub name: String,
+    pub auto: bool,
+    pub contexts: Vec<String>,
+
+    pub responses: Vec<IntentResponse>,
+
+    pub priority: i64,
+
+    #[serde(rename = "webhookUsed")]
+    pub webhook_used: bool,
+
+    #[serde(rename = "webhookForSlotFilling")]
+    pub webhook_for_slot_filling: bool,
+
+    #[serde(rename = "fallbackIntent")]
+    pub fallback_intent: bool,
+
+    pub events: Vec<IntentEvent>,
+
+    #[serde(rename = "conditionalResponses")]
+    pub conditional_responses: Vec<String>, // TBD: no idea what is in these attribute, we do not use it
+    pub condition: String,
+    #[serde(rename = "conditionalFollowupEvents")]
+    pub conditional_followup_events: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IntentUtteranceData {
+    text: String,
+    #[serde(rename = "userDefined")]
+    user_defined: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IntentUtterance {
+    pub id: String,
+    pub data: Vec<IntentUtteranceData>,
+
+    #[serde(rename = "isTemplate")]
+    pub is_template: bool,
+    pub count: i8,
+    pub updated: i64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,6 +510,138 @@ mod tests {
         assert_eq!(
             remove_whitespace(&serialized_str),
             remove_whitespace(agent_str)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_intent_deser_ser_1() -> Result<()> {
+        let intent_str = r#"
+        {
+          "id": "d9d7d680-8adc-4571-b2bf-22ba3c5dbc75",
+          "name": "FAQ|CS|0|Stop ODD Messages|TPh",
+          "auto": true,
+          "contexts": [],
+          "responses": [
+            {
+              "resetContexts": false,
+              "action": "country_specific_response",
+              "affectedContexts": [],
+              "parameters": [
+                {
+                  "id": "d3f16abc-1032-4e1a-a3ea-fa520f0d1b4f",
+                  "required": false,
+                  "dataType": "",
+                  "name": "countries",
+                  "value": "CA",
+                  "promptMessages": [],
+                  "noMatchPromptMessages": [],
+                  "noInputPromptMessages": [],
+                  "outputDialogContexts": [],
+                  "isList": false
+                },
+                {
+                  "id": "6257c129-4817-488d-83ee-57b72632b86b",
+                  "required": false,
+                  "dataType": "",
+                  "name": "event",
+                  "value": "faq_stop_odd",
+                  "promptMessages": [],
+                  "noMatchPromptMessages": [],
+                  "noInputPromptMessages": [],
+                  "outputDialogContexts": [],
+                  "isList": false
+                },
+                {
+                  "id": "3274c173-4243-42fa-bdbe-7ced43f64d53",
+                  "required": false,
+                  "dataType": "@no",
+                  "name": "no",
+                  "value": "$no",
+                  "promptMessages": [],
+                  "noMatchPromptMessages": [],
+                  "noInputPromptMessages": [],
+                  "outputDialogContexts": [],
+                  "isList": false
+                }
+              ],
+              "messages": [
+                {
+                  "type": "simple_response",
+                  "platform": "google",
+                  "lang": "pt-br",
+                  "condition": "",
+                  "textToSpeech": "PLACEHOLDER - NÃ£o altere esta cÃ©lula",
+                  "ssml": "",
+                  "displayText": ""
+                }
+              ],
+              "defaultResponsePlatforms": {},
+              "speech": ["xixix"]
+            }
+          ],
+          "priority": 500000,
+          "webhookUsed": false,
+          "webhookForSlotFilling": false,
+          "fallbackIntent": false,
+          "events": [
+            {
+              "name": "faq_stop_odd_entry"
+            }
+          ],
+          "conditionalResponses": [],
+          "condition": "",
+          "conditionalFollowupEvents": []
+        }
+        "#;
+        let intent: Intent = serde_json::from_str(intent_str)?;
+        assert_eq!(intent.name, "FAQ|CS|0|Stop ODD Messages|TPh");
+
+        let serialized_str = serde_json::to_string(&intent).unwrap();
+        assert_eq!(
+            remove_whitespace(&serialized_str),
+            remove_whitespace(&intent_str)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_intent_utterance_deser_ser_1() -> Result<()> {
+        let intent_utterance_str = r#"
+        [
+          {
+            "id": "9dfa147d-d2d8-4703-a693-8edef11322a2",
+            "data": [
+              {
+                "text": "FAQ|BIT|0|Tech Support|CA",
+                "userDefined": false
+              }
+            ],
+            "isTemplate": true,
+            "count": 123,
+            "updated": 456
+          }
+        ]       
+        "#;
+        let intent_utterances: Vec<IntentUtterance> = serde_json::from_str(intent_utterance_str)?;
+        assert_eq!(
+            intent_utterances[0].id,
+            "9dfa147d-d2d8-4703-a693-8edef11322a2"
+        );
+        assert_eq!(intent_utterances[0].data.len(), 1);
+        assert_eq!(
+            intent_utterances[0].data[0].text,
+            "FAQ|BIT|0|Tech Support|CA"
+        );
+        assert_eq!(intent_utterances[0].data[0].user_defined, false);
+        assert_eq!(intent_utterances[0].is_template, true);
+        assert_eq!(intent_utterances[0].count, 123);
+        assert_eq!(intent_utterances[0].updated, 456);
+
+        let serialized_str = serde_json::to_string(&intent_utterances).unwrap();
+        assert_eq!(
+            remove_whitespace(&serialized_str),
+            remove_whitespace(&intent_utterance_str)
         );
         Ok(())
     }
