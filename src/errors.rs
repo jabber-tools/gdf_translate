@@ -14,3 +14,11 @@ impl From<serde_json::error::Error> for Error {
         }
     }
 }
+
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Error {
+        Error {
+            message: format!("{}", error),
+        }
+    }
+}

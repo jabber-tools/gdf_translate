@@ -216,7 +216,7 @@ pub struct IntentResponseParameter {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntentResponseMessage {
     #[serde(rename = "type")]
-    pub message_type: String,
+    pub message_type: String, // TBD: can be string or number, see https://github.com/serde-rs/json/issues/181
     pub platform: String,
     pub lang: String,
     pub condition: String,
@@ -292,6 +292,10 @@ pub struct Intent {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntentUtteranceData {
     text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    alias: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    meta: Option<String>,
     #[serde(rename = "userDefined")]
     user_defined: bool,
 }
@@ -310,6 +314,8 @@ pub struct IntentUtterance {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use glob::glob;
+    use std::fs;
 
     fn remove_whitespace(s: &str) -> String {
         let normalized_str: String = s.split_whitespace().collect();
@@ -645,4 +651,130 @@ mod tests {
         );
         Ok(())
     }
+
+    #[test]
+    fn test_entity_entries() -> Result<()> {
+        for entry in glob("./examples/testdata/entities/*_entries_*.json")
+            .expect("Failed to read glob pattern")
+        {
+            match entry {
+                Ok(path) => {
+                    let file_name = path.as_path().to_str().unwrap();
+                    // println!("processing file {}", file_name);
+                    let file_str = fs::read_to_string(file_name)?;
+
+                    let deserialized_struct: Vec<EntityEntry> = serde_json::from_str(&file_str)?;
+
+                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+                    assert_eq!(
+                        remove_whitespace(&serialized_str)
+                            .replace("&", "\\u0026") // these two discrepancies found in Express_CS_AM_PRD !
+                            .replace("'", "\\u0027"),
+                        remove_whitespace(&file_str)
+                    );
+                }
+                Err(e) => {
+                    println!("error when processing file");
+                    panic!(e);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_entities() -> Result<()> {
+        for entry in
+            glob("./examples/testdata/entities/*.json").expect("Failed to read glob pattern")
+        {
+            match entry {
+                Ok(path) => {
+                    let file_name = path.as_path().to_str().unwrap();
+                    if file_name.contains("_entries_") {
+                        continue; // skip entries, process entities only!
+                    }
+                    // println!("processing file {}", file_name);
+                    let file_str = fs::read_to_string(file_name)?;
+
+                    let deserialized_struct: Entity = serde_json::from_str(&file_str)?;
+
+                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+                    assert_eq!(
+                        remove_whitespace(&serialized_str),
+                        remove_whitespace(&file_str)
+                    );
+                }
+                Err(e) => {
+                    println!("error when processing file");
+                    panic!(e);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_utterances() -> Result<()> {
+        for entry in glob("./examples/testdata/intents/*_usersays_*.json")
+            .expect("Failed to read glob pattern")
+        {
+            match entry {
+                Ok(path) => {
+                    let file_name = path.as_path().to_str().unwrap();
+                    // println!("processing file {}", file_name);
+                    let file_str = fs::read_to_string(file_name)?;
+
+                    let deserialized_struct: Vec<IntentUtterance> = serde_json::from_str(&file_str)?;
+
+                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+                    assert_eq!(
+                        remove_whitespace(&serialized_str)
+                        .replace("'", "\\u0027"),
+                        remove_whitespace(&file_str)
+                    );
+                }
+                Err(e) => {
+                    println!("error when processing file");
+                    panic!(e);
+                }
+            }
+        }
+
+        Ok(())
+    }    
+
+    #[test]
+    fn test_intents() -> Result<()> {
+        for entry in
+            glob("./examples/testdata/intents/*.json").expect("Failed to read glob pattern")
+        {
+            match entry {
+                Ok(path) => {
+                    let file_name = path.as_path().to_str().unwrap();
+                    if file_name.contains("_usersays_") {
+                        continue; // skip utterances, process intents only!
+                    }
+                    println!("processing file {}", file_name);
+                    let file_str = fs::read_to_string(file_name)?;
+
+                    let deserialized_struct: Intent = serde_json::from_str(&file_str)?;
+
+                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+                    assert_eq!(
+                        remove_whitespace(&serialized_str),
+                        remove_whitespace(&file_str)
+                    );
+                }
+                Err(e) => {
+                    println!("error when processing file");
+                    panic!(e);
+                }
+            }
+        }
+
+        Ok(())
+    }    
+
 }
