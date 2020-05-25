@@ -1,5 +1,7 @@
 #[allow(unused_imports)]
-use crate::errors::Result;
+use crate::errors::{Error, Result};
+use serde::de::{self, Deserializer};
+use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
 use serde_json;
@@ -212,12 +214,97 @@ pub struct IntentResponseParameter {
     is_list: bool,
 }
 
+#[derive(Debug)]
+pub enum IntentResponseMessageType {
+    TypeStr(String),
+    TypeNum(i8),
+}
+
+impl Serialize for IntentResponseMessageType {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            IntentResponseMessageType::TypeStr(some_str) => serializer.serialize_str(some_str),
+            IntentResponseMessageType::TypeNum(some_num) => {
+                serializer.serialize_i32((*some_num).into())
+            } //you can convert an `i8` to `i32`: `(*some_num).into()`
+        }
+    }
+}
+
+fn deserialize_message_type<'de, D>(
+    de: D,
+) -> std::result::Result<IntentResponseMessageType, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let deser_result: serde_json::Value = Deserialize::deserialize(de)?;
+    match deser_result {
+        serde_json::Value::String(str_val) => Ok(IntentResponseMessageType::TypeStr(str_val)),
+        serde_json::Value::Number(num_val) => {
+            if let Some(i64_numval) = num_val.as_i64() {
+                Ok(IntentResponseMessageType::TypeNum(i64_numval as i8))
+            } else {
+                Err(de::Error::custom(
+                    "Invalid numeric value when deserializing IntentResponseMessage.message_type",
+                ))
+            }
+        }
+        _ => Err(de::Error::custom(
+            "Unexpected value when deserializing IntentResponseMessage.message_type",
+        )),
+    }
+}
+
+// visitor does not work with two visit methods, no idea why, using instead: #[serde(deserialize_with="deserialize_message_type")]
+/* impl<'de> Deserialize<'de> for IntentResponseMessageType {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+
+        struct FieldVisitor;
+
+        //  see https://docs.serde.rs/serde/de/trait.Visitor.html
+        impl<'de> Visitor<'de> for FieldVisitor {
+            type Value = IntentResponseMessageType;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(formatter, "string or numeric value")
+            }
+
+            fn visit_str<E>(self, s: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(IntentResponseMessageType::TypeStr(s.to_owned()))
+            }
+
+
+            fn visit_i8<E>(self, v: i8) -> std::result::Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(IntentResponseMessageType::TypeNum(v))
+            }
+
+        }
+
+        deserializer.deserialize_str(FieldVisitor)
+    }
+} */
+
 // TBD: definitelly not covering all message types, need more love!
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntentResponseMessage {
     #[serde(rename = "type")]
-    pub message_type: String, // TBD: can be string or number, see https://github.com/serde-rs/json/issues/181
-    pub platform: String,
+    #[serde(deserialize_with = "deserialize_message_type")]
+    pub message_type: IntentResponseMessageType, // TBD: can be string or number, see https://github.com/serde-rs/json/issues/181
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub platform: Option<String>,
     pub lang: String,
     pub condition: String,
 
@@ -245,7 +332,8 @@ pub struct IntentResponse {
     #[serde(rename = "resetContexts")]
     pub reset_contexts: bool,
 
-    pub action: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action: Option<String>,
 
     #[serde(rename = "affectedContexts")]
     pub affected_contexts: Vec<IntentResponseAffectedContext>,
@@ -612,6 +700,103 @@ mod tests {
     }
 
     #[test]
+    fn test_intent_deser_ser_2() -> Result<()> {
+        let intent_str = r#"
+        {
+          "id": "d9d7d680-8adc-4571-b2bf-22ba3c5dbc75",
+          "name": "FAQ|CS|0|Stop ODD Messages|TPh",
+          "auto": true,
+          "contexts": [],
+          "responses": [
+            {
+              "resetContexts": false,
+              "action": "country_specific_response",
+              "affectedContexts": [],
+              "parameters": [
+                {
+                  "id": "d3f16abc-1032-4e1a-a3ea-fa520f0d1b4f",
+                  "required": false,
+                  "dataType": "",
+                  "name": "countries",
+                  "value": "CA",
+                  "promptMessages": [],
+                  "noMatchPromptMessages": [],
+                  "noInputPromptMessages": [],
+                  "outputDialogContexts": [],
+                  "isList": false
+                },
+                {
+                  "id": "6257c129-4817-488d-83ee-57b72632b86b",
+                  "required": false,
+                  "dataType": "",
+                  "name": "event",
+                  "value": "faq_stop_odd",
+                  "promptMessages": [],
+                  "noMatchPromptMessages": [],
+                  "noInputPromptMessages": [],
+                  "outputDialogContexts": [],
+                  "isList": false
+                },
+                {
+                  "id": "3274c173-4243-42fa-bdbe-7ced43f64d53",
+                  "required": false,
+                  "dataType": "@no",
+                  "name": "no",
+                  "value": "$no",
+                  "promptMessages": [],
+                  "noMatchPromptMessages": [],
+                  "noInputPromptMessages": [],
+                  "outputDialogContexts": [],
+                  "isList": false
+                }
+              ],
+              "messages": [
+                {
+                    "type": 0,
+                    "lang": "en",
+                    "condition": "",
+                    "speech": "You can contact our Technical Support team on 1-855-123-4567"
+                  },
+                  {
+                    "type": "simple_response",
+                    "platform": "google",
+                    "lang": "en",
+                    "condition": "",
+                    "textToSpeech": "You can contact our Technical Support team on 1-855-123-4567",
+                    "ssml": "",
+                    "displayText": ""
+                  }
+              ],
+              "defaultResponsePlatforms": {},
+              "speech": ["xixix"]
+            }
+          ],
+          "priority": 500000,
+          "webhookUsed": false,
+          "webhookForSlotFilling": false,
+          "fallbackIntent": false,
+          "events": [
+            {
+              "name": "faq_stop_odd_entry"
+            }
+          ],
+          "conditionalResponses": [],
+          "condition": "",
+          "conditionalFollowupEvents": []
+        }
+        "#;
+        let intent: Intent = serde_json::from_str(intent_str)?;
+        assert_eq!(intent.name, "FAQ|CS|0|Stop ODD Messages|TPh");
+
+        let serialized_str = serde_json::to_string(&intent).unwrap();
+        assert_eq!(
+            remove_whitespace(&serialized_str),
+            remove_whitespace(&intent_str)
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_intent_utterance_deser_ser_1() -> Result<()> {
         let intent_utterance_str = r#"
         [
@@ -726,12 +911,12 @@ mod tests {
                     // println!("processing file {}", file_name);
                     let file_str = fs::read_to_string(file_name)?;
 
-                    let deserialized_struct: Vec<IntentUtterance> = serde_json::from_str(&file_str)?;
+                    let deserialized_struct: Vec<IntentUtterance> =
+                        serde_json::from_str(&file_str)?;
 
                     let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
                     assert_eq!(
-                        remove_whitespace(&serialized_str)
-                        .replace("'", "\\u0027"),
+                        remove_whitespace(&serialized_str).replace("'", "\\u0027"),
                         remove_whitespace(&file_str)
                     );
                 }
@@ -743,7 +928,7 @@ mod tests {
         }
 
         Ok(())
-    }    
+    }
 
     #[test]
     fn test_intents() -> Result<()> {
@@ -763,7 +948,7 @@ mod tests {
 
                     let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
                     assert_eq!(
-                        remove_whitespace(&serialized_str),
+                        remove_whitespace(&serialized_str).replace("<", "\\u003c").replace(">", "\\u003e").replace("=", "\\u003d"),
                         remove_whitespace(&file_str)
                     );
                 }
@@ -775,6 +960,5 @@ mod tests {
         }
 
         Ok(())
-    }    
-
+    }
 }
