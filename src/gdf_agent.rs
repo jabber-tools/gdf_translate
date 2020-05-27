@@ -214,6 +214,7 @@ pub struct IntentResponseParameter {
     is_list: bool,
 }
 
+// we could probably use #[serde(untagged)] here as well as we do for IntentResponseMessageSpeech
 #[derive(Debug)]
 pub enum IntentResponseMessageType {
     TypeStr(String),
@@ -258,43 +259,12 @@ where
     }
 }
 
-// visitor does not work with two visit methods, no idea why, using instead: #[serde(deserialize_with="deserialize_message_type")]
-/* impl<'de> Deserialize<'de> for IntentResponseMessageType {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-
-        struct FieldVisitor;
-
-        //  see https://docs.serde.rs/serde/de/trait.Visitor.html
-        impl<'de> Visitor<'de> for FieldVisitor {
-            type Value = IntentResponseMessageType;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(formatter, "string or numeric value")
-            }
-
-            fn visit_str<E>(self, s: &str) -> std::result::Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(IntentResponseMessageType::TypeStr(s.to_owned()))
-            }
-
-
-            fn visit_i8<E>(self, v: i8) -> std::result::Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(IntentResponseMessageType::TypeNum(v))
-            }
-
-        }
-
-        deserializer.deserialize_str(FieldVisitor)
-    }
-} */
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum IntentResponseMessageSpeech {
+    Str(String),
+    StrArray(Vec<String>),   
+}
 
 // TBD: definitelly not covering all message types, need more love!
 #[derive(Debug, Serialize, Deserialize)]
@@ -308,12 +278,8 @@ pub struct IntentResponseMessage {
     pub lang: String,
     pub condition: String,
 
-    //
-    // https://stackoverflow.com/questions/46993079/how-do-i-change-serdes-default-implementation-to-return-an-empty-object-instead
-    // https://serde.rs/field-attrs.html
-    //
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub speech: Option<String>,
+    pub speech: Option<IntentResponseMessageSpeech>,
 
     #[serde(rename = "textToSpeech")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -404,6 +370,8 @@ mod tests {
     use super::*;
     use glob::glob;
     use std::fs;
+    use serde_json::json;
+    use assert_json_diff::assert_json_eq;
 
     fn remove_whitespace(s: &str) -> String {
         let normalized_str: String = s.split_whitespace().collect();
@@ -609,6 +577,7 @@ mod tests {
     }
 
     #[test]
+    // no speech specified for response message
     fn test_intent_deser_ser_1() -> Result<()> {
         let intent_str = r#"
         {
@@ -671,7 +640,7 @@ mod tests {
                 }
               ],
               "defaultResponsePlatforms": {},
-              "speech": ["xixix"]
+              "speech": []
             }
           ],
           "priority": 500000,
@@ -700,6 +669,7 @@ mod tests {
     }
 
     #[test]
+    // speech with single string specified  + aeeay of responses for response message
     fn test_intent_deser_ser_2() -> Result<()> {
         let intent_str = r#"
         {
@@ -758,6 +728,12 @@ mod tests {
                     "speech": "You can contact our Technical Support team on 1-855-123-4567"
                   },
                   {
+                    "type": 0,
+                    "lang": "en",
+                    "condition": "",
+                    "speech": ["You can contact our Technical Support team on 1-855-123-4567", "second response here"]
+                  },                  
+                  {
                     "type": "simple_response",
                     "platform": "google",
                     "lang": "en",
@@ -768,7 +744,7 @@ mod tests {
                   }
               ],
               "defaultResponsePlatforms": {},
-              "speech": ["xixix"]
+              "speech": []
             }
           ],
           "priority": 500000,
@@ -945,12 +921,22 @@ mod tests {
                     let file_str = fs::read_to_string(file_name)?;
 
                     let deserialized_struct: Intent = serde_json::from_str(&file_str)?;
-
                     let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
-                    assert_eq!(
+                    
+                    // cannot really use string comparison here. E.g. intent file contains: defaultResponsePlatforms\":{\"line\":true,\"google\":true}
+                    // serde will serialize back from struct in alphabetical order, i.e.: defaultResponsePlatforms\":{\"google\":true,\"line\":true}
+                    // We cannot use LinkedHasMap (to serialize in original order) instead of HashMap since it does not implement Deserialize trait
+                    //
+                    /* 
+                     assert_eq!(
                         remove_whitespace(&serialized_str).replace("<", "\\u003c").replace(">", "\\u003e").replace("=", "\\u003d"),
                         remove_whitespace(&file_str)
-                    );
+                    ); */
+                    
+                    assert_json_eq!(
+                        json!(remove_whitespace(&serialized_str).replace("<", "\\u003c").replace(">", "\\u003e").replace("=", "\\u003d")),
+                        json!(remove_whitespace(&file_str))
+                    ); 
                 }
                 Err(e) => {
                     println!("error when processing file");

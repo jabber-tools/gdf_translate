@@ -16,6 +16,7 @@ ctrlc = "3.1.4"
 log = "0.4.0"
 env_logger = "0.7.1"
 clap = "2.33.0"
+assert-json-diff = "1.0.3"
 
 [dev-dependencies]
 glob = "0.3.0"
