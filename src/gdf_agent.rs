@@ -271,7 +271,7 @@ pub enum IntentResponseMessageSpeech {
 pub struct IntentResponseMessage {
     #[serde(rename = "type")]
     #[serde(deserialize_with = "deserialize_message_type")]
-    pub message_type: IntentResponseMessageType, // TBD: can be string or number, see https://github.com/serde-rs/json/issues/181
+    pub message_type: IntentResponseMessageType,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub platform: Option<String>,
