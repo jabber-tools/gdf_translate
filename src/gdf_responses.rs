@@ -64,11 +64,11 @@ pub struct GAImage {
 pub struct GABasicCardTypeButton {
     pub title: String,
     #[serde(rename = "openUrlAction")]
-    pub open_url_action: GABasicCardTypeButtonOpenUrlAction,
+    pub open_url_action: GAOpenUrlAction,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GABasicCardTypeButtonOpenUrlAction {
+pub struct GAOpenUrlAction {
     pub url: String,
     #[serde(rename = "urlTypeHint")]
     pub url_type_hint: String,
@@ -96,12 +96,23 @@ pub struct GAListTypeItemOptionInfo {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GAListTypeItem {
+pub struct GAItem {
     #[serde(rename = "optionInfo")]
     pub option_info: GAListTypeItemOptionInfo,
     pub title: String,
     pub description: String,
     pub image: GAImage,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GAItemBrowseCarousel {
+    pub footer: String,
+    #[serde(rename = "openUrlAction")]
+    pub open_url_action: GAOpenUrlAction,
+    pub title: String,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<GAImage>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -113,7 +124,7 @@ pub struct GAListType {
     pub condition: String,
     pub title: String,
     pub subtitle: String,
-    pub items: Vec<GAListTypeItem>,
+    pub items: Vec<GAItem>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -144,6 +155,26 @@ pub struct GALinkOutSuggestionType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GACarouselCardType {
+  #[serde(rename = "type")]
+  pub message_type: String,
+  pub platform: String,
+  pub lang: String,
+  pub condition: String,
+  pub items: Vec<GAItem> 
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GABrowseCarouselCardType {
+  #[serde(rename = "type")]
+  pub message_type: String,
+  pub platform: String,
+  pub lang: String,
+  pub condition: String,
+  pub items: Vec<GAItemBrowseCarousel> 
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MessageType {
     DefaultTextResponse(DefaultTextResponseType),
@@ -153,7 +184,9 @@ pub enum MessageType {
     GABasicCard(GABasicCardType),
     GASuggestionChips(GASuggestionChipsType),
     GAList(GAListType),
-    GALinkOutSuggestion(GALinkOutSuggestionType)
+    GALinkOutSuggestion(GALinkOutSuggestionType),
+    GACarouselCard(GACarouselCardType),
+    GABrowseCarouselCard(GABrowseCarouselCardType)
 }
 
 // removes all whitespaces and replaces some characters (as produced by serde serialization)
@@ -413,6 +446,112 @@ mod tests {
     }    
     "#;
 
+    let carousel_card = r#"
+    {
+      "type": "carousel_card",
+      "platform": "google",
+      "lang": "en",
+      "condition": "",
+      "items": [
+        {
+          "optionInfo": {
+            "key": "key",
+            "synonyms": [
+              "syn",
+              "sybn2"
+            ]
+          },
+          "title": "item0",
+          "description": "item0desc",
+          "image": {
+            "url": "",
+            "accessibilityText": ""
+          }
+        },
+        {
+          "optionInfo": {
+            "key": "key1",
+            "synonyms": [
+              "some syb"
+            ]
+          },
+          "title": "item1",
+          "description": "",
+          "image": {
+            "url": "",
+            "accessibilityText": ""
+          }
+        }
+      ]
+    }        
+    "#;    
+
+    let browse_carousel_card_1 = r#"
+    {
+      "type": "browse_carousel_card",
+      "platform": "google",
+      "lang": "en",
+      "condition": "",
+      "items": [
+        {
+          "footer": "footer",
+          "openUrlAction": {
+            "url": "https://www.idnes.cz/",
+            "urlTypeHint": "URL_TYPE_HINT_UNSPECIFIED"
+          },
+          "title": "title",
+          "description": "desc",
+          "image": {
+            "url": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+            "accessibilityText": "access text"
+          }
+        },
+        {
+          "footer": "",
+          "openUrlAction": {
+            "url": "https://www.idnes.cz/",
+            "urlTypeHint": "AMP_CONTENT"
+          },
+          "title": "title2",
+          "description": "",
+          "image": {
+            "url": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+            "accessibilityText": "acces text 2"
+          }
+        }
+      ]
+    }        
+    "#;   
+    
+    let browse_carousel_card_2 = r#"
+    {
+      "type": "browse_carousel_card",
+      "platform": "google",
+      "lang": "en",
+      "condition": "",
+      "items": [
+        {
+          "footer": "footer",
+          "openUrlAction": {
+            "url": "https://www.idnes.cz/",
+            "urlTypeHint": "URL_TYPE_HINT_UNSPECIFIED"
+          },
+          "title": "title",
+          "description": "desc"
+        },
+        {
+          "footer": "",
+          "openUrlAction": {
+            "url": "https://www.idnes.cz/",
+            "urlTypeHint": "AMP_CONTENT"
+          },
+          "title": "title2",
+          "description": ""
+        }
+      ]
+    }        
+    "#;      
+
         let messages = format!(
             r#"
       {{
@@ -420,14 +559,20 @@ mod tests {
          {basic_card},
          {suggestions},
          {list_card},
-         {linkout_suggestion}
+         {linkout_suggestion},
+         {carousel_card},
+         {browse_carousel_card_1},
+         {browse_carousel_card_2}
         ]
        }}
       "#,
             basic_card = basic_card,
             suggestions = suggestions,
             list_card = list_card,
-            linkout_suggestion = linkout_suggestion
+            linkout_suggestion = linkout_suggestion,
+            carousel_card = carousel_card,
+            browse_carousel_card_1 = browse_carousel_card_1,
+            browse_carousel_card_2 = browse_carousel_card_2
         );
 
         println!("messages: {}", messages);
