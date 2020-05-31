@@ -258,8 +258,8 @@ fn normalize_json(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
     use assert_json_diff::assert_json_eq;
+    use serde_json::json;
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct Messages {
@@ -641,8 +641,7 @@ mod tests {
         Ok(())
     }
 
-    // not passing for now
-    //#[test]
+    #[test]
     fn test_ga_2() -> Result<()> {
         let table_card = r#"
     {
@@ -740,9 +739,111 @@ mod tests {
 
         let back_to_str = serde_json::to_string(&messages_struct)?;
 
+        // this will pass...
         assert_json_eq!(
-          json!(normalize_json(&messages)),
-          json!(normalize_json(&back_to_str))
+            json!(
+            {
+              "foo": [{
+                  "header": "",
+                  "horizontalAlignment": "LEADING"
+                },
+                {
+                  "header": "",
+                  "horizontalAlignment": "LEADING"
+                }
+              ]
+            }
+              ),
+            json!(
+              {
+                "foo": [{
+                    "horizontalAlignment": "LEADING",
+                    "header": ""
+                  },
+                  {
+                    "header": "",
+                    "horizontalAlignment": "LEADING"
+                  }
+                ]
+              }
+            ),
+        );
+
+        // and this will fail! no idea why
+        /*assert_json_eq!(
+            json!(
+                r#"
+          {
+            "foo": [{
+                "header": "",
+                "horizontalAlignment": "LEADING"
+              },
+              {
+                "header": "",
+                "horizontalAlignment": "LEADING"
+              }
+            ]
+          }
+          "#
+            ),
+            json!(
+                r#"
+              {
+                "foo": [{
+                    "horizontalAlignment": "LEADING",
+                    "header": ""
+                  },
+                  {
+                    "header": "",
+                    "horizontalAlignment": "LEADING"
+                  }
+                ]
+              }
+              "#
+            ),
+        );*/
+
+        // solution: using serde_json::from_str instead of providing into json! macro string literal seems
+        // to produce proper serde_json::value::Value value which can be then tested properly for json structural equality by assert_json_eq
+
+        let v1 = serde_json::from_str(
+            r#"
+              {
+                "foo": [{
+                    "header": "",
+                    "horizontalAlignment": "LEADING"
+                  },
+                  {
+                    "header": "",
+                    "horizontalAlignment": "LEADING"
+                  }
+                ]
+              }          
+              "#,
+        )?;
+
+        let v2 = serde_json::from_str(
+            r#"
+                {
+                  "foo": [{
+                      "horizontalAlignment": "LEADING",
+                      "header": ""
+                    },
+                    {
+                      "header": "",
+                      "horizontalAlignment": "LEADING"
+                    }
+                  ]
+                }          
+                "#,
+        )?;
+
+        println!("comapring jsons...");
+        assert_json_eq!(v1, v2,);
+
+        assert_json_eq!(
+            serde_json::from_str(&messages)?,
+            serde_json::from_str(&back_to_str)?
         );
         Ok(())
     }
