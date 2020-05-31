@@ -225,8 +225,75 @@ pub struct GATableCardType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct FBTextResponseType {
+    #[serde(rename = "type")]
+    pub message_type: u8,
+    pub platform: String,
+    pub lang: String,
+    pub condition: String,
+    pub speech: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FBImageResponseType {
+    #[serde(rename = "type")]
+    pub message_type: u8,
+    pub platform: String,
+    pub lang: String,
+    pub condition: String,
+    #[serde(rename = "imageUrl")]
+    pub image_url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FBCardResponseButton {
+    pub text: String,
+    pub postback: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FBCardResponseType {
+    #[serde(rename = "type")]
+    pub message_type: u8,
+    pub platform: String,
+    pub lang: String,
+    pub condition: String,
+    pub title: String,
+    pub subtitle: String,
+    #[serde(rename = "imageUrl")]
+    pub image_url: String,
+    pub buttons: Vec<FBCardResponseButton>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FBQuickRepliesResponseType {
+    #[serde(rename = "type")]
+    pub message_type: u8,
+    pub platform: String,
+    pub lang: String,
+    pub condition: String,
+    pub title: String,
+    pub replies: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FacebookCustomPayloadType {
+    #[serde(rename = "type")]
+    pub message_type: u8,
+    pub lang: String,
+    pub condition: String,
+    pub payload: JsonValue,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MessageType {
+    // FBTextResponse is more specific then DefaultTextResponse(+platform)!
+    // In untagged serde enums more specific enum value must be listed before general value!
+    // Serde will always take first match and in this case it would ignore platform parameter
+    // of facebook text response and confuse it with text response of defautl channel! Thus we would
+    // effectively loose platform param during subsequent serialization!
+    FBTextResponse(FBTextResponseType),
     DefaultTextResponse(DefaultTextResponseType),
     DefaultCustomPayload(DefaultCustomPayloadType),
     GASimpleResponse(GASimpleResponseType),
@@ -239,6 +306,10 @@ pub enum MessageType {
     GABrowseCarouselCard(GABrowseCarouselCardType),
     GAMediaContent(GAMediaContentType),
     GATableCard(GATableCardType),
+    FBCardResponse(FBCardResponseType), // FBCardResponse more specific than FBImageResponse!
+    FBImageResponse(FBImageResponseType),
+    FBQuickRepliesResponse(FBQuickRepliesResponseType),
+    FacebookCustomPayload(FacebookCustomPayloadType),
 }
 
 // removes all whitespaces and replaces some characters (as produced by serde serialization)
@@ -265,6 +336,8 @@ mod tests {
     pub struct Messages {
         pub messages: Vec<MessageType>,
     }
+
+    /* Default channel */
 
     #[test]
     fn test_default_1() -> Result<()> {
@@ -845,6 +918,126 @@ mod tests {
             serde_json::from_str(&messages)?,
             serde_json::from_str(&back_to_str)?
         );
+        Ok(())
+    }
+
+    /* Facebook */
+
+    #[test]
+    fn test_facebook() -> Result<()> {
+        let default_text_response = r#"
+        {
+            "type": 0,
+            "lang": "en",
+            "condition": "",
+            "speech": "Text response"
+          }
+        "#;
+
+        let facebook_text_response = r#"
+        {
+          "type": 0,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "speech": "Facebook text"
+        }
+        "#;
+
+        let facebook_image_response = r#"
+        {
+          "type": 3,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "imageUrl": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg"
+        }
+        "#;
+
+        let facebook_card_response = r#"
+        {
+          "type": 1,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "title": "fb card",
+          "subtitle": "subtitle",
+          "imageUrl": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+          "buttons": [
+            {
+              "text": "button",
+              "postback": "https://github.com/contain-rs/linked-hash-map"
+            },
+            {
+              "text": "buitton2",
+              "postback": "https://github.com/contain-rs/linked-hash-map"
+            }
+          ]
+        }
+        "#;
+
+        let facebook_quick_replies_response = r#"
+        {
+          "type": 2,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "title": "fb quick reply",
+          "replies": [
+            "123",
+            "456"
+          ]
+        }
+        "#;
+
+        let facebook_custom_payload_response = r#"
+        {
+          "type": 2,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "title": "fb quick reply",
+          "replies": [
+            "123",
+            "456"
+          ]
+        }
+        "#;
+
+        let messages = format!(
+            r#"
+          {{
+            "messages": [
+            {default_text_response},
+            {facebook_text_response},
+            {facebook_image_response},
+            {facebook_card_response},
+            {facebook_quick_replies_response},
+            {facebook_custom_payload_response}
+          ]
+        }}
+        "#,
+            default_text_response = default_text_response,
+            facebook_text_response = facebook_text_response,
+            facebook_image_response = facebook_image_response,
+            facebook_card_response = facebook_card_response,
+            facebook_quick_replies_response = facebook_quick_replies_response,
+            facebook_custom_payload_response = facebook_custom_payload_response
+        );
+
+        println!("messages: {}", messages);
+
+        let messages_struct: Messages = serde_json::from_str(&messages)?;
+        println!("messages_struct {:#?}", messages_struct);
+
+        let back_to_str = serde_json::to_string(&messages_struct)?;
+
+        // assert_eq!(normalize_json(&messages), normalize_json(&back_to_str));
+        assert_json_eq!(
+            serde_json::from_str(&messages)?,
+            serde_json::from_str(&back_to_str)?
+        );
+
         Ok(())
     }
 }
