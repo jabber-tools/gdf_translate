@@ -195,7 +195,8 @@ pub struct IntentResponseParameter {
     data_type: String,
 
     name: String,
-    value: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    value: Option<String>,
 
     #[serde(rename = "promptMessages")]
     prompt_messages: Vec<String>, // ??
@@ -237,6 +238,10 @@ pub struct IntentResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Intent {
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parentId: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rootParentId: Option<String>,
     pub name: String,
     pub auto: bool,
     pub contexts: Vec<String>,
@@ -826,9 +831,7 @@ mod tests {
         Ok(())
     }
 
-    // disabled until we have proper structures representing all possible message types
-    // #[test]
-    #[allow(dead_code)]
+    #[test]
     fn test_intents() -> Result<()> {
         for entry in
             glob("./examples/testdata/intents/*.json").expect("Failed to read glob pattern")
@@ -855,13 +858,20 @@ mod tests {
                         remove_whitespace(&file_str)
                     ); */
 
-                    assert_json_eq!(
+                    /*assert_json_eq!(
                         json!(remove_whitespace(&serialized_str)
                             .replace("<", "\\u003c")
                             .replace(">", "\\u003e")
                             .replace("=", "\\u003d")),
                         json!(remove_whitespace(&file_str))
+                    );*/
+
+                    assert_json_eq!(
+                        serde_json::from_str(&serialized_str)?,
+                        serde_json::from_str(&file_str)?
                     );
+            
+
                 }
                 Err(e) => {
                     println!("error when processing file");
