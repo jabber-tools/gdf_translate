@@ -178,6 +178,24 @@ pub struct GASimpleResponseType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GASimpleResponseType2 {
+    #[serde(rename = "type")]
+    pub message_type: String,
+    pub platform: String,
+    pub lang: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssml: Option<String>,
+    #[serde(rename = "displayText")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_text: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GACardTypeButton {
     pub title: String,
     #[serde(rename = "openUrlAction")]
@@ -360,7 +378,7 @@ pub enum MessageType {
     GenericCardResponse(GenericCardResponseType),
     GenericImageResponse(GenericImageResponseType),
     GenericQuickRepliesResponse(GenericQuickRepliesResponseType),
-    GASimpleResponse(GASimpleResponseType),
+    GATableCard(GATableCardType),
     GACustomPayload(GACustomPayloadType),
     GABasicCard(GABasicCardType),
     GASuggestionChips(GASuggestionChipsType),
@@ -369,7 +387,8 @@ pub enum MessageType {
     GACarouselCard(GACarouselCardType),
     GABrowseCarouselCard(GABrowseCarouselCardType),
     GAMediaContent(GAMediaContentType),
-    GATableCard(GATableCardType),
+    GASimpleResponse(GASimpleResponseType),
+    GASimpleResponse2(GASimpleResponseType2),
     DefaultCustomPayload(DefaultCustomPayloadType),
     GenericTextResponse(GenericTextResponseType),
 }

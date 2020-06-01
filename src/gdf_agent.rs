@@ -1,7 +1,6 @@
 #[allow(unused_imports)]
 use crate::errors::{Error, Result};
-use serde::de::{self, Deserializer};
-use serde::ser::Serializer;
+use crate::gdf_responses::MessageType;
 use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
 use serde_json;
@@ -214,85 +213,6 @@ pub struct IntentResponseParameter {
     is_list: bool,
 }
 
-// we could probably use #[serde(untagged)] here as well as we do for IntentResponseMessageSpeech
-#[derive(Debug)]
-pub enum IntentResponseMessageType {
-    TypeStr(String),
-    TypeNum(i8),
-}
-
-impl Serialize for IntentResponseMessageType {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self {
-            IntentResponseMessageType::TypeStr(some_str) => serializer.serialize_str(some_str),
-            IntentResponseMessageType::TypeNum(some_num) => {
-                serializer.serialize_i32((*some_num).into())
-            } //you can convert an `i8` to `i32`: `(*some_num).into()`
-        }
-    }
-}
-
-fn deserialize_message_type<'de, D>(
-    de: D,
-) -> std::result::Result<IntentResponseMessageType, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let deser_result: serde_json::Value = Deserialize::deserialize(de)?;
-    match deser_result {
-        serde_json::Value::String(str_val) => Ok(IntentResponseMessageType::TypeStr(str_val)),
-        serde_json::Value::Number(num_val) => {
-            if let Some(i64_numval) = num_val.as_i64() {
-                Ok(IntentResponseMessageType::TypeNum(i64_numval as i8))
-            } else {
-                Err(de::Error::custom(
-                    "Invalid numeric value when deserializing IntentResponseMessage.message_type",
-                ))
-            }
-        }
-        _ => Err(de::Error::custom(
-            "Unexpected value when deserializing IntentResponseMessage.message_type",
-        )),
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum IntentResponseMessageSpeech {
-    Str(String),
-    StrArray(Vec<String>),
-}
-
-// TBD: definitelly not covering all message types, need more love!
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IntentResponseMessage {
-    #[serde(rename = "type")]
-    #[serde(deserialize_with = "deserialize_message_type")]
-    pub message_type: IntentResponseMessageType,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub platform: Option<String>,
-    pub lang: String,
-    pub condition: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub speech: Option<IntentResponseMessageSpeech>,
-
-    #[serde(rename = "textToSpeech")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub text_to_speech: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ssml: Option<String>,
-
-    #[serde(rename = "displayText")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display_text: Option<String>,
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntentResponse {
     #[serde(rename = "resetContexts")]
@@ -306,7 +226,7 @@ pub struct IntentResponse {
 
     pub parameters: Vec<IntentResponseParameter>,
 
-    pub messages: Vec<IntentResponseMessage>,
+    pub messages: Vec<MessageType>,
 
     #[serde(rename = "defaultResponsePlatforms")]
     pub default_response_platforms: std::collections::HashMap<String, bool>,
