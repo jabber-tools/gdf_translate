@@ -1,27 +1,160 @@
-/// This will replace first/draft implementation of IntentResponseMessage in gdf_agent
-/// WIP
-///
 #[allow(unused_imports)]
 use crate::errors::{Error, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
+// GDF channels we need to support:
+//
+// DEFAULT (Text Response + Custom Payload)
+// GA (Simple Response + Basic Card + List + Suggestions Chips + Carousel Card + Browse Carousel Card + Link Out Suggestion + Media Content + Custom Payload + Table Card)
+// FACEBOOK (Text Resoponse + Image + Card + Quick Replies + Custom Payload)
+// SLACK (Text Resoponse + Image + Card + Quick Replies + Custom Payload) - for Twitter
+// Kick / Viber (Text Resoponse + Image + Card + Quick Replies + Custom Payload) - for Whatsapp
+// SKYPE (Text Resoponse + Image + Card + Quick Replies + Custom Payload)
+// LINE (Text Resoponse + Image + Card + Quick Replies + Custom Payload)
+// GOOGLE_HANGOUTS (Text Resoponse + Image + Card +  Custom Payload) - for wechat
+//
+// not supported:
+//
+// GDF phone gateway (Play audio, Transfer call, Synthetize speech)
+// Telegram (Text Resoponse + Image + Card + Quick Replies + Custom Payload)
+// RCS Business Messaging (Standalone Rich Card + Carousel Rich Card + Simple Response)
+
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DefaultTextResponseType {
-    #[serde(rename = "type")]
-    pub message_type: u8,
-    pub lang: String,
-    pub condition: String,
-    pub speech: String,
+#[serde(untagged)]
+pub enum StringOrVecOfString {
+    Str(String),
+    StrArray(Vec<String>),
 }
 
+//
+//
+// TEXT RESPONSE
+//
+//
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenericTextResponseType {
+    #[serde(rename = "type")]
+    pub message_type: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub platform: Option<String>,
+    pub lang: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
+    pub speech: StringOrVecOfString,
+}
+
+//
+//
+// IMAGE
+//
+//
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenericImageResponseType {
+    #[serde(rename = "type")]
+    pub message_type: u8,
+    pub platform: String,
+    pub lang: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
+    #[serde(rename = "imageUrl")]
+    pub image_url: String,
+}
+
+//
+//
+// QUICK REPLIES
+//
+//
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenericQuickRepliesResponseType {
+    #[serde(rename = "type")]
+    pub message_type: u8,
+    pub platform: String,
+    pub lang: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
+    pub title: String,
+    pub replies: Vec<String>,
+}
+
+//
+//
+// CARD
+//
+//
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenericCardResponseButton {
+    pub text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub postback: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenericCardResponseType {
+    #[serde(rename = "type")]
+    pub message_type: u8,
+    pub platform: String,
+    pub lang: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
+    pub title: String,
+    pub subtitle: String,
+    #[serde(rename = "imageUrl")]
+    pub image_url: String,
+    pub buttons: Vec<GenericCardResponseButton>,
+}
+
+//
+//
+// CUSTOM PAYLOADS
+//
+//
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GACustomPayloadType {
+    #[serde(rename = "type")]
+    pub message_type: String, // platform is string
+    pub platform: String,
+    pub lang: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
+    pub payload: JsonValue,
+}
+
+// platform is number (all other channels supporting custom payload)
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenericCustomPayloadType {
+    #[serde(rename = "type")]
+    pub message_type: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub platform: Option<String>,
+    pub lang: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
+    pub payload: JsonValue,
+}
+
+// no platform specified (DEFAULT CHANNEL)
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DefaultCustomPayloadType {
     #[serde(rename = "type")]
     pub message_type: u8,
     pub lang: String,
-    pub condition: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
     pub payload: JsonValue,
+}
+
+//
+//
+// GOOGLE ASSISTANT (so special ;) )
+//
+//
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GAImage {
+    pub url: String,
+    #[serde(rename = "accessibilityText")]
+    pub accessibility_text: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -39,25 +172,9 @@ pub struct GASimpleResponseType {
     pub message_type: String,
     pub platform: String,
     pub lang: String,
-    pub condition: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
     pub items: Vec<GASimpleResponseItem>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GACustomPayloadType {
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub platform: String,
-    pub lang: String,
-    pub condition: String,
-    pub payload: JsonValue,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GAImage {
-    pub url: String,
-    #[serde(rename = "accessibilityText")]
-    pub accessibility_text: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -80,7 +197,8 @@ pub struct GABasicCardType {
     pub message_type: String,
     pub platform: String,
     pub lang: String,
-    pub condition: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
     pub title: String,
     pub subtitle: String,
     #[serde(rename = "formattedText")]
@@ -121,7 +239,8 @@ pub struct GAListType {
     pub message_type: String,
     pub platform: String,
     pub lang: String,
-    pub condition: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
     pub title: String,
     pub subtitle: String,
     pub items: Vec<GAItem>,
@@ -138,7 +257,8 @@ pub struct GASuggestionChipsType {
     pub message_type: String,
     pub platform: String,
     pub lang: String,
-    pub condition: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
     pub suggestions: Vec<GASuggestionChipsTypeSuggestion>,
 }
 
@@ -148,7 +268,8 @@ pub struct GALinkOutSuggestionType {
     pub message_type: String,
     pub platform: String,
     pub lang: String,
-    pub condition: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
     #[serde(rename = "destinationName")]
     pub destination_name: String,
     pub url: String,
@@ -160,7 +281,8 @@ pub struct GACarouselCardType {
     pub message_type: String,
     pub platform: String,
     pub lang: String,
-    pub condition: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
     pub items: Vec<GAItem>,
 }
 
@@ -170,7 +292,8 @@ pub struct GABrowseCarouselCardType {
     pub message_type: String,
     pub platform: String,
     pub lang: String,
-    pub condition: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
     pub items: Vec<GAItemBrowseCarousel>,
 }
 
@@ -190,7 +313,8 @@ pub struct GAMediaContentType {
     pub message_type: String,
     pub platform: String,
     pub lang: String,
-    pub condition: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
     #[serde(rename = "mediaType")]
     pub media_type: String,
     #[serde(rename = "mediaObjects")]
@@ -215,7 +339,8 @@ pub struct GATableCardType {
     pub message_type: String,
     pub platform: String,
     pub lang: String,
-    pub condition: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
     pub title: String,
     pub subtitle: String,
     #[serde(rename = "columnProperties")]
@@ -225,77 +350,16 @@ pub struct GATableCardType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct FBTextResponseType {
-    #[serde(rename = "type")]
-    pub message_type: u8,
-    pub platform: String,
-    pub lang: String,
-    pub condition: String,
-    pub speech: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FBImageResponseType {
-    #[serde(rename = "type")]
-    pub message_type: u8,
-    pub platform: String,
-    pub lang: String,
-    pub condition: String,
-    #[serde(rename = "imageUrl")]
-    pub image_url: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FBCardResponseButton {
-    pub text: String,
-    pub postback: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FBCardResponseType {
-    #[serde(rename = "type")]
-    pub message_type: u8,
-    pub platform: String,
-    pub lang: String,
-    pub condition: String,
-    pub title: String,
-    pub subtitle: String,
-    #[serde(rename = "imageUrl")]
-    pub image_url: String,
-    pub buttons: Vec<FBCardResponseButton>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FBQuickRepliesResponseType {
-    #[serde(rename = "type")]
-    pub message_type: u8,
-    pub platform: String,
-    pub lang: String,
-    pub condition: String,
-    pub title: String,
-    pub replies: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FacebookCustomPayloadType {
-    #[serde(rename = "type")]
-    pub message_type: u8,
-    pub lang: String,
-    pub condition: String,
-    pub payload: JsonValue,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MessageType {
-    // FBTextResponse is more specific then DefaultTextResponse(+platform)!
-    // In untagged serde enums more specific enum value must be listed before general value!
-    // Serde will always take first match and in this case it would ignore platform parameter
-    // of facebook text response and confuse it with text response of defautl channel! Thus we would
+    // In untagged serde enums more specific enum value must be listed before more generic values!
+    // Serde will always take first match and in thus it would ignore for platform parameter
+    // of facebook text response and confuse it with text response of defautl channel! We would
     // effectively loose platform param during subsequent serialization!
-    FBTextResponse(FBTextResponseType),
-    DefaultTextResponse(DefaultTextResponseType),
-    DefaultCustomPayload(DefaultCustomPayloadType),
+    GenericCustomPayload(GenericCustomPayloadType),
+    GenericCardResponse(GenericCardResponseType),
+    GenericImageResponse(GenericImageResponseType),
+    GenericQuickRepliesResponse(GenericQuickRepliesResponseType),
     GASimpleResponse(GASimpleResponseType),
     GACustomPayload(GACustomPayloadType),
     GABasicCard(GABasicCardType),
@@ -306,10 +370,8 @@ pub enum MessageType {
     GABrowseCarouselCard(GABrowseCarouselCardType),
     GAMediaContent(GAMediaContentType),
     GATableCard(GATableCardType),
-    FBCardResponse(FBCardResponseType), // FBCardResponse more specific than FBImageResponse!
-    FBImageResponse(FBImageResponseType),
-    FBQuickRepliesResponse(FBQuickRepliesResponseType),
-    FacebookCustomPayload(FacebookCustomPayloadType),
+    DefaultCustomPayload(DefaultCustomPayloadType),
+    GenericTextResponse(GenericTextResponseType),
 }
 
 // removes all whitespaces and replaces some characters (as produced by serde serialization)
@@ -1023,6 +1085,122 @@ mod tests {
             facebook_card_response = facebook_card_response,
             facebook_quick_replies_response = facebook_quick_replies_response,
             facebook_custom_payload_response = facebook_custom_payload_response
+        );
+
+        println!("messages: {}", messages);
+
+        let messages_struct: Messages = serde_json::from_str(&messages)?;
+        println!("messages_struct {:#?}", messages_struct);
+
+        let back_to_str = serde_json::to_string(&messages_struct)?;
+
+        // assert_eq!(normalize_json(&messages), normalize_json(&back_to_str));
+        assert_json_eq!(
+            serde_json::from_str(&messages)?,
+            serde_json::from_str(&back_to_str)?
+        );
+
+        Ok(())
+    }
+
+    /* Skype */
+
+    #[test]
+    fn test_skype() -> Result<()> {
+        let default_text_response = r#"
+        {
+            "type": 0,
+            "lang": "en",
+            "condition": "",
+            "speech": "Text response"
+          }
+        "#;
+
+        let skype_text_response = r#"
+        {
+          "type": 0,
+          "platform": "skype",
+          "lang": "en",
+          "condition": "",
+          "speech": "Skype text"
+        }
+        "#;
+
+        let skype_image_response = r#"
+        {
+          "type": 3,
+          "platform": "skype",
+          "lang": "en",
+          "condition": "",
+          "imageUrl": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg"
+        }
+        "#;
+
+        let skype_card_response = r#"
+        {
+          "type": 1,
+          "platform": "skype",
+          "lang": "en",
+          "condition": "",
+          "title": "card title",
+          "subtitle": "skype card subtitle",
+          "imageUrl": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+          "buttons": [
+            {
+              "text": "button1",
+              "postback": "https://www.idnes.cz/"
+            }
+          ]
+        }
+        "#;
+
+        let skype_quick_replies_response = r#"
+        {
+          "type": 2,
+          "platform": "skype",
+          "lang": "en",
+          "condition": "",
+          "title": "skype quick reply",
+          "replies": [
+            "yes",
+            "no"
+          ]
+        }
+        "#;
+
+        let skype_custom_payload_response = r#"
+        {
+          "type": 4,
+          "platform": "skype",
+          "lang": "en",
+          "condition": "",
+          "payload": {
+            "skype": {
+              "text": "foo eats bar"
+            }
+          }
+        }
+        "#;
+
+        let messages = format!(
+            r#"
+          {{
+            "messages": [
+            {default_text_response},
+            {skype_text_response},
+            {skype_image_response},
+            {skype_card_response},
+            {skype_quick_replies_response},
+            {skype_custom_payload_response}
+          ]
+        }}
+        "#,
+            default_text_response = default_text_response,
+            skype_text_response = skype_text_response,
+            skype_image_response = skype_image_response,
+            skype_card_response = skype_card_response,
+            skype_quick_replies_response = skype_quick_replies_response,
+            skype_custom_payload_response = skype_custom_payload_response
         );
 
         println!("messages: {}", messages);
