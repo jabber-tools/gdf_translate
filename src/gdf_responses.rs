@@ -105,7 +105,7 @@ pub struct GenericCardResponseType {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub buttons: Option<Vec<GenericCardResponseButton>>
+    pub buttons: Option<Vec<GenericCardResponseButton>>,
 }
 
 //

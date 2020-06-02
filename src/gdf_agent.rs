@@ -239,9 +239,11 @@ pub struct IntentResponse {
 pub struct Intent {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub parentId: Option<String>,
+    #[serde(rename = "parentId")]
+    pub parent_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rootParentId: Option<String>,
+    #[serde(rename = "rootParentId")]
+    pub root_parent_id: Option<String>,
     pub name: String,
     pub auto: bool,
     pub contexts: Vec<String>,
@@ -295,7 +297,6 @@ mod tests {
     use super::*;
     use assert_json_diff::assert_json_eq;
     use glob::glob;
-    use serde_json::json;
     use std::fs;
 
     fn remove_whitespace(s: &str) -> String {
@@ -834,7 +835,7 @@ mod tests {
     #[test]
     fn test_intents() -> Result<()> {
         for entry in
-            glob("./examples/testdata/intents2/*.json").expect("Failed to read glob pattern")
+            glob("./examples/testdata/intents/*.json").expect("Failed to read glob pattern")
         {
             match entry {
                 Ok(path) => {
@@ -848,15 +849,12 @@ mod tests {
                     let deserialized_struct: Intent = serde_json::from_str(&file_str)?;
                     let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
 
-
                     println!("deserialized_struct: {:#?}", deserialized_struct);
                     println!("serialized_str: {}", serialized_str);
                     assert_json_eq!(
                         serde_json::from_str(&serialized_str)?,
                         serde_json::from_str(&file_str)?
                     );
-            
-
                 }
                 Err(e) => {
                     println!("error when processing file");
