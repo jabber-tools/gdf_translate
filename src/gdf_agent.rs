@@ -834,7 +834,7 @@ mod tests {
     #[test]
     fn test_intents() -> Result<()> {
         for entry in
-            glob("./examples/testdata/intents/*.json").expect("Failed to read glob pattern")
+            glob("./examples/testdata/intents2/*.json").expect("Failed to read glob pattern")
         {
             match entry {
                 Ok(path) => {
@@ -848,24 +848,9 @@ mod tests {
                     let deserialized_struct: Intent = serde_json::from_str(&file_str)?;
                     let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
 
-                    // cannot really use string comparison here. E.g. intent file contains: defaultResponsePlatforms\":{\"line\":true,\"google\":true}
-                    // serde will serialize back from struct in alphabetical order, i.e.: defaultResponsePlatforms\":{\"google\":true,\"line\":true}
-                    // We cannot use LinkedHasMap (to serialize in original order) instead of HashMap since it does not implement Deserialize trait
-                    //
-                    /*
-                     assert_eq!(
-                        remove_whitespace(&serialized_str).replace("<", "\\u003c").replace(">", "\\u003e").replace("=", "\\u003d"),
-                        remove_whitespace(&file_str)
-                    ); */
 
-                    /*assert_json_eq!(
-                        json!(remove_whitespace(&serialized_str)
-                            .replace("<", "\\u003c")
-                            .replace(">", "\\u003e")
-                            .replace("=", "\\u003d")),
-                        json!(remove_whitespace(&file_str))
-                    );*/
-
+                    println!("deserialized_struct: {:#?}", deserialized_struct);
+                    println!("serialized_str: {}", serialized_str);
                     assert_json_eq!(
                         serde_json::from_str(&serialized_str)?,
                         serde_json::from_str(&file_str)?

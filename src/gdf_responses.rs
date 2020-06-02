@@ -99,10 +99,13 @@ pub struct GenericCardResponseType {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub condition: Option<String>,
     pub title: String,
-    pub subtitle: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subtitle: Option<String>,
     #[serde(rename = "imageUrl")]
-    pub image_url: String,
-    pub buttons: Vec<GenericCardResponseButton>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buttons: Option<Vec<GenericCardResponseButton>>
 }
 
 //
@@ -217,12 +220,16 @@ pub struct GABasicCardType {
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub condition: Option<String>,
-    pub title: String,
-    pub subtitle: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subtitle: Option<String>,
     #[serde(rename = "formattedText")]
     pub formatted_text: String,
-    pub image: GAImage,
-    pub buttons: Vec<GACardTypeButton>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<GAImage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buttons: Option<Vec<GACardTypeButton>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -375,9 +382,9 @@ pub enum MessageType {
     // of facebook text response and confuse it with text response of defautl channel! We would
     // effectively loose platform param during subsequent serialization!
     GenericCustomPayload(GenericCustomPayloadType),
+    GenericQuickRepliesResponse(GenericQuickRepliesResponseType),
     GenericCardResponse(GenericCardResponseType),
     GenericImageResponse(GenericImageResponseType),
-    GenericQuickRepliesResponse(GenericQuickRepliesResponseType),
     GATableCard(GATableCardType),
     GACustomPayload(GACustomPayloadType),
     GABasicCard(GABasicCardType),
