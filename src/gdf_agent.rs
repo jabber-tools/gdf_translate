@@ -1,9 +1,14 @@
 #[allow(unused_imports)]
 use crate::errors::{Error, Result};
 use crate::gdf_responses::MessageType;
+use log::debug;
 use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
 use serde_json;
+use std::fs;
+use std::io;
+use std::path::Path;
+use zip;
 
 // see https://serde.rs/field-attrs.html
 #[derive(Debug, Serialize, Deserialize)]
@@ -290,6 +295,51 @@ pub struct IntentUtterance {
     pub is_template: bool,
     pub count: i8,
     pub updated: i64,
+}
+
+pub fn unzip_file(zip_name: &str, target_folder: &str) -> Result<()> {
+    let fname = std::path::Path::new(zip_name);
+    let file = fs::File::open(&fname)?;
+    let mut archive = zip::ZipArchive::new(file)?;
+
+    let base_path = Path::new(target_folder);
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let outpath = base_path.join(file.sanitized_name());
+
+        {
+            let comment = file.comment();
+            if !comment.is_empty() {
+                debug!("File {} comment: {}", i, comment);
+            }
+        }
+
+        if (&*file.name()).ends_with('/') {
+            debug!(
+                "File {} extracted to \"{}\"",
+                i,
+                outpath.as_path().display()
+            );
+            fs::create_dir_all(&outpath)?;
+        } else {
+            debug!(
+                "File {} extracted to \"{}\" ({} bytes)",
+                i,
+                outpath.as_path().display(),
+                file.size()
+            );
+            if let Some(p) = outpath.parent() {
+                if !p.exists() {
+                    fs::create_dir_all(&p)?;
+                }
+            }
+            let mut outfile = fs::File::create(&outpath)?;
+            io::copy(&mut file, &mut outfile)?;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -847,7 +897,7 @@ mod tests {
                     let file_str = fs::read_to_string(file_name)?;
 
                     let deserialized_struct: Intent = serde_json::from_str(&file_str)?;
-                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+                    let serialized_str = serde_json::to_string(&deserialized_struct)?;
 
                     println!("deserialized_struct: {:#?}", deserialized_struct);
                     println!("serialized_str: {}", serialized_str);
@@ -862,6 +912,18 @@ mod tests {
                 }
             }
         }
+
+        Ok(())
+    }
+
+    // integration test for unpacking
+    #[test]
+    #[ignore]
+    fn test_unzip() -> Result<()> {
+        let path = "c:/tmp/z/Express_CS_AM_PRD.zip";
+        let target_folder = "c:/tmp/z/unpacked";
+
+        unzip_file(path, target_folder)?;
 
         Ok(())
     }

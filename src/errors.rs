@@ -1,4 +1,5 @@
 use std::result;
+use zip::result::ZipError;
 
 #[derive(Debug)]
 pub struct Error {
@@ -17,6 +18,14 @@ impl From<serde_json::error::Error> for Error {
 
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Error {
+        Error {
+            message: format!("{}", error),
+        }
+    }
+}
+
+impl From<ZipError> for Error {
+    fn from(error: ZipError) -> Error {
         Error {
             message: format!("{}", error),
         }
