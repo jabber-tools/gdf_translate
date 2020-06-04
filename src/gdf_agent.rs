@@ -1,13 +1,16 @@
-#[allow(unused_imports)]
 use crate::errors::{Error, Result};
 use crate::gdf_responses::MessageType;
+use assert_json_diff::assert_json_eq_no_panic;
+use glob::glob;
 use log::debug;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-#[allow(unused_imports)]
 use serde_json;
+use std::env::current_exe;
 use std::fs;
 use std::io;
 use std::path::Path;
+use std::time::SystemTime;
 use zip;
 
 // see https://serde.rs/field-attrs.html
@@ -103,7 +106,6 @@ pub struct AgentManifestGoogleAssistant {
     pub is_device_agent: bool,
 }
 
-// TBD: there will be probably field for online code if enabled
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AgentManifestWebhook {
     url: String,
@@ -297,8 +299,8 @@ pub struct IntentUtterance {
     pub updated: i64,
 }
 
-pub fn unzip_file(zip_name: &str, target_folder: &str) -> Result<()> {
-    let fname = std::path::Path::new(zip_name);
+pub fn unzip_file(zip_path: &str, target_folder: &str) -> Result<()> {
+    let fname = std::path::Path::new(zip_path);
     let file = fs::File::open(&fname)?;
     let mut archive = zip::ZipArchive::new(file)?;
 
@@ -342,17 +344,122 @@ pub fn unzip_file(zip_name: &str, target_folder: &str) -> Result<()> {
     Ok(())
 }
 
+fn check_gdf_zip_glob_files<T>(glob_exp: &str, contains_array: bool) -> Result<()>
+where
+    T: DeserializeOwned + Serialize, // see https://serde.rs/lifetimes.html !
+{
+    for entry in glob(glob_exp)? {
+        let path = entry?;
+
+        let file_name = path.as_path().to_str().unwrap();
+
+        if contains_array == false
+            && (file_name.contains("_entries_") || file_name.contains("_usersays_"))
+        {
+            continue; // if not processing arrays (entity entries or intent utterances) skip respective files!
+        }
+
+        debug!("processing file {}", file_name);
+        let file_str = fs::read_to_string(file_name)?;
+
+        let deserialized_struct: T = serde_json::from_str(&file_str)?;
+
+        let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+        let comparison_result = assert_json_eq_no_panic(
+            &serde_json::from_str(&serialized_str)?,
+            &serde_json::from_str(&file_str)?,
+        );
+
+        if let Err(err_msg) = comparison_result {
+            return Err(Error::new(err_msg));
+        }
+    }
+    Ok(())
+}
+
+pub fn check_gdf_zip(zip_path: &str) -> Result<bool> {
+    // create temp folder name as epoch time in sec
+    let ts_sec = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    // from curent binary path remove executable name (e.g. ddf_translate.exe) and add temp folder name
+    let tmp_working_folder_path = current_exe()?
+        .into_boxed_path()
+        .as_ref()
+        .parent()
+        .unwrap()
+        .join(Path::new(&ts_sec.to_string()));
+
+    // create glob search expression <<tmp_working_folder_path>>/entities/*_entries_*.json
+    let mut glob_entity_entries = tmp_working_folder_path.clone();
+    glob_entity_entries.push("entities");
+    glob_entity_entries.push("*_entries_*.json");
+    debug!("glob_entity_entries={:?}", glob_entity_entries);
+
+    // create glob search expression <<tmp_working_folder_path>>/entities/*_entries_*.json
+    let mut glob_entities = tmp_working_folder_path.clone();
+    glob_entities.push("entities");
+    glob_entities.push("*.json");
+    debug!("glob_entities={:?}", glob_entities);
+
+    // create glob search expression <<tmp_working_folder_path>>/intents/*_usersays_*.json
+    let mut glob_intents_usersays = tmp_working_folder_path.clone();
+    glob_intents_usersays.push("intents");
+    glob_intents_usersays.push("*_usersays_*.json");
+    debug!("glob_intents_usersays={:?}", glob_intents_usersays);
+
+    // create glob search expression <<tmp_working_folder_path>>/intents/*.json
+    let mut glob_intents = tmp_working_folder_path.clone();
+    glob_intents.push("intents");
+    glob_intents.push("*.json");
+    debug!("glob_intents={:?}", glob_intents);
+
+    // convert to string slice
+    let tmp_working_folder_path = tmp_working_folder_path.to_str().unwrap();
+
+    debug!("creating folder={}", tmp_working_folder_path);
+    fs::create_dir_all(tmp_working_folder_path)?;
+    unzip_file(zip_path, tmp_working_folder_path)?;
+
+    // doing this 4 times would be annoying
+    /*for entry in glob(glob_entity_entries.to_str().unwrap())? {
+      let path = entry?;
+
+      let file_name = path.as_path().to_str().unwrap();
+      println!("processing file {}", file_name);
+      let file_str = fs::read_to_string(file_name)?;
+
+      let deserialized_struct: Vec<EntityEntry> = serde_json::from_str(&file_str)?;
+
+      let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+      let comparison_result = assert_json_eq_no_panic(
+        &serde_json::from_str(&serialized_str)?,
+        &serde_json::from_str(&file_str)?
+      );
+
+      if let Err(err_msg) = comparison_result {
+        return Err(Error::new(err_msg));
+      }
+
+    }*/
+    check_gdf_zip_glob_files::<Vec<EntityEntry>>(glob_entity_entries.to_str().unwrap(), true)?;
+    check_gdf_zip_glob_files::<Entity>(glob_entities.to_str().unwrap(), false)?;
+    check_gdf_zip_glob_files::<Vec<IntentUtterance>>(
+        glob_intents_usersays.to_str().unwrap(),
+        true,
+    )?;
+    check_gdf_zip_glob_files::<Intent>(glob_intents.to_str().unwrap(), false)?;
+
+    Ok(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gdf_responses::normalize_json;
     use assert_json_diff::assert_json_eq;
-    use glob::glob;
-    use std::fs;
-
-    fn remove_whitespace(s: &str) -> String {
-        let normalized_str: String = s.split_whitespace().collect();
-        normalized_str.replace("\n", "")
-    }
 
     #[test]
     fn test_entity_deser_ser() -> Result<()> {
@@ -469,8 +576,8 @@ mod tests {
         let serialized_str = serde_json::to_string(&package).unwrap();
         let serialized_str_expected = r#"{"version":"1.0.0"}"#;
         assert_eq!(
-            remove_whitespace(&serialized_str),
-            remove_whitespace(serialized_str_expected)
+            normalize_json(&serialized_str),
+            normalize_json(serialized_str_expected)
         );
         Ok(())
     }
@@ -545,10 +652,7 @@ mod tests {
         );
 
         let serialized_str = serde_json::to_string(&agent).unwrap();
-        assert_eq!(
-            remove_whitespace(&serialized_str),
-            remove_whitespace(agent_str)
-        );
+        assert_eq!(normalize_json(&serialized_str), normalize_json(agent_str));
         Ok(())
     }
 
@@ -637,10 +741,7 @@ mod tests {
         assert_eq!(intent.name, "FAQ|CS|0|Stop ODD Messages|TPh");
 
         let serialized_str = serde_json::to_string(&intent).unwrap();
-        assert_eq!(
-            remove_whitespace(&serialized_str),
-            remove_whitespace(&intent_str)
-        );
+        assert_eq!(normalize_json(&serialized_str), normalize_json(&intent_str));
         Ok(())
     }
 
@@ -741,10 +842,7 @@ mod tests {
         assert_eq!(intent.name, "FAQ|CS|0|Stop ODD Messages|TPh");
 
         let serialized_str = serde_json::to_string(&intent).unwrap();
-        assert_eq!(
-            remove_whitespace(&serialized_str),
-            remove_whitespace(&intent_str)
-        );
+        assert_eq!(normalize_json(&serialized_str), normalize_json(&intent_str));
         Ok(())
     }
 
@@ -783,8 +881,8 @@ mod tests {
 
         let serialized_str = serde_json::to_string(&intent_utterances).unwrap();
         assert_eq!(
-            remove_whitespace(&serialized_str),
-            remove_whitespace(&intent_utterance_str)
+            normalize_json(&serialized_str),
+            normalize_json(&intent_utterance_str)
         );
         Ok(())
     }
@@ -803,12 +901,7 @@ mod tests {
                     let deserialized_struct: Vec<EntityEntry> = serde_json::from_str(&file_str)?;
 
                     let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
-                    assert_eq!(
-                        remove_whitespace(&serialized_str)
-                            .replace("&", "\\u0026") // these two discrepancies found in Express_CS_AM_PRD !
-                            .replace("'", "\\u0027"),
-                        remove_whitespace(&file_str)
-                    );
+                    assert_eq!(normalize_json(&serialized_str), normalize_json(&file_str));
                 }
                 Err(e) => {
                     println!("error when processing file");
@@ -837,10 +930,7 @@ mod tests {
                     let deserialized_struct: Entity = serde_json::from_str(&file_str)?;
 
                     let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
-                    assert_eq!(
-                        remove_whitespace(&serialized_str),
-                        remove_whitespace(&file_str)
-                    );
+                    assert_eq!(normalize_json(&serialized_str), normalize_json(&file_str));
                 }
                 Err(e) => {
                     println!("error when processing file");
@@ -867,10 +957,7 @@ mod tests {
                         serde_json::from_str(&file_str)?;
 
                     let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
-                    assert_eq!(
-                        remove_whitespace(&serialized_str).replace("'", "\\u0027"),
-                        remove_whitespace(&file_str)
-                    );
+                    assert_eq!(normalize_json(&serialized_str), normalize_json(&file_str));
                 }
                 Err(e) => {
                     println!("error when processing file");
@@ -925,6 +1012,17 @@ mod tests {
 
         unzip_file(path, target_folder)?;
 
+        Ok(())
+    }
+
+    // running this test from VSCode will create folder in /target/debug folder
+    // running from cmd line (see command below) will create folder in /target/debug/deps !
+    // cargo test -- --show-output test_check_gdf_zip
+    #[test]
+    //#[ignore]
+    fn test_check_gdf_zip() -> Result<()> {
+        let path = "c:/tmp/z/Express_CS_AM_PRD.zip";
+        check_gdf_zip(path)?;
         Ok(())
     }
 }

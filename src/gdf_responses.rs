@@ -402,8 +402,7 @@ pub enum MessageType {
 
 // removes all whitespaces and replaces some characters (as produced by serde serialization)
 // with entities used by DialogFlow.
-#[allow(dead_code)]
-fn normalize_json(s: &str) -> String {
+pub fn normalize_json(s: &str) -> String {
     let normalized_str: String = s.split_whitespace().collect();
     normalized_str
         .replace("\n", "")
