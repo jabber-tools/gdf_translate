@@ -9,7 +9,7 @@ use serde_json;
 use std::env::current_exe;
 use std::fs;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use zip;
 
@@ -299,6 +299,96 @@ pub struct IntentUtterance {
     pub updated: i64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EntityFile {
+    pub file_name: String,
+    pub file_content: Entity,
+}
+
+impl EntityFile {
+    fn new(file_name: String, file_content: Entity) -> Self {
+        EntityFile {
+            file_name,
+            file_content,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EntityEntriesFile {
+    pub file_name: String,
+    pub file_content: Vec<EntityEntry>,
+}
+
+impl EntityEntriesFile {
+    fn new(file_name: String, file_content: Vec<EntityEntry>) -> Self {
+        EntityEntriesFile {
+            file_name,
+            file_content,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IntentFile {
+    pub file_name: String,
+    pub file_content: Intent,
+}
+
+impl IntentFile {
+    fn new(file_name: String, file_content: Intent) -> Self {
+        IntentFile {
+            file_name,
+            file_content,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IntentUtterancesFile {
+    pub file_name: String,
+    pub file_content: Vec<IntentUtterance>,
+}
+
+impl IntentUtterancesFile {
+    fn new(file_name: String, file_content: Vec<IntentUtterance>) -> Self {
+        IntentUtterancesFile {
+            file_name,
+            file_content,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct GoogleDialogflowAgent {
+    entities: Vec<EntityFile>,
+    entity_entries: Vec<EntityEntriesFile>,
+    intents: Vec<IntentFile>,
+    utterances: Vec<IntentUtterancesFile>,
+    agent: AgentManifest,
+    package: Package,
+}
+
+impl GoogleDialogflowAgent {
+    fn new(
+        entities: Vec<EntityFile>,
+        entity_entries: Vec<EntityEntriesFile>,
+        intents: Vec<IntentFile>,
+        utterances: Vec<IntentUtterancesFile>,
+        agent: AgentManifest,
+        package: Package,
+    ) -> Self {
+        GoogleDialogflowAgent {
+            entities,
+            entity_entries,
+            intents,
+            utterances,
+            agent,
+            package,
+        }
+    }
+}
+
 pub fn unzip_file(zip_path: &str, target_folder: &str) -> Result<()> {
     let fname = std::path::Path::new(zip_path);
     let file = fs::File::open(&fname)?;
@@ -344,6 +434,9 @@ pub fn unzip_file(zip_path: &str, target_folder: &str) -> Result<()> {
     Ok(())
 }
 
+// not used in the end, if we actually wanted to put somewhere deserialized that generics would become
+// quite cumbersome and nasty using macro instead
+#[allow(dead_code)]
 fn check_gdf_zip_glob_files<T>(glob_exp: &str, contains_array: bool) -> Result<()>
 where
     T: DeserializeOwned + Serialize, // see https://serde.rs/lifetimes.html !
@@ -377,7 +470,64 @@ where
     Ok(())
 }
 
-pub fn check_gdf_zip(zip_path: &str) -> Result<bool> {
+// definying this function with generics is quite tricky becase of calling <<DeserializedStructType>>::new
+// macri is good way here how to prevent writing same function4 times
+macro_rules! parse_gdf_agent_files {
+    ($name:ident, $type_deserialized:ty, $type_output:ty) => {
+        fn $name(glob_exp: &PathBuf) -> Result<Vec<$type_output>> {
+            let mut output_vec: Vec<$type_output> = vec![];
+            let glob_str = glob_exp.as_path().to_str().unwrap();
+            for entry in glob(glob_str)? {
+                let path = entry?;
+
+                let file_name = path.as_path().to_str().unwrap();
+
+                // if not processing arrays (entity entries or intent utterances) skip
+                // respective files (which are otherwise include in glob expresion)!
+                if glob_str.contains("_*.json")
+                    && (file_name.contains("_entries_") || file_name.contains("_usersays_"))
+                {
+                    continue; // if not processing arrays (entity entries or intent utterances) skip respective files!
+                }
+
+                debug!("processing file {}", file_name);
+                let file_str = fs::read_to_string(file_name)?;
+
+                let deserialized_struct: $type_deserialized = serde_json::from_str(&file_str)?;
+
+                let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+                let comparison_result = assert_json_eq_no_panic(
+                    &serde_json::from_str(&serialized_str)?,
+                    &serde_json::from_str(&file_str)?,
+                );
+
+                if let Err(err_msg) = comparison_result {
+                    return Err(Error::new(err_msg));
+                }
+                output_vec.push(<$type_output>::new(
+                    file_name.to_string(),
+                    deserialized_struct,
+                ));
+            }
+            Ok(output_vec)
+        }
+    };
+}
+
+parse_gdf_agent_files!(parse_gdf_agent_files_entity, Entity, EntityFile);
+parse_gdf_agent_files!(
+    parse_gdf_agent_files_entity_entries,
+    Vec<EntityEntry>,
+    EntityEntriesFile
+);
+parse_gdf_agent_files!(parse_gdf_agent_files_intent, Intent, IntentFile);
+parse_gdf_agent_files!(
+    parse_gdf_agent_files_intent_utterances,
+    Vec<IntentUtterance>,
+    IntentUtterancesFile
+);
+
+pub fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     // create temp folder name as epoch time in sec
     let ts_sec = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -391,6 +541,9 @@ pub fn check_gdf_zip(zip_path: &str) -> Result<bool> {
         .parent()
         .unwrap()
         .join(Path::new(&ts_sec.to_string()));
+
+    let agent_manifest_file = tmp_working_folder_path.join("agent.json");
+    let package_file = tmp_working_folder_path.join("package.json");
 
     // create glob search expression <<tmp_working_folder_path>>/entities/*_entries_*.json
     let mut glob_entity_entries = tmp_working_folder_path.clone();
@@ -419,40 +572,49 @@ pub fn check_gdf_zip(zip_path: &str) -> Result<bool> {
     // convert to string slice
     let tmp_working_folder_path = tmp_working_folder_path.to_str().unwrap();
 
-    debug!("creating folder={}", tmp_working_folder_path);
+    println!("creating folder={}", tmp_working_folder_path);
     fs::create_dir_all(tmp_working_folder_path)?;
     unzip_file(zip_path, tmp_working_folder_path)?;
 
-    // doing this 4 times would be annoying
-    /*for entry in glob(glob_entity_entries.to_str().unwrap())? {
-      let path = entry?;
+    let entities = parse_gdf_agent_files_entity(&glob_entities)?;
+    let entity_entries = parse_gdf_agent_files_entity_entries(&glob_entity_entries)?;
+    let intents = parse_gdf_agent_files_intent(&glob_intents)?;
+    let utterances = parse_gdf_agent_files_intent_utterances(&glob_intents_usersays)?;
 
-      let file_name = path.as_path().to_str().unwrap();
-      println!("processing file {}", file_name);
-      let file_str = fs::read_to_string(file_name)?;
-
-      let deserialized_struct: Vec<EntityEntry> = serde_json::from_str(&file_str)?;
-
-      let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
-      let comparison_result = assert_json_eq_no_panic(
+    // process agent.json
+    let file_str = fs::read_to_string(agent_manifest_file)?;
+    let agent_manifest: AgentManifest = serde_json::from_str(&file_str)?;
+    let serialized_str = serde_json::to_string(&agent_manifest).unwrap();
+    let comparison_result = assert_json_eq_no_panic(
         &serde_json::from_str(&serialized_str)?,
-        &serde_json::from_str(&file_str)?
-      );
+        &serde_json::from_str(&file_str)?,
+    );
 
-      if let Err(err_msg) = comparison_result {
+    if let Err(err_msg) = comparison_result {
         return Err(Error::new(err_msg));
-      }
+    }
 
-    }*/
-    check_gdf_zip_glob_files::<Vec<EntityEntry>>(glob_entity_entries.to_str().unwrap(), true)?;
-    check_gdf_zip_glob_files::<Entity>(glob_entities.to_str().unwrap(), false)?;
-    check_gdf_zip_glob_files::<Vec<IntentUtterance>>(
-        glob_intents_usersays.to_str().unwrap(),
-        true,
-    )?;
-    check_gdf_zip_glob_files::<Intent>(glob_intents.to_str().unwrap(), false)?;
+    // process package.json
+    let file_str = fs::read_to_string(package_file)?;
+    let package: Package = serde_json::from_str(&file_str)?;
+    let serialized_str = serde_json::to_string(&package).unwrap();
+    let comparison_result = assert_json_eq_no_panic(
+        &serde_json::from_str(&serialized_str)?,
+        &serde_json::from_str(&file_str)?,
+    );
 
-    Ok(true)
+    if let Err(err_msg) = comparison_result {
+        return Err(Error::new(err_msg));
+    }
+
+    Ok(GoogleDialogflowAgent::new(
+        entities,
+        entity_entries,
+        intents,
+        utterances,
+        agent_manifest,
+        package,
+    ))
 }
 
 #[cfg(test)]
@@ -1020,9 +1182,10 @@ mod tests {
     // cargo test -- --show-output test_check_gdf_zip
     #[test]
     //#[ignore]
-    fn test_check_gdf_zip() -> Result<()> {
+    fn test_parse_gdf_agent_zip() -> Result<()> {
         let path = "c:/tmp/z/Express_CS_AM_PRD.zip";
-        check_gdf_zip(path)?;
+        let agent = parse_gdf_agent_zip(path)?;
+        println!("{:#?}", agent);
         Ok(())
     }
 }
