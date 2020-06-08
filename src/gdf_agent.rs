@@ -477,16 +477,19 @@ macro_rules! parse_gdf_agent_files {
         fn $name(glob_exp: &PathBuf) -> Result<Vec<$type_output>> {
             let mut output_vec: Vec<$type_output> = vec![];
             let glob_str = glob_exp.as_path().to_str().unwrap();
+            debug!("entering parse_gdf_agent_files macro with glob_str {}", glob_str);
             for entry in glob(glob_str)? {
                 let path = entry?;
 
                 let file_name = path.as_path().to_str().unwrap();
+                debug!("going to process file {}", file_name);
 
                 // if not processing arrays (entity entries or intent utterances) skip
                 // respective files (which are otherwise include in glob expresion)!
-                if glob_str.contains("_*.json")
+                if !glob_str.contains("_*.json")
                     && (file_name.contains("_entries_") || file_name.contains("_usersays_"))
                 {
+                    debug!("skipping the processing of the file file {}", file_name);
                     continue; // if not processing arrays (entity entries or intent utterances) skip respective files!
                 }
 
@@ -1179,13 +1182,13 @@ mod tests {
 
     // running this test from VSCode will create folder in /target/debug folder
     // running from cmd line (see command below) will create folder in /target/debug/deps !
-    // cargo test -- --show-output test_check_gdf_zip
+    // cargo test -- --show-output test_parse_gdf_agent_zip
     #[test]
     //#[ignore]
     fn test_parse_gdf_agent_zip() -> Result<()> {
         let path = "c:/tmp/z/Express_CS_AM_PRD.zip";
-        let agent = parse_gdf_agent_zip(path)?;
-        println!("{:#?}", agent);
+        let _agent = parse_gdf_agent_zip(path)?;
+        // println!("{:#?}", agent);
         Ok(())
     }
 }
