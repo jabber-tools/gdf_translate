@@ -54,3 +54,12 @@ impl From<GlobError> for Error {
         }
     }
 }
+
+// required by surf crate
+impl From<Box<dyn std::error::Error + Send + Sync>> for Error {
+    fn from(error: Box<dyn std::error::Error + Send + Sync>) -> Error {
+        Error {
+            message: format!("{}", error),
+        }
+    }
+}

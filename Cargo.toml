@@ -19,5 +19,7 @@ clap = "2.33.0"
 assert-json-diff = "1.0.3"
 zip = "0.5"
 glob = "0.3.0"
+surf = "1.0.3"
+async-std = "1.6.0"
 
 [dev-dependencies]

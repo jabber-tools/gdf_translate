@@ -477,7 +477,10 @@ macro_rules! parse_gdf_agent_files {
         fn $name(glob_exp: &PathBuf) -> Result<Vec<$type_output>> {
             let mut output_vec: Vec<$type_output> = vec![];
             let glob_str = glob_exp.as_path().to_str().unwrap();
-            debug!("entering parse_gdf_agent_files macro with glob_str {}", glob_str);
+            debug!(
+                "entering parse_gdf_agent_files macro with glob_str {}",
+                glob_str
+            );
             for entry in glob(glob_str)? {
                 let path = entry?;
 
@@ -1167,7 +1170,7 @@ mod tests {
 
         Ok(())
     }
-    
+
     //
     // integration tests
     //
