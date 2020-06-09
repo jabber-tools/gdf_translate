@@ -1167,8 +1167,11 @@ mod tests {
 
         Ok(())
     }
+    
+    //
+    // integration tests
+    //
 
-    // integration test for unpacking
     #[test]
     #[ignore]
     fn test_unzip() -> Result<()> {
@@ -1184,7 +1187,7 @@ mod tests {
     // running from cmd line (see command below) will create folder in /target/debug/deps !
     // cargo test -- --show-output test_parse_gdf_agent_zip
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_parse_gdf_agent_zip() -> Result<()> {
         let path = "c:/tmp/z/Express_CS_AM_PRD.zip";
         let _agent = parse_gdf_agent_zip(path)?;
