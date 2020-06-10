@@ -61,17 +61,17 @@ pub struct TranslateResponseBodyTranslationItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
     #[serde(rename = "translatedText")]
-    pub translated_text: String
+    pub translated_text: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TranslateResponseBodyData {
-    pub translations: Vec<TranslateResponseBodyTranslationItem>
+    pub translations: Vec<TranslateResponseBodyTranslationItem>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TranslateResponseBody {
-    pub data: TranslateResponseBodyData
+    pub data: TranslateResponseBodyData,
 }
 
 pub async fn file_to_gdf_credentials(file_name: &str) -> Result<GDFCredentials> {
