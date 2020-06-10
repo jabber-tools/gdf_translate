@@ -63,3 +63,20 @@ impl From<Box<dyn std::error::Error + Send + Sync>> for Error {
         }
     }
 }
+
+impl From<jsonwebtoken::errors::Error> for Error {
+    fn from(error: jsonwebtoken::errors::Error) -> Error {
+        Error {
+            message: format!("{}", error),
+        }
+    }
+}
+
+// required by surf crate when calling set_query
+impl From<serde_urlencoded::ser::Error> for Error {
+    fn from(error: serde_urlencoded::ser::Error) -> Error {
+        Error {
+            message: format!("{}", error),
+        }
+    }
+}
