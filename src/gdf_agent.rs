@@ -6,6 +6,7 @@ use log::debug;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::collections;
 use std::env::current_exe;
 use std::fs;
 use std::io;
@@ -110,7 +111,7 @@ pub struct AgentManifestGoogleAssistant {
 pub struct AgentManifestWebhook {
     url: String,
     username: String,
-    headers: std::collections::HashMap<String, String>,
+    headers: collections::HashMap<String, String>,
     available: bool,
 
     #[serde(rename = "useForDomains")]
@@ -189,7 +190,7 @@ pub struct IntentEvent {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntentResponseAffectedContext {
     pub name: String,
-    pub parameters: std::collections::HashMap<String, String>, // ??
+    pub parameters: collections::HashMap<String, String>, // ??
     pub lifespan: i8,
 }
 
@@ -237,7 +238,7 @@ pub struct IntentResponse {
     pub messages: Vec<MessageType>,
 
     #[serde(rename = "defaultResponsePlatforms")]
-    pub default_response_platforms: std::collections::HashMap<String, bool>,
+    pub default_response_platforms: collections::HashMap<String, bool>,
 
     pub speech: Vec<String>,
 }
@@ -623,11 +624,62 @@ pub fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     ))
 }
 
+pub trait Translate {
+    fn to_translation(&self) -> collections::HashMap<String, String>;
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::gdf_responses::normalize_json;
     use assert_json_diff::assert_json_eq;
+
+    #[derive(Debug)]
+    struct DummyStructSlave {
+        pub foo: String,
+        pub bar: String,
+        pub id: String,
+    }
+
+    impl DummyStructSlave {
+        fn new(foo: String, bar: String, id: String) -> Self {
+            DummyStructSlave { foo, bar, id }
+        }
+    }
+
+    impl Translate for DummyStructSlave {
+        fn to_translation(&self) -> collections::HashMap<String, String> {
+            let mut map_to_translate = collections::HashMap::new();
+
+            let ptr_addr_foo = format!("{:p}", &self.foo);
+            let ptr_addr_bar = format!("{:p}", &self.bar);
+            map_to_translate.insert(ptr_addr_foo, self.foo.to_owned());
+            map_to_translate.insert(ptr_addr_bar, self.bar.to_owned());
+
+            map_to_translate
+        }
+
+        fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+            let ptr_addr_foo = format!("{:p}", &self.foo);
+            let ptr_addr_bar = format!("{:p}", &self.bar);
+            let translated_foo = translations_map.get(&ptr_addr_foo).unwrap();
+            let translated_bar = translations_map.get(&ptr_addr_bar).unwrap();
+            self.foo = translated_foo.to_owned();
+            self.bar = translated_bar.to_owned();
+        }
+    }
+
+    #[derive(Debug)]
+    struct DummyStructMaster {
+        pub items: Vec<DummyStructSlave>,
+    }
+
+    impl DummyStructMaster {
+        fn new(items: Vec<DummyStructSlave>) -> Self {
+            DummyStructMaster { items }
+        }
+    }
 
     #[test]
     fn test_entity_deser_ser() -> Result<()> {
@@ -1169,6 +1221,61 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    // cargo test -- --show-output test_translation_mechanics
+    #[test]
+    fn test_translation_mechanics() {
+        let item1 = DummyStructSlave::new("foo1".to_owned(), "bar1".to_owned(), "id1".to_owned());
+        let item2 = DummyStructSlave::new("foo2".to_owned(), "bar2".to_owned(), "id2".to_owned());
+        let items = vec![item1, item2];
+
+        let mut master = DummyStructMaster::new(items);
+
+        let master_iter = master.items.iter();
+
+        let mut translation_map: collections::HashMap<String, String> = collections::HashMap::new();
+
+        for item in master_iter {
+            translation_map.extend(item.to_translation());
+        }
+
+        println!("before translation");
+        for (_, text_to_translate) in &translation_map {
+            println!("{}", text_to_translate);
+        }
+        println!("{:#?}", translation_map);
+        println!("{:#?}", master);
+
+        assert_eq!(master.items[0].foo, "foo1");
+        assert_eq!(master.items[0].bar, "bar1");
+        assert_eq!(master.items[1].foo, "foo2");
+        assert_eq!(master.items[1].bar, "bar2");
+
+        // translation will iterate (producing mutable values) over hashmap product and create translated texts
+        for val in translation_map.values_mut() {
+            let translated_text = format!("{}{}", val, "_translated!");
+            *val = translated_text;
+        }
+
+        // then we will iterate (using mutable iterator) original structure and lookup translated values based on struct member pointer addresses
+        let master_iter_mut = master.items.iter_mut();
+
+        for item in master_iter_mut {
+            item.from_translation(&translation_map);
+        }
+
+        println!("after translation");
+        for (_, text_to_translate) in &translation_map {
+            println!("{}", text_to_translate);
+        }
+        println!("{:#?}", translation_map);
+        println!("{:#?}", master);
+
+        assert_eq!(master.items[0].foo, "foo1_translated!");
+        assert_eq!(master.items[0].bar, "bar1_translated!");
+        assert_eq!(master.items[1].foo, "foo2_translated!");
+        assert_eq!(master.items[1].bar, "bar2_translated!");
     }
 
     //
