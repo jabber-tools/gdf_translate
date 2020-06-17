@@ -14,6 +14,11 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use zip;
 
+pub trait Translate {
+    fn to_translation(&self) -> collections::HashMap<String, String>;
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>);
+}
+
 // see https://serde.rs/field-attrs.html
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Entity {
@@ -36,10 +41,38 @@ pub struct Entity {
     pub allow_fuzzy_extraction: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct EntityEntry {
     pub value: String,
     pub synonyms: Vec<String>,
+}
+
+impl Translate for EntityEntry {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.value), self.value.to_owned());
+
+        for synonym in self.synonyms.iter() {
+            map_to_translate.insert(format!("{:p}", synonym), synonym.to_owned());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.value = translations_map
+            .get(&format!("{:p}", &self.value))
+            .unwrap()
+            .to_owned();
+
+        for synonym in self.synonyms.iter_mut() {
+            *synonym = translations_map
+                .get(&format!("{:p}", synonym))
+                .unwrap()
+                .to_owned();
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -624,11 +657,6 @@ pub fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     ))
 }
 
-pub trait Translate {
-    fn to_translation(&self) -> collections::HashMap<String, String>;
-    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -678,6 +706,13 @@ mod tests {
     impl DummyStructMaster {
         fn new(items: Vec<DummyStructSlave>) -> Self {
             DummyStructMaster { items }
+        }
+    }
+
+    fn dummy_translate(translation_map: &mut collections::HashMap<String, String>) {
+        for val in translation_map.values_mut() {
+            let translated_text = format!("{}{}", val, "_translated");
+            *val = translated_text;
         }
     }
 
@@ -1276,6 +1311,45 @@ mod tests {
         assert_eq!(master.items[0].bar, "bar1_translated!");
         assert_eq!(master.items[1].foo, "foo2_translated!");
         assert_eq!(master.items[1].bar, "bar2_translated!");
+    }
+
+    // cargo test -- --show-output test_translate_entity_entry
+    #[test]
+    fn test_translate_entity_entry() -> Result<()> {
+        let entity_entry_str = r#"
+            {
+              "value": "beautiful",
+              "synonyms": ["charming", "alluring", "lovely"]
+            }
+        "#;
+
+        let entity_entry_str_translated_exptected = r#"
+        {
+            "value": "beautiful_translated",
+            "synonyms": [
+              "charming_translated",
+              "alluring_translated",
+              "lovely_translated"
+            ]
+          }
+        "#;
+
+        let mut entry: EntityEntry = serde_json::from_str(entity_entry_str)?;
+        let entry_translated: EntityEntry =
+            serde_json::from_str(entity_entry_str_translated_exptected)?;
+        let mut translations_map = entry.to_translation();
+
+        dummy_translate(&mut translations_map);
+        entry.from_translation(&translations_map);
+        let entity_entry_str_translated = serde_json::to_string(&entry)?;
+
+        assert_eq!(
+            normalize_json(&entity_entry_str_translated),
+            normalize_json(&entity_entry_str_translated_exptected)
+        );
+
+        assert_eq!(entry, entry_translated);
+        Ok(())
     }
 
     //
