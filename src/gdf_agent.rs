@@ -311,7 +311,7 @@ pub struct Intent {
     pub conditional_followup_events: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct IntentUtteranceData {
     text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -320,6 +320,21 @@ pub struct IntentUtteranceData {
     meta: Option<String>,
     #[serde(rename = "userDefined")]
     user_defined: bool,
+}
+
+impl Translate for IntentUtteranceData {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+        map_to_translate.insert(format!("{:p}", &self.text), self.text.to_owned());
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.text = translations_map
+            .get(&format!("{:p}", &self.text))
+            .unwrap()
+            .to_owned();
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1351,6 +1366,41 @@ mod tests {
         assert_eq!(entry, entry_translated);
         Ok(())
     }
+
+    // cargo test -- --show-output test_translate_intent_utternce
+    #[test]
+    fn test_translate_intent_utternce() -> Result<()> {
+        let utterance_str = r#"
+        {
+            "text": "when will I receive the ",
+            "userDefined": false
+        }
+        "#;
+
+        let utterance_str_translated_exptected = r#"
+        {
+            "text": "when will I receive the _translated",
+            "userDefined": false
+        }
+        "#;
+
+        let mut utterance: IntentUtteranceData = serde_json::from_str(utterance_str)?;
+        let utterance_translated: IntentUtteranceData =
+            serde_json::from_str(utterance_str_translated_exptected)?;
+        let mut translations_map = utterance.to_translation();
+
+        dummy_translate(&mut translations_map);
+        utterance.from_translation(&translations_map);
+        let utterance_str_translated = serde_json::to_string(&utterance)?;
+
+        assert_eq!(
+            normalize_json(&utterance_str_translated),
+            normalize_json(&utterance_str_translated_exptected)
+        );
+
+        assert_eq!(utterance, utterance_translated);
+        Ok(())
+    }    
 
     //
     // integration tests
