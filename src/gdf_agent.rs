@@ -1302,7 +1302,11 @@ mod tests {
           }
         "#;
 
-        translation_tests_assertions!(EntityEntry, entity_entry_str, entity_entry_str_translated_exptected);
+        translation_tests_assertions!(
+            EntityEntry,
+            entity_entry_str,
+            entity_entry_str_translated_exptected
+        );
         Ok(())
     }
 
@@ -1323,7 +1327,11 @@ mod tests {
         }
         "#;
 
-        translation_tests_assertions!(IntentUtteranceData, utterance_str, utterance_str_translated_exptected);
+        translation_tests_assertions!(
+            IntentUtteranceData,
+            utterance_str,
+            utterance_str_translated_exptected
+        );
         Ok(())
     }
 
