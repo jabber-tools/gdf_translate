@@ -1,5 +1,6 @@
 use crate::errors::{Error, Result};
 use crate::gdf_responses::MessageType;
+use crate::parse_gdf_agent_files;
 use assert_json_diff::assert_json_eq_no_panic;
 use glob::glob;
 use log::debug;
@@ -527,56 +528,6 @@ where
     Ok(())
 }
 
-// definying this function with generics is quite tricky becase of calling <<DeserializedStructType>>::new
-// macri is good way here how to prevent writing same function4 times
-macro_rules! parse_gdf_agent_files {
-    ($name:ident, $type_deserialized:ty, $type_output:ty) => {
-        fn $name(glob_exp: &PathBuf) -> Result<Vec<$type_output>> {
-            let mut output_vec: Vec<$type_output> = vec![];
-            let glob_str = glob_exp.as_path().to_str().unwrap();
-            debug!(
-                "entering parse_gdf_agent_files macro with glob_str {}",
-                glob_str
-            );
-            for entry in glob(glob_str)? {
-                let path = entry?;
-
-                let file_name = path.as_path().to_str().unwrap();
-                debug!("going to process file {}", file_name);
-
-                // if not processing arrays (entity entries or intent utterances) skip
-                // respective files (which are otherwise include in glob expresion)!
-                if !glob_str.contains("_*.json")
-                    && (file_name.contains("_entries_") || file_name.contains("_usersays_"))
-                {
-                    debug!("skipping the processing of the file file {}", file_name);
-                    continue; // if not processing arrays (entity entries or intent utterances) skip respective files!
-                }
-
-                debug!("processing file {}", file_name);
-                let file_str = fs::read_to_string(file_name)?;
-
-                let deserialized_struct: $type_deserialized = serde_json::from_str(&file_str)?;
-
-                let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
-                let comparison_result = assert_json_eq_no_panic(
-                    &serde_json::from_str(&serialized_str)?,
-                    &serde_json::from_str(&file_str)?,
-                );
-
-                if let Err(err_msg) = comparison_result {
-                    return Err(Error::new(err_msg));
-                }
-                output_vec.push(<$type_output>::new(
-                    file_name.to_string(),
-                    deserialized_struct,
-                ));
-            }
-            Ok(output_vec)
-        }
-    };
-}
-
 parse_gdf_agent_files!(parse_gdf_agent_files_entity, Entity, EntityFile);
 parse_gdf_agent_files!(
     parse_gdf_agent_files_entity_entries,
@@ -684,6 +635,7 @@ pub fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
 mod tests {
     use super::*;
     use crate::gdf_responses::normalize_json;
+    use crate::translation_tests_assertions;
     use assert_json_diff::assert_json_eq;
 
     #[derive(Debug)]
@@ -1350,21 +1302,7 @@ mod tests {
           }
         "#;
 
-        let mut entry: EntityEntry = serde_json::from_str(entity_entry_str)?;
-        let entry_translated: EntityEntry =
-            serde_json::from_str(entity_entry_str_translated_exptected)?;
-        let mut translations_map = entry.to_translation();
-
-        dummy_translate(&mut translations_map);
-        entry.from_translation(&translations_map);
-        let entity_entry_str_translated = serde_json::to_string(&entry)?;
-
-        assert_eq!(
-            normalize_json(&entity_entry_str_translated),
-            normalize_json(&entity_entry_str_translated_exptected)
-        );
-
-        assert_eq!(entry, entry_translated);
+        translation_tests_assertions!(EntityEntry, entity_entry_str, entity_entry_str_translated_exptected);
         Ok(())
     }
 
@@ -1385,21 +1323,7 @@ mod tests {
         }
         "#;
 
-        let mut utterance: IntentUtteranceData = serde_json::from_str(utterance_str)?;
-        let utterance_translated: IntentUtteranceData =
-            serde_json::from_str(utterance_str_translated_exptected)?;
-        let mut translations_map = utterance.to_translation();
-
-        dummy_translate(&mut translations_map);
-        utterance.from_translation(&translations_map);
-        let utterance_str_translated = serde_json::to_string(&utterance)?;
-
-        assert_eq!(
-            normalize_json(&utterance_str_translated),
-            normalize_json(&utterance_str_translated_exptected)
-        );
-
-        assert_eq!(utterance, utterance_translated);
+        translation_tests_assertions!(IntentUtteranceData, utterance_str, utterance_str_translated_exptected);
         Ok(())
     }
 

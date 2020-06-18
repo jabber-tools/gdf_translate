@@ -112,7 +112,7 @@ pub struct GenericImageResponseType {
 // QUICK REPLIES
 //
 //
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GenericQuickRepliesResponseType {
     #[serde(rename = "type")]
     pub message_type: u8,
@@ -122,6 +122,34 @@ pub struct GenericQuickRepliesResponseType {
     pub condition: Option<String>,
     pub title: String,
     pub replies: Vec<String>,
+}
+
+impl Translate for GenericQuickRepliesResponseType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.title), self.title.to_owned());
+
+        for reply in self.replies.iter() {
+            map_to_translate.insert(format!("{:p}", reply), reply.to_owned());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.title = translations_map
+            .get(&format!("{:p}", &self.title))
+            .unwrap()
+            .to_owned();
+
+        for reply in self.replies.iter_mut() {
+            *reply = translations_map
+                .get(&format!("{:p}", reply))
+                .unwrap()
+                .to_owned();
+        }
+    }
 }
 
 //
@@ -462,6 +490,7 @@ pub fn normalize_json(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::translation_tests_assertions;
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
 
@@ -1295,7 +1324,7 @@ mod tests {
     // cargo test -- --show-output test_translate_generic_text_response_1
     #[test]
     fn test_translate_generic_text_response_1() -> Result<()> {
-        let default_text_response = r#"
+        let str_before_translation = r#"
       {
           "type": 0,
           "lang": "en",
@@ -1304,7 +1333,7 @@ mod tests {
         }
       "#;
 
-        let default_text_response_translated_exptected = r#"
+        let str_after_translation_expected = r#"
         {
           "type": 0,
           "lang": "en",
@@ -1313,29 +1342,18 @@ mod tests {
         }
         "#;
 
-        let mut generic_text_response: GenericTextResponseType =
-            serde_json::from_str(default_text_response)?;
-        let generic_text_response_translated: GenericTextResponseType =
-            serde_json::from_str(default_text_response_translated_exptected)?;
-        let mut translations_map = generic_text_response.to_translation();
-
-        dummy_translate(&mut translations_map);
-        generic_text_response.from_translation(&translations_map);
-        let generic_text_response_translated_real = serde_json::to_string(&generic_text_response)?;
-
-        assert_eq!(
-            normalize_json(&generic_text_response_translated_real),
-            normalize_json(&default_text_response_translated_exptected)
+        translation_tests_assertions!(
+            GenericTextResponseType,
+            str_before_translation,
+            str_after_translation_expected
         );
-
-        assert_eq!(generic_text_response, generic_text_response_translated);
         Ok(())
     }
 
     // cargo test -- --show-output test_translate_generic_text_response_2
     #[test]
     fn test_translate_generic_text_response_2() -> Result<()> {
-        let default_text_response = r#"
+        let str_before_translation = r#"
       {
           "type": 0,
           "lang": "en",
@@ -1344,7 +1362,7 @@ mod tests {
         }
       "#;
 
-        let default_text_response_translated_exptected = r#"
+        let str_after_translation_expected = r#"
         {
           "type": 0,
           "lang": "en",
@@ -1353,22 +1371,50 @@ mod tests {
         }
         "#;
 
-        let mut generic_text_response: GenericTextResponseType =
-            serde_json::from_str(default_text_response)?;
-        let generic_text_response_translated: GenericTextResponseType =
-            serde_json::from_str(default_text_response_translated_exptected)?;
-        let mut translations_map = generic_text_response.to_translation();
-
-        dummy_translate(&mut translations_map);
-        generic_text_response.from_translation(&translations_map);
-        let generic_text_response_translated_real = serde_json::to_string(&generic_text_response)?;
-
-        assert_eq!(
-            normalize_json(&generic_text_response_translated_real),
-            normalize_json(&default_text_response_translated_exptected)
+        translation_tests_assertions!(
+            GenericTextResponseType,
+            str_before_translation,
+            str_after_translation_expected
         );
+        Ok(())
+    }
 
-        assert_eq!(generic_text_response, generic_text_response_translated);
+    // cargo test -- --show-output test_translate_quick_reply
+    #[test]
+    fn test_translate_quick_reply() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": 2,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "title": "fb quick reply",
+          "replies": [
+            "123",
+            "456"
+          ]
+        }
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": 2,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "title": "fb quick reply_translated",
+          "replies": [
+            "123_translated",
+            "456_translated"
+          ]
+        }
+        "#;
+
+        translation_tests_assertions!(
+            GenericQuickRepliesResponseType,
+            str_before_translation,
+            str_after_translation_expected
+        );
         Ok(())
     }
 }
