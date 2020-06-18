@@ -19,6 +19,14 @@ pub trait Translate {
     fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>);
 }
 
+// used in unit tests in gdf_responses and gdf_agent
+pub fn dummy_translate(translation_map: &mut collections::HashMap<String, String>) {
+    for val in translation_map.values_mut() {
+        let translated_text = format!("{}{}", val, "_translated");
+        *val = translated_text;
+    }
+}
+
 // see https://serde.rs/field-attrs.html
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Entity {
@@ -724,13 +732,6 @@ mod tests {
         }
     }
 
-    fn dummy_translate(translation_map: &mut collections::HashMap<String, String>) {
-        for val in translation_map.values_mut() {
-            let translated_text = format!("{}{}", val, "_translated");
-            *val = translated_text;
-        }
-    }
-
     #[test]
     fn test_entity_deser_ser() -> Result<()> {
         let entity_str = r#"
@@ -1400,7 +1401,7 @@ mod tests {
 
         assert_eq!(utterance, utterance_translated);
         Ok(())
-    }    
+    }
 
     //
     // integration tests

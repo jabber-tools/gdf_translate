@@ -1,7 +1,10 @@
 #[allow(unused_imports)]
-use crate::errors::{Error, Result};
+use crate::errors::Result;
+#[allow(unused_imports)]
+use crate::gdf_agent::{dummy_translate, Translate};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use std::collections;
 
 // GDF channels we need to support:
 //
@@ -20,7 +23,7 @@ use serde_json::Value as JsonValue;
 // Telegram (Text Resoponse + Image + Card + Quick Replies + Custom Payload)
 // RCS Business Messaging (Standalone Rich Card + Carousel Rich Card + Simple Response)
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum StringOrVecOfString {
     Str(String),
@@ -32,7 +35,7 @@ pub enum StringOrVecOfString {
 // TEXT RESPONSE
 //
 //
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GenericTextResponseType {
     #[serde(rename = "type")]
     pub message_type: u8,
@@ -42,6 +45,49 @@ pub struct GenericTextResponseType {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub condition: Option<String>,
     pub speech: StringOrVecOfString,
+}
+
+impl Translate for GenericTextResponseType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+        match &self.speech {
+            StringOrVecOfString::Str(str_val) => {
+                map_to_translate.insert(format!("{:p}", str_val), str_val.to_owned());
+            }
+            StringOrVecOfString::StrArray(str_vec) => {
+                for item in str_vec.iter() {
+                    map_to_translate.insert(format!("{:p}", item), item.to_owned());
+                }
+            }
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        match &self.speech {
+            StringOrVecOfString::Str(str_val) => {
+                self.speech = StringOrVecOfString::Str(
+                    translations_map
+                        .get(&format!("{:p}", str_val))
+                        .unwrap()
+                        .to_owned(),
+                );
+            }
+            StringOrVecOfString::StrArray(str_vec) => {
+                let mut speech_vec = vec![];
+                for item in str_vec.iter() {
+                    speech_vec.push(
+                        translations_map
+                            .get(&format!("{:p}", item))
+                            .unwrap()
+                            .to_owned(),
+                    );
+                }
+                self.speech = StringOrVecOfString::StrArray(speech_vec);
+            }
+        }
+    }
 }
 
 //
@@ -1241,6 +1287,88 @@ mod tests {
             serde_json::from_str(&back_to_str)?
         );
 
+        Ok(())
+    }
+
+    /* Translation tests */
+
+    // cargo test -- --show-output test_translate_generic_text_response_1
+    #[test]
+    fn test_translate_generic_text_response_1() -> Result<()> {
+        let default_text_response = r#"
+      {
+          "type": 0,
+          "lang": "en",
+          "condition": "",
+          "speech": "Text response"
+        }
+      "#;
+
+        let default_text_response_translated_exptected = r#"
+        {
+          "type": 0,
+          "lang": "en",
+          "condition": "",
+          "speech": "Text response_translated"
+        }
+        "#;
+
+        let mut generic_text_response: GenericTextResponseType =
+            serde_json::from_str(default_text_response)?;
+        let generic_text_response_translated: GenericTextResponseType =
+            serde_json::from_str(default_text_response_translated_exptected)?;
+        let mut translations_map = generic_text_response.to_translation();
+
+        dummy_translate(&mut translations_map);
+        generic_text_response.from_translation(&translations_map);
+        let generic_text_response_translated_real = serde_json::to_string(&generic_text_response)?;
+
+        assert_eq!(
+            normalize_json(&generic_text_response_translated_real),
+            normalize_json(&default_text_response_translated_exptected)
+        );
+
+        assert_eq!(generic_text_response, generic_text_response_translated);
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_generic_text_response_2
+    #[test]
+    fn test_translate_generic_text_response_2() -> Result<()> {
+        let default_text_response = r#"
+      {
+          "type": 0,
+          "lang": "en",
+          "condition": "",
+          "speech": ["Text response", "Text response2"]
+        }
+      "#;
+
+        let default_text_response_translated_exptected = r#"
+        {
+          "type": 0,
+          "lang": "en",
+          "condition": "",
+          "speech": ["Text response_translated", "Text response2_translated"]
+        }
+        "#;
+
+        let mut generic_text_response: GenericTextResponseType =
+            serde_json::from_str(default_text_response)?;
+        let generic_text_response_translated: GenericTextResponseType =
+            serde_json::from_str(default_text_response_translated_exptected)?;
+        let mut translations_map = generic_text_response.to_translation();
+
+        dummy_translate(&mut translations_map);
+        generic_text_response.from_translation(&translations_map);
+        let generic_text_response_translated_real = serde_json::to_string(&generic_text_response)?;
+
+        assert_eq!(
+            normalize_json(&generic_text_response_translated_real),
+            normalize_json(&default_text_response_translated_exptected)
+        );
+
+        assert_eq!(generic_text_response, generic_text_response_translated);
         Ok(())
     }
 }
