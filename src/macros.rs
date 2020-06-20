@@ -23,6 +23,23 @@ macro_rules! translation_tests_assertions {
 
         println!("{:#?}", struct_to_translate);
     };
+
+    ($response_type:ty, $str_before_translation:expr, $str_after_translation_expected:expr, "no_string_comparison") => {
+        let mut struct_to_translate: $response_type =
+            serde_json::from_str($str_before_translation)?;
+        let struct_after_translation_expected: $response_type =
+            serde_json::from_str($str_after_translation_expected)?;
+        let mut translations_map = struct_to_translate.to_translation();
+
+        println!("{:#?}", struct_to_translate);
+
+        dummy_translate(&mut translations_map);
+        struct_to_translate.from_translation(&translations_map);
+
+        assert_eq!(struct_to_translate, struct_after_translation_expected);
+
+        println!("{:#?}", struct_to_translate);
+    };
 }
 
 // used in gdf_responses

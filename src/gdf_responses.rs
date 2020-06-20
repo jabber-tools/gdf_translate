@@ -164,6 +164,23 @@ pub struct GenericCardResponseButton {
     pub postback: Option<String>,
 }
 
+impl Translate for GenericCardResponseButton {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.text), self.text.to_owned());
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.text = translations_map
+            .get(&format!("{:p}", &self.text))
+            .unwrap()
+            .to_owned();
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GenericCardResponseType {
     #[serde(rename = "type")]
@@ -193,7 +210,7 @@ impl Translate for GenericCardResponseType {
 
         if let Some(buttons) = &self.buttons {
             for button in buttons.iter() {
-                map_to_translate.insert(format!("{:p}", &button.text), button.text.to_owned());
+                map_to_translate.extend(button.to_translation());
             }
         }
 
@@ -217,10 +234,7 @@ impl Translate for GenericCardResponseType {
 
         if let Some(buttons) = &mut self.buttons {
             for button in buttons.iter_mut() {
-                button.text = translations_map
-                    .get(&format!("{:p}", &button.text))
-                    .unwrap()
-                    .to_owned();
+                button.from_translation(translations_map);
             }
         }
     }
@@ -271,14 +285,34 @@ pub struct DefaultCustomPayloadType {
 // GOOGLE ASSISTANT (so special ;) )
 //
 //
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GAImage {
     pub url: String,
     #[serde(rename = "accessibilityText")]
     pub accessibility_text: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GAImage {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(
+            format!("{:p}", &self.accessibility_text),
+            self.accessibility_text.to_owned(),
+        );
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.accessibility_text = translations_map
+            .get(&format!("{:p}", &self.accessibility_text))
+            .unwrap()
+            .to_owned();
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GASimpleResponseItem {
     #[serde(rename = "textToSpeech")]
     pub text_to_speech: String,
@@ -287,7 +321,7 @@ pub struct GASimpleResponseItem {
     pub display_text: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GASimpleResponseType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -298,7 +332,46 @@ pub struct GASimpleResponseType {
     pub items: Vec<GASimpleResponseItem>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GASimpleResponseType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        for item in self.items.iter() {
+            map_to_translate.insert(
+                format!("{:p}", &item.text_to_speech),
+                item.text_to_speech.to_owned(),
+            );
+            map_to_translate.insert(format!("{:p}", &item.ssml), item.ssml.to_owned());
+            map_to_translate.insert(
+                format!("{:p}", &item.display_text),
+                item.display_text.to_owned(),
+            );
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        for item in self.items.iter_mut() {
+            item.text_to_speech = translations_map
+                .get(&format!("{:p}", &item.text_to_speech))
+                .unwrap()
+                .to_owned();
+
+            item.ssml = translations_map
+                .get(&format!("{:p}", &item.ssml))
+                .unwrap()
+                .to_owned();
+
+            item.display_text = translations_map
+                .get(&format!("{:p}", &item.display_text))
+                .unwrap()
+                .to_owned();
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GASimpleResponseType2 {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -316,21 +389,87 @@ pub struct GASimpleResponseType2 {
     pub display_text: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GASimpleResponseType2 {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        if let Some(text_to_speech) = &self.text_to_speech {
+            map_to_translate.insert(format!("{:p}", text_to_speech), text_to_speech.to_owned());
+        }
+
+        if let Some(ssml) = &self.ssml {
+            map_to_translate.insert(format!("{:p}", ssml), ssml.to_owned());
+        }
+
+        if let Some(display_text) = &self.display_text {
+            map_to_translate.insert(format!("{:p}", display_text), display_text.to_owned());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        if let Some(text_to_speech) = &self.text_to_speech {
+            self.text_to_speech = Some(
+                translations_map
+                    .get(&format!("{:p}", text_to_speech))
+                    .unwrap()
+                    .to_owned(),
+            );
+        }
+
+        if let Some(ssml) = &self.ssml {
+            self.ssml = Some(
+                translations_map
+                    .get(&format!("{:p}", ssml))
+                    .unwrap()
+                    .to_owned(),
+            );
+        }
+
+        if let Some(display_text) = &self.display_text {
+            self.display_text = Some(
+                translations_map
+                    .get(&format!("{:p}", display_text))
+                    .unwrap()
+                    .to_owned(),
+            );
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GACardTypeButton {
     pub title: String,
     #[serde(rename = "openUrlAction")]
     pub open_url_action: GAOpenUrlAction,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GACardTypeButton {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.title), self.title.to_owned());
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.title = translations_map
+            .get(&format!("{:p}", &self.title))
+            .unwrap()
+            .to_owned();
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GAOpenUrlAction {
     pub url: String,
     #[serde(rename = "urlTypeHint")]
     pub url_type_hint: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GABasicCardType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -350,13 +489,107 @@ pub struct GABasicCardType {
     pub buttons: Option<Vec<GACardTypeButton>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GABasicCardType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        if let Some(title) = &self.title {
+            map_to_translate.insert(format!("{:p}", title), title.to_owned());
+        }
+
+        if let Some(subtitle) = &self.subtitle {
+            map_to_translate.insert(format!("{:p}", subtitle), subtitle.to_owned());
+        }
+
+        map_to_translate.insert(
+            format!("{:p}", &self.formatted_text),
+            self.formatted_text.to_owned(),
+        );
+
+        if let Some(image) = &self.image {
+            map_to_translate.extend(image.to_translation());
+        }
+
+        if let Some(buttons) = &self.buttons {
+            for button in buttons.iter() {
+                map_to_translate.extend(button.to_translation())
+            }
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        if let Some(title) = &self.title {
+            self.title = Some(
+                translations_map
+                    .get(&format!("{:p}", title))
+                    .unwrap()
+                    .to_owned(),
+            );
+        }
+
+        if let Some(subtitle) = &self.subtitle {
+            self.subtitle = Some(
+                translations_map
+                    .get(&format!("{:p}", subtitle))
+                    .unwrap()
+                    .to_owned(),
+            );
+        }
+
+        self.formatted_text = translations_map
+            .get(&format!("{:p}", &self.formatted_text))
+            .unwrap()
+            .to_owned();
+
+        if let Some(image) = &mut self.image {
+            image.from_translation(translations_map);
+        }
+
+        if let Some(buttons) = &mut self.buttons {
+            for button in buttons.iter_mut() {
+                button.from_translation(translations_map);
+            }
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GAListTypeItemOptionInfo {
     key: String,
     synonyms: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GAListTypeItemOptionInfo {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.key), self.key.to_owned());
+
+        for synonym in self.synonyms.iter() {
+            map_to_translate.insert(format!("{:p}", synonym), synonym.to_owned());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.key = translations_map
+            .get(&format!("{:p}", &self.key))
+            .unwrap()
+            .to_owned();
+
+        for synonym in self.synonyms.iter_mut() {
+            *synonym = translations_map
+                .get(&format!("{:p}", synonym))
+                .unwrap()
+                .to_owned();
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GAItem {
     #[serde(rename = "optionInfo")]
     pub option_info: GAListTypeItemOptionInfo,
@@ -365,7 +598,38 @@ pub struct GAItem {
     pub image: GAImage,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GAItem {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.title), self.title.to_owned());
+        map_to_translate.insert(
+            format!("{:p}", &self.description),
+            self.description.to_owned(),
+        );
+        map_to_translate.extend(self.option_info.to_translation());
+        map_to_translate.extend(self.image.to_translation());
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.title = translations_map
+            .get(&format!("{:p}", &self.title))
+            .unwrap()
+            .to_owned();
+
+        self.description = translations_map
+            .get(&format!("{:p}", &self.description))
+            .unwrap()
+            .to_owned();
+
+        self.option_info.from_translation(translations_map);
+        self.image.from_translation(translations_map);
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GAItemBrowseCarousel {
     pub footer: String,
     #[serde(rename = "openUrlAction")]
@@ -374,6 +638,46 @@ pub struct GAItemBrowseCarousel {
     pub description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<GAImage>,
+}
+
+impl Translate for GAItemBrowseCarousel {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.footer), self.footer.to_owned());
+        map_to_translate.insert(format!("{:p}", &self.title), self.title.to_owned());
+        map_to_translate.insert(
+            format!("{:p}", &self.description),
+            self.description.to_owned(),
+        );
+
+        if let Some(image) = &self.image {
+            map_to_translate.extend(image.to_translation());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.footer = translations_map
+            .get(&format!("{:p}", &self.footer))
+            .unwrap()
+            .to_owned();
+
+        self.title = translations_map
+            .get(&format!("{:p}", &self.title))
+            .unwrap()
+            .to_owned();
+
+        self.description = translations_map
+            .get(&format!("{:p}", &self.description))
+            .unwrap()
+            .to_owned();
+
+        if let Some(image) = &mut self.image {
+            image.from_translation(translations_map);
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -389,12 +693,60 @@ pub struct GAListType {
     pub items: Vec<GAItem>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GAListType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.title), self.title.to_owned());
+        map_to_translate.insert(format!("{:p}", &self.subtitle), self.subtitle.to_owned());
+
+        for item in self.items.iter() {
+            map_to_translate.extend(item.to_translation());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.title = translations_map
+            .get(&format!("{:p}", &self.title))
+            .unwrap()
+            .to_owned();
+
+        self.subtitle = translations_map
+            .get(&format!("{:p}", &self.subtitle))
+            .unwrap()
+            .to_owned();
+
+        for item in self.items.iter_mut() {
+            item.from_translation(translations_map);
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GASuggestionChipsTypeSuggestion {
     pub title: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GASuggestionChipsTypeSuggestion {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.title), self.title.to_owned());
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.title = translations_map
+            .get(&format!("{:p}", &self.title))
+            .unwrap()
+            .to_owned();
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GASuggestionChipsType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -405,7 +757,25 @@ pub struct GASuggestionChipsType {
     pub suggestions: Vec<GASuggestionChipsTypeSuggestion>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GASuggestionChipsType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        for suggestion in self.suggestions.iter() {
+            map_to_translate.extend(suggestion.to_translation());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        for suggestion in self.suggestions.iter_mut() {
+            suggestion.from_translation(translations_map);
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GALinkOutSuggestionType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -418,7 +788,27 @@ pub struct GALinkOutSuggestionType {
     pub url: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GALinkOutSuggestionType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(
+            format!("{:p}", &self.destination_name),
+            self.destination_name.to_owned(),
+        );
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.destination_name = translations_map
+            .get(&format!("{:p}", &self.destination_name))
+            .unwrap()
+            .to_owned();
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GACarouselCardType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -429,7 +819,25 @@ pub struct GACarouselCardType {
     pub items: Vec<GAItem>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GACarouselCardType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        for item in self.items.iter() {
+            map_to_translate.extend(item.to_translation());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        for item in self.items.iter_mut() {
+            item.from_translation(translations_map);
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GABrowseCarouselCardType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -440,7 +848,25 @@ pub struct GABrowseCarouselCardType {
     pub items: Vec<GAItemBrowseCarousel>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GABrowseCarouselCardType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        for item in self.items.iter() {
+            map_to_translate.extend(item.to_translation());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        for item in self.items.iter_mut() {
+            item.from_translation(translations_map);
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GAMediaObject {
     name: String,
     description: String,
@@ -450,7 +876,36 @@ pub struct GAMediaObject {
     content_url: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GAMediaObject {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.name), self.name.to_owned());
+        map_to_translate.insert(
+            format!("{:p}", &self.description),
+            self.description.to_owned(),
+        );
+        map_to_translate.extend(self.large_image.to_translation());
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.name = translations_map
+            .get(&format!("{:p}", &self.name))
+            .unwrap()
+            .to_owned();
+
+        self.description = translations_map
+            .get(&format!("{:p}", &self.description))
+            .unwrap()
+            .to_owned();
+
+        self.large_image.from_translation(translations_map);
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GAMediaContentType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -464,19 +919,72 @@ pub struct GAMediaContentType {
     pub media_objects: Vec<GAMediaObject>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GAMediaContentType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        for media_object in self.media_objects.iter() {
+            map_to_translate.extend(media_object.to_translation());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        for media_object in self.media_objects.iter_mut() {
+            media_object.from_translation(translations_map);
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GATableCardRowCell {
     pub text: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GATableCardRowCell {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.text), self.text.to_owned());
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.text = translations_map
+            .get(&format!("{:p}", &self.text))
+            .unwrap()
+            .to_owned();
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GATableCardRow {
     pub cells: Vec<GATableCardRowCell>,
     #[serde(rename = "dividerAfter")]
     pub divider_after: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Translate for GATableCardRow {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        for cell in self.cells.iter() {
+            map_to_translate.extend(cell.to_translation());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        for cell in self.cells.iter_mut() {
+            cell.from_translation(translations_map);
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GATableCardType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -490,6 +998,45 @@ pub struct GATableCardType {
     pub column_properties: Vec<std::collections::HashMap<String, String>>,
     pub rows: Vec<GATableCardRow>,
     pub buttons: Vec<GACardTypeButton>,
+}
+
+impl Translate for GATableCardType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.title), self.title.to_owned());
+        map_to_translate.insert(format!("{:p}", &self.subtitle), self.subtitle.to_owned());
+
+        for row in self.rows.iter() {
+            map_to_translate.extend(row.to_translation());
+        }
+
+        for button in self.buttons.iter() {
+            map_to_translate.extend(button.to_translation());
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.title = translations_map
+            .get(&format!("{:p}", &self.title))
+            .unwrap()
+            .to_owned();
+
+        self.subtitle = translations_map
+            .get(&format!("{:p}", &self.subtitle))
+            .unwrap()
+            .to_owned();
+
+        for row in self.rows.iter_mut() {
+            row.from_translation(translations_map);
+        }
+
+        for button in self.buttons.iter_mut() {
+            button.from_translation(translations_map);
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1545,6 +2092,630 @@ mod tests {
             str_after_translation_expected2
         );
 
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_ga_simple_response
+    #[test]
+    fn test_translate_ga_simple_response() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": "simple_response",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "items": [
+            {
+              "textToSpeech": "some speech",
+              "ssml": "some ssml",
+              "displayText": "some text"
+            },
+            {
+              "textToSpeech": "some speech2",
+              "ssml": "some ssml2",
+              "displayText": "some text2"
+            }
+          ]
+        }
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": "simple_response",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "items": [
+            {
+              "textToSpeech": "some speech_translated",
+              "ssml": "some ssml_translated",
+              "displayText": "some text_translated"
+            },
+            {
+              "textToSpeech": "some speech2_translated",
+              "ssml": "some ssml2_translated",
+              "displayText": "some text2_translated"
+            }
+          ]
+        }
+        "#;
+
+        translation_tests_assertions!(
+            GASimpleResponseType,
+            str_before_translation,
+            str_after_translation_expected
+        );
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_ga_simple_response2
+    #[test]
+    fn test_translate_ga_simple_response2() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": "simple_response",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "textToSpeech": "some speech",
+          "ssml": "some ssml",
+          "displayText": "some text"
+        }
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": "simple_response",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "textToSpeech": "some speech_translated",
+          "ssml": "some ssml_translated",
+          "displayText": "some text_translated"
+        }
+        "#;
+
+        translation_tests_assertions!(
+            GASimpleResponseType2,
+            str_before_translation,
+            str_after_translation_expected
+        );
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_ga_basic_card
+    #[test]
+    fn test_translate_ga_basic_card() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": "basic_card",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "title": "title",
+          "subtitle": "subtitle",
+          "formattedText": "GA simple card",
+          "image": {
+            "url": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+            "accessibilityText": "accessbility text"
+          },
+          "buttons": [
+            {
+              "title": "weblink title",
+              "openUrlAction": {
+                "url": "https://github.com/contain-rs/linked-hash-map",
+                "urlTypeHint": "URL_TYPE_HINT_UNSPECIFIED"
+              }
+            }
+          ]
+        }
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": "basic_card",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "title": "title_translated",
+          "subtitle": "subtitle_translated",
+          "formattedText": "GA simple card_translated",
+          "image": {
+            "url": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+            "accessibilityText": "accessbility text_translated"
+          },
+          "buttons": [
+            {
+              "title": "weblink title_translated",
+              "openUrlAction": {
+                "url": "https://github.com/contain-rs/linked-hash-map",
+                "urlTypeHint": "URL_TYPE_HINT_UNSPECIFIED"
+              }
+            }
+          ]
+        }
+        "#;
+
+        translation_tests_assertions!(
+            GABasicCardType,
+            str_before_translation,
+            str_after_translation_expected
+        );
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_ga_basic_card
+    #[test]
+    fn test_translate_ga_browse_carousel() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": "browse_carousel_card",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "items": [
+            {
+              "footer": "footer",
+              "openUrlAction": {
+                "url": "https://www.idnes.cz/",
+                "urlTypeHint": "URL_TYPE_HINT_UNSPECIFIED"
+              },
+              "title": "title",
+              "description": "desc",
+              "image": {
+                "url": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+                "accessibilityText": "access text"
+              }
+            },
+            {
+              "footer": "",
+              "openUrlAction": {
+                "url": "https://www.idnes.cz/",
+                "urlTypeHint": "AMP_CONTENT"
+              },
+              "title": "title2",
+              "description": "",
+              "image": {
+                "url": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+                "accessibilityText": "acces text 2"
+              }
+            }
+          ]
+        }     
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": "browse_carousel_card",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "items": [
+            {
+              "footer": "footer_translated",
+              "openUrlAction": {
+                "url": "https://www.idnes.cz/",
+                "urlTypeHint": "URL_TYPE_HINT_UNSPECIFIED"
+              },
+              "title": "title_translated",
+              "description": "desc_translated",
+              "image": {
+                "url": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+                "accessibilityText": "access text_translated"
+              }
+            },
+            {
+              "footer": "_translated",
+              "openUrlAction": {
+                "url": "https://www.idnes.cz/",
+                "urlTypeHint": "AMP_CONTENT"
+              },
+              "title": "title2_translated",
+              "description": "_translated",
+              "image": {
+                "url": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+                "accessibilityText": "acces text 2_translated"
+              }
+            }
+          ]
+        }     
+        "#;
+
+        translation_tests_assertions!(
+            GABrowseCarouselCardType,
+            str_before_translation,
+            str_after_translation_expected
+        );
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_ga_suggestions
+    #[test]
+    fn test_translate_ga_suggestions() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": "suggestion_chips",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "suggestions": [
+            {
+              "title": "chip1"
+            },
+            {
+              "title": "chip2"
+            }
+          ]
+        }
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": "suggestion_chips",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "suggestions": [
+            {
+              "title": "chip1_translated"
+            },
+            {
+              "title": "chip2_translated"
+            }
+          ]
+        }
+        "#;
+
+        translation_tests_assertions!(
+            GASuggestionChipsType,
+            str_before_translation,
+            str_after_translation_expected
+        );
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_ga_linkout_suggestions
+    #[test]
+    fn test_translate_ga_linkout_suggestions() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": "link_out_chip",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "destinationName": "GA Link Out Suggestion",
+          "url": "https://github.com/contain-rs/linked-hash-map"
+        }  
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": "link_out_chip",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "destinationName": "GA Link Out Suggestion_translated",
+          "url": "https://github.com/contain-rs/linked-hash-map"
+        }  
+        "#;
+
+        translation_tests_assertions!(
+            GALinkOutSuggestionType,
+            str_before_translation,
+            str_after_translation_expected
+        );
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_ga_carousel_card
+    #[test]
+    fn test_translate_ga_carousel_card() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": "carousel_card",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "items": [
+            {
+              "optionInfo": {
+                "key": "key",
+                "synonyms": [
+                  "syn",
+                  "sybn2"
+                ]
+              },
+              "title": "item0",
+              "description": "item0desc",
+              "image": {
+                "url": "",
+                "accessibilityText": ""
+              }
+            },
+            {
+              "optionInfo": {
+                "key": "key1",
+                "synonyms": [
+                  "some syb"
+                ]
+              },
+              "title": "item1",
+              "description": "",
+              "image": {
+                "url": "",
+                "accessibilityText": ""
+              }
+            }
+          ]
+        }  
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": "carousel_card",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "items": [
+            {
+              "optionInfo": {
+                "key": "key_translated",
+                "synonyms": [
+                  "syn_translated",
+                  "sybn2_translated"
+                ]
+              },
+              "title": "item0_translated",
+              "description": "item0desc_translated",
+              "image": {
+                "url": "",
+                "accessibilityText": "_translated"
+              }
+            },
+            {
+              "optionInfo": {
+                "key": "key1_translated",
+                "synonyms": [
+                  "some syb_translated"
+                ]
+              },
+              "title": "item1_translated",
+              "description": "_translated",
+              "image": {
+                "url": "",
+                "accessibilityText": "_translated"
+              }
+            }
+          ]
+        }  
+        "#;
+
+        translation_tests_assertions!(
+            GACarouselCardType,
+            str_before_translation,
+            str_after_translation_expected
+        );
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_ga_media_content
+    #[test]
+    fn test_translate_ga_media_content() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": "media_content",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "mediaType": "AUDIO",
+          "mediaObjects": [
+            {
+              "name": "cad name",
+              "description": "desc",
+              "largeImage": {
+                "url": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+                "accessibilityText": "acxcess text"
+              },
+              "contentUrl": "https://www.idnes.cz/"
+            }
+          ]
+        }  
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": "media_content",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "mediaType": "AUDIO",
+          "mediaObjects": [
+            {
+              "name": "cad name_translated",
+              "description": "desc_translated",
+              "largeImage": {
+                "url": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+                "accessibilityText": "acxcess text_translated"
+              },
+              "contentUrl": "https://www.idnes.cz/"
+            }
+          ]
+        }    
+        "#;
+
+        translation_tests_assertions!(
+            GAMediaContentType,
+            str_before_translation,
+            str_after_translation_expected
+        );
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_ga_table
+    #[test]
+    fn test_translate_ga_table() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": "table_card",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "title": "tit",
+          "subtitle": "subt",
+          "columnProperties": [
+            {
+              "header": "",
+              "horizontalAlignment": "LEADING"
+            },
+            {
+              "header": "",
+              "horizontalAlignment": "LEADING"
+            },
+            {
+              "header": "",
+              "horizontalAlignment": "LEADING"
+            }
+          ],
+          "rows": [
+            {
+              "cells": [
+                {
+                  "text": "1"
+                },
+                {
+                  "text": "2"
+                },
+                {
+                  "text": "3"
+                }
+              ],
+              "dividerAfter": false
+            },
+            {
+              "cells": [
+                {
+                  "text": "4"
+                },
+                {
+                  "text": "5"
+                },
+                {
+                  "text": "6"
+                }
+              ],
+              "dividerAfter": false
+            },
+            {
+              "cells": [
+                {
+                  "text": "7"
+                },
+                {
+                  "text": "8"
+                },
+                {
+                  "text": "9"
+                }
+              ],
+              "dividerAfter": false
+            }
+          ],
+          "buttons": [
+            {
+              "title": "www",
+              "openUrlAction": {
+                "url": "https://www.idnes.cz/",
+                "urlTypeHint": "URL_TYPE_HINT_UNSPECIFIED"
+              }
+            }
+          ]
+        }         
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": "table_card",
+          "platform": "google",
+          "lang": "en",
+          "condition": "",
+          "title": "tit_translated",
+          "subtitle": "subt_translated",
+          "columnProperties": [
+            {
+              "header": "",
+              "horizontalAlignment": "LEADING"
+            },
+            {
+              "header": "",
+              "horizontalAlignment": "LEADING"
+            },
+            {
+              "header": "",
+              "horizontalAlignment": "LEADING"
+            }
+          ],
+          "rows": [
+            {
+              "cells": [
+                {
+                  "text": "1_translated"
+                },
+                {
+                  "text": "2_translated"
+                },
+                {
+                  "text": "3_translated"
+                }
+              ],
+              "dividerAfter": false
+            },
+            {
+              "cells": [
+                {
+                  "text": "4_translated"
+                },
+                {
+                  "text": "5_translated"
+                },
+                {
+                  "text": "6_translated"
+                }
+              ],
+              "dividerAfter": false
+            },
+            {
+              "cells": [
+                {
+                  "text": "7_translated"
+                },
+                {
+                  "text": "8_translated"
+                },
+                {
+                  "text": "9_translated"
+                }
+              ],
+              "dividerAfter": false
+            }
+          ],
+          "buttons": [
+            {
+              "title": "www_translated",
+              "openUrlAction": {
+                "url": "https://www.idnes.cz/",
+                "urlTypeHint": "URL_TYPE_HINT_UNSPECIFIED"
+              }
+            }
+          ]
+        }        
+        "#;
+
+        translation_tests_assertions!(
+            GATableCardType,
+            str_before_translation,
+            str_after_translation_expected,
+            "no_string_comparison"
+        );
         Ok(())
     }
 }
