@@ -157,14 +157,14 @@ impl Translate for GenericQuickRepliesResponseType {
 // CARD
 //
 //
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GenericCardResponseButton {
     pub text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub postback: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GenericCardResponseType {
     #[serde(rename = "type")]
     pub message_type: u8,
@@ -180,6 +180,50 @@ pub struct GenericCardResponseType {
     pub image_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub buttons: Option<Vec<GenericCardResponseButton>>,
+}
+
+impl Translate for GenericCardResponseType {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        map_to_translate.insert(format!("{:p}", &self.title), self.title.to_owned());
+        if let Some(subtitle) = &self.subtitle {
+            map_to_translate.insert(format!("{:p}", subtitle), subtitle.to_owned());
+        }
+
+        if let Some(buttons) = &self.buttons {
+            for button in buttons.iter() {
+                map_to_translate.insert(format!("{:p}", &button.text), button.text.to_owned());
+            }
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.title = translations_map
+            .get(&format!("{:p}", &self.title))
+            .unwrap()
+            .to_owned();
+
+        if let Some(subtitle) = &self.subtitle {
+            self.subtitle = Some(
+                translations_map
+                    .get(&format!("{:p}", subtitle))
+                    .unwrap()
+                    .to_owned(),
+            );
+        }
+
+        if let Some(buttons) = &mut self.buttons {
+            for button in buttons.iter_mut() {
+                button.text = translations_map
+                    .get(&format!("{:p}", &button.text))
+                    .unwrap()
+                    .to_owned();
+            }
+        }
+    }
 }
 
 //
@@ -1415,6 +1459,92 @@ mod tests {
             str_before_translation,
             str_after_translation_expected
         );
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_translate_generic_card
+    #[test]
+    fn test_translate_generic_card() -> Result<()> {
+        let str_before_translation = r#"
+        {
+          "type": 1,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "title": "fb card",
+          "subtitle": "subtitle",
+          "imageUrl": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+          "buttons": [
+            {
+              "text": "button",
+              "postback": "https://github.com/contain-rs/linked-hash-map"
+            },
+            {
+              "text": "buitton2",
+              "postback": "https://github.com/contain-rs/linked-hash-map"
+            }
+          ]
+        }
+      "#;
+
+        let str_after_translation_expected = r#"
+        {
+          "type": 1,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "title": "fb card_translated",
+          "subtitle": "subtitle_translated",
+          "imageUrl": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg",
+          "buttons": [
+            {
+              "text": "button_translated",
+              "postback": "https://github.com/contain-rs/linked-hash-map"
+            },
+            {
+              "text": "buitton2_translated",
+              "postback": "https://github.com/contain-rs/linked-hash-map"
+            }
+          ]
+        }
+        "#;
+
+        translation_tests_assertions!(
+            GenericCardResponseType,
+            str_before_translation,
+            str_after_translation_expected
+        );
+
+        // skip optional trasnlatable fields now, i.e. now substitle, no buttons
+
+        let str_before_translation2 = r#"
+        {
+          "type": 1,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "title": "fb card",
+          "imageUrl": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg"
+        }
+      "#;
+
+        let str_after_translation_expected2 = r#"
+        {
+          "type": 1,
+          "platform": "facebook",
+          "lang": "en",
+          "condition": "",
+          "title": "fb card_translated",
+          "imageUrl": "https://i1.wp.com/www.dignited.com/wp-content/uploads/2018/09/url_istock_nicozorn_thumb800.jpg"
+        }
+        "#;
+
+        translation_tests_assertions!(
+            GenericCardResponseType,
+            str_before_translation2,
+            str_after_translation_expected2
+        );
+
         Ok(())
     }
 }
