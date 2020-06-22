@@ -3,7 +3,9 @@ use crate::gdf_responses::MessageType;
 use crate::parse_gdf_agent_files;
 use assert_json_diff::assert_json_eq_no_panic;
 use glob::glob;
+use lazy_static::lazy_static;
 use log::debug;
+use regex::{Captures, Regex};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -29,7 +31,7 @@ pub fn dummy_translate(translation_map: &mut collections::HashMap<String, String
 }
 
 // see https://serde.rs/field-attrs.html
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Entity {
     pub id: String,
     pub name: String,
@@ -50,7 +52,7 @@ pub struct Entity {
     pub allow_fuzzy_extraction: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct EntityEntry {
     pub value: String,
     pub synonyms: Vec<String>,
@@ -357,7 +359,7 @@ pub struct IntentUtterance {
     pub updated: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EntityFile {
     pub file_name: String,
     pub file_content: Entity,
@@ -372,7 +374,7 @@ impl EntityFile {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct EntityEntriesFile {
     pub file_name: String,
     pub file_content: Vec<EntityEntry>,
@@ -384,6 +386,22 @@ impl EntityEntriesFile {
             file_name,
             file_content,
         }
+    }
+
+    #[allow(dead_code)]
+    fn add_language(&self, new_lang_code: &str) -> Self {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"(\w+entries_)([a-zA-Z-]+).json").unwrap();
+        }
+
+        let mut cloned = self.clone();
+        cloned.file_name = RE
+            .replace(&self.file_name, |caps: &Captures| {
+                format!("{}{}{}", &caps[1], new_lang_code, ".json")
+            })
+            .to_string();
+
+        cloned
     }
 }
 
@@ -1224,6 +1242,47 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    // cargo test -- --show-output test_file_regex_operations
+    #[test]
+    fn test_file_regex_operations() {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"\w+entries_([a-zA-Z-]+).json").unwrap();
+        }
+
+        let file_name = "express_country_entries_en.json";
+        let caps = RE.captures(file_name).unwrap();
+        let lang_code = caps.get(1).unwrap().as_str();
+        assert_eq!(lang_code, "en");
+
+        let file_name = "express_country_entries_pt-br.json";
+        let caps = RE.captures(file_name).unwrap();
+        let lang_code = caps.get(1).unwrap().as_str();
+        assert_eq!(lang_code, "pt-br");
+
+        let new_file_name = file_name.replace(lang_code, "es");
+        assert_eq!(new_file_name, "express_country_entries_es.json");
+    }
+
+    // cargo test -- --show-output test_entity_file_add_language
+    #[test]
+    fn test_entity_file_add_language() {
+        let entity_entry = EntityEntry {
+            value: "back".to_owned(),
+            synonyms: vec!["rear".to_owned(), "tail end".to_owned()],
+        };
+
+        let entity_entries_file = EntityEntriesFile::new(
+            "express_country_entries_en.json".to_owned(),
+            vec![entity_entry.clone()],
+        );
+        let entity_entries_file_expected = EntityEntriesFile::new(
+            "express_country_entries_pt-br.json".to_owned(),
+            vec![entity_entry],
+        );
+        let cloned = entity_entries_file.add_language("pt-br");
+        assert_eq!(cloned, entity_entries_file_expected);
     }
 
     // cargo test -- --show-output test_translation_mechanics

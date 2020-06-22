@@ -23,5 +23,7 @@ surf = "1.0.3"
 async-std = "1.6.0"
 jsonwebtoken = "7"
 serde_urlencoded = "0.6.1"
+regex = "1"
+lazy_static = "1.4.0"
 
 [dev-dependencies]
