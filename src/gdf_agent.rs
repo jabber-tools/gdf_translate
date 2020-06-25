@@ -463,6 +463,54 @@ impl GoogleDialogflowAgent {
             package,
         }
     }
+
+    fn group_entities(&self) -> collections::HashMap<String, Vec<&EntityEntriesFile>> {
+        let mut output_collection = collections::HashMap::new();
+        for entity in self.entities.iter() {
+            let entity_file_name = entity.file_name.to_string();
+            for entity_entry in self.entity_entries.iter() {
+                if entity_entry
+                    .file_name
+                    .starts_with(&format!("{}{}", &entity_file_name, "_entries_"))
+                {
+                    let map = output_collection.get_mut(&entity_file_name);
+                    match map {
+                        None => {
+                            output_collection.insert(entity_file_name.clone(), vec![entity_entry]);
+                        }
+                        Some(vec_of_entries) => {
+                            vec_of_entries.push(entity_entry);
+                        }
+                    }
+                }
+            }
+        }
+        output_collection
+    }
+
+    fn group_intents(&self) -> collections::HashMap<String, Vec<&IntentUtterancesFile>> {
+        let mut output_collection = collections::HashMap::new();
+        for intent in self.intents.iter() {
+            let intent_file_name = intent.file_name.to_string();
+            for utterance in self.utterances.iter() {
+                if utterance
+                    .file_name
+                    .starts_with(&format!("{}{}", &intent_file_name, "_usersays_"))
+                {
+                    let map = output_collection.get_mut(&intent_file_name);
+                    match map {
+                        None => {
+                            output_collection.insert(intent_file_name.clone(), vec![utterance]);
+                        }
+                        Some(vec_of_entries) => {
+                            vec_of_entries.push(utterance);
+                        }
+                    }
+                }
+            }
+        }
+        output_collection
+    }
 }
 
 pub fn unzip_file(zip_path: &str, target_folder: &str) -> Result<()> {
@@ -559,7 +607,7 @@ parse_gdf_agent_files!(
     IntentUtterancesFile
 );
 
-pub fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
+fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     // create temp folder name as epoch time in sec
     let ts_sec = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -647,6 +695,15 @@ pub fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
         agent_manifest,
         package,
     ))
+}
+
+pub fn get_gdf_agent_from_zip(zip_path: &str) -> Result<()> {
+    let agent = parse_gdf_agent_zip(zip_path)?;
+    let entity_groups = agent.group_entities();
+    let intent_groups = agent.group_intents();
+    debug!("entity_groups {:#?}", entity_groups);
+    debug!("intent_groups {:#?}", intent_groups);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1417,7 +1474,7 @@ mod tests {
     fn test_parse_gdf_agent_zip() -> Result<()> {
         let path = "c:/tmp/z/Express_CS_AM_PRD.zip";
         let _agent = parse_gdf_agent_zip(path)?;
-        // println!("{:#?}", agent);
+        println!("{:#?}", _agent);
         Ok(())
     }
 }
