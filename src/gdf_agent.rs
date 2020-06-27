@@ -17,6 +17,12 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use zip;
 
+lazy_static! {
+    static ref RE_ENTITY_ENTRY_FILE: Regex = Regex::new(r"(\w+entries_)([a-zA-Z-]+).json").unwrap();
+    static ref RE_INTENT_UTTERANCE_FILE: Regex =
+        Regex::new(r"(\w+usersays_)([a-zA-Z-]+).json").unwrap();
+}
+
 pub trait Translate {
     fn to_translation(&self) -> collections::HashMap<String, String>;
     fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>);
@@ -322,7 +328,7 @@ pub struct Intent {
     pub conditional_followup_events: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct IntentUtteranceData {
     text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -348,7 +354,7 @@ impl Translate for IntentUtteranceData {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IntentUtterance {
     pub id: String,
     pub data: Vec<IntentUtteranceData>,
@@ -388,14 +394,9 @@ impl EntityEntriesFile {
         }
     }
 
-    #[allow(dead_code)]
-    fn add_language(&self, new_lang_code: &str) -> Self {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"(\w+entries_)([a-zA-Z-]+).json").unwrap();
-        }
-
+    fn to_new_language(&self, new_lang_code: &str) -> Self {
         let mut cloned = self.clone();
-        cloned.file_name = RE
+        cloned.file_name = RE_ENTITY_ENTRY_FILE
             .replace(&self.file_name, |caps: &Captures| {
                 format!("{}{}{}", &caps[1], new_lang_code, ".json")
             })
@@ -420,7 +421,7 @@ impl IntentFile {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IntentUtterancesFile {
     pub file_name: String,
     pub file_content: Vec<IntentUtterance>,
@@ -432,6 +433,17 @@ impl IntentUtterancesFile {
             file_name,
             file_content,
         }
+    }
+
+    fn to_new_language(&self, new_lang_code: &str) -> Self {
+        let mut cloned = self.clone();
+        cloned.file_name = RE_INTENT_UTTERANCE_FILE
+            .replace(&self.file_name, |caps: &Captures| {
+                format!("{}{}{}", &caps[1], new_lang_code, ".json")
+            })
+            .to_string();
+
+        cloned
     }
 }
 
@@ -464,6 +476,7 @@ impl GoogleDialogflowAgent {
         }
     }
 
+    // TBD: this will be probably not used in the end
     fn group_entities(&self) -> collections::HashMap<String, Vec<&EntityEntriesFile>> {
         let mut output_collection = collections::HashMap::new();
         for entity in self.entities.iter() {
@@ -491,6 +504,7 @@ impl GoogleDialogflowAgent {
         output_collection
     }
 
+    // TBD: this will be probably not used in the end
     fn group_intents(&self) -> collections::HashMap<String, Vec<&IntentUtterancesFile>> {
         let mut output_collection = collections::HashMap::new();
         for intent in self.intents.iter() {
@@ -516,6 +530,77 @@ impl GoogleDialogflowAgent {
             }
         }
         output_collection
+    }
+
+    pub fn to_translation(
+        &mut self,
+        lang_from: &str,
+        lang_to: &str,
+    ) -> collections::HashMap<String, String> {
+        let mut translations_map: collections::HashMap<String, String> =
+            collections::HashMap::new();
+
+        // create new entity entry files and add their content to map to translate
+        let mut new_entity_entry_files = vec![];
+        for entity_entry_file in self.entity_entries.iter() {
+            let caps = RE_ENTITY_ENTRY_FILE
+                .captures(&entity_entry_file.file_name)
+                .unwrap();
+
+            if &caps[2] == lang_from {
+                new_entity_entry_files.push(entity_entry_file.to_new_language(lang_to));
+                break; // no need to iterate further, there will be always only one file with particular lang_from
+            }
+        }
+
+        for new_entity_entry_file in new_entity_entry_files.iter() {
+            for new_entity_entry in new_entity_entry_file.file_content.iter() {
+                translations_map.extend(new_entity_entry.to_translation());
+            }
+        }
+
+        self.entity_entries.extend(new_entity_entry_files);
+
+        // create new intent utterance files and add their content to map to translate
+        let mut new_utterance_files = vec![];
+        for utterance_file in self.utterances.iter() {
+            let caps = RE_INTENT_UTTERANCE_FILE
+                .captures(&utterance_file.file_name)
+                .unwrap();
+
+            if &caps[2] == lang_from {
+                new_utterance_files.push(utterance_file.to_new_language(lang_to));
+                break; // no need to iterate further, there will be always only one file with particular lang_from
+            }
+        }
+
+        for new_utterance_file in new_utterance_files.iter() {
+            for utterance in new_utterance_file.file_content.iter() {
+                for utterance_data in utterance.data.iter() {
+                    translations_map.extend(utterance_data.to_translation());
+                }
+            }
+        }
+
+        self.utterances.extend(new_utterance_files);
+
+        // TBD: intent responses(messages)
+        /*
+        -for every intent iterate messages
+        -if messages contain target language skipt this intent
+        -otherwise clone every message with source language (to_new_language) and add it to translation map
+        */
+
+        translations_map
+    }
+    #[allow(unused_variables)]
+    pub fn from_translation(
+        &mut self,
+        translations_map: &collections::HashMap<String, String>,
+        lang_from: &str,
+        lang_to: &str,
+    ) {
+        // TBD
     }
 }
 
@@ -703,6 +788,7 @@ fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     ))
 }
 
+//  TBD: not used currently
 pub fn get_gdf_agent_from_zip(zip_path: &str) -> Result<()> {
     let agent = parse_gdf_agent_zip(zip_path)?;
     let entity_groups = agent.group_entities();
@@ -711,6 +797,27 @@ pub fn get_gdf_agent_from_zip(zip_path: &str) -> Result<()> {
     debug!("intent_groups {:#?}", intent_groups);
     Ok(())
 }
+
+/*
+pub fn prepare_translation_map(
+    gdf_agent: &GoogleDialogflowAgent,
+    source_lang: &str,
+    entity_groups: &collections::HashMap<String, Vec<&EntityEntriesFile>>,
+    intent_groups: &collections::HashMap<String, Vec<&IntentUtterancesFile>>,
+) -> collections::HashMap<String, String> {
+    let translations_map = collections::HashMap::new();
+
+    for entity in gdf_agent.entities.iter() {
+        if let Some(entity_entries) = entity_groups.get(&entity.file_name) {
+            for entity_entry in entity_entries.iter() {
+
+            }
+        }
+    }
+
+    translations_map
+}
+*/
 
 #[cfg(test)]
 mod tests {
@@ -1328,9 +1435,9 @@ mod tests {
         assert_eq!(new_file_name, "express_country_entries_es.json");
     }
 
-    // cargo test -- --show-output test_entity_file_add_language
+    // cargo test -- --show-output test_entity_file_to_new_language
     #[test]
-    fn test_entity_file_add_language() {
+    fn test_entity_file_to_new_language() {
         let entity_entry = EntityEntry {
             value: "back".to_owned(),
             synonyms: vec!["rear".to_owned(), "tail end".to_owned()],
@@ -1344,7 +1451,7 @@ mod tests {
             "express_country_entries_pt-br.json".to_owned(),
             vec![entity_entry],
         );
-        let cloned = entity_entries_file.add_language("pt-br");
+        let cloned = entity_entries_file.to_new_language("pt-br");
         assert_eq!(cloned, entity_entries_file_expected);
     }
 
