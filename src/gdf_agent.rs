@@ -469,9 +469,12 @@ impl GoogleDialogflowAgent {
         for entity in self.entities.iter() {
             let entity_file_name = entity.file_name.to_string();
             for entity_entry in self.entity_entries.iter() {
-                if entity_entry
-                    .file_name
-                    .starts_with(&format!("{}{}", &entity_file_name, "_entries_"))
+                if entity_entry.file_name.starts_with(&format!(
+                    "{}{}",
+                    &entity_file_name[0..entity_file_name.len() - 5],
+                    "_entries_"
+                ))
+                // remove last 5 characters which is '.json'
                 {
                     let map = output_collection.get_mut(&entity_file_name);
                     match map {
@@ -493,9 +496,12 @@ impl GoogleDialogflowAgent {
         for intent in self.intents.iter() {
             let intent_file_name = intent.file_name.to_string();
             for utterance in self.utterances.iter() {
-                if utterance
-                    .file_name
-                    .starts_with(&format!("{}{}", &intent_file_name, "_usersays_"))
+                if utterance.file_name.starts_with(&format!(
+                    "{}{}",
+                    &intent_file_name[0..intent_file_name.len() - 5],
+                    "_usersays_"
+                ))
+                // remove last 5 characters which is '.json'
                 {
                     let map = output_collection.get_mut(&intent_file_name);
                     match map {
@@ -1475,6 +1481,18 @@ mod tests {
         let path = "c:/tmp/z/Express_CS_AM_PRD.zip";
         let _agent = parse_gdf_agent_zip(path)?;
         println!("{:#?}", _agent);
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_get_gdf_agent_from_zip
+    #[test]
+    #[ignore]
+    fn test_get_gdf_agent_from_zip() -> Result<()> {
+        let agent = parse_gdf_agent_zip("c:/tmp/AdamEnvs.zip")?;
+        let entity_groups = agent.group_entities();
+        let intent_groups = agent.group_intents();
+        println!("entity_groups {:#?}", entity_groups);
+        println!("intent_groups {:#?}", intent_groups);
         Ok(())
     }
 }

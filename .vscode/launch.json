@@ -22,7 +22,7 @@
             "name": "gdf-translate - unit tests",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/target/debug/gdf_translate-b242f22c36e2632a.exe",
+            "program": "${workspaceRoot}/target/debug/gdf_translate-b18af16231258095.exe",
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
