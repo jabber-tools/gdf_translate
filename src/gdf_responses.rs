@@ -23,7 +23,7 @@ use std::collections;
 // Telegram (Text Resoponse + Image + Card + Quick Replies + Custom Payload)
 // RCS Business Messaging (Standalone Rich Card + Carousel Rich Card + Simple Response)
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum StringOrVecOfString {
     Str(String),
@@ -35,7 +35,7 @@ pub enum StringOrVecOfString {
 // TEXT RESPONSE
 //
 //
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GenericTextResponseType {
     #[serde(rename = "type")]
     pub message_type: u8,
@@ -95,7 +95,7 @@ impl Translate for GenericTextResponseType {
 // IMAGE
 //
 //
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GenericImageResponseType {
     #[serde(rename = "type")]
     pub message_type: u8,
@@ -112,7 +112,7 @@ pub struct GenericImageResponseType {
 // QUICK REPLIES
 //
 //
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GenericQuickRepliesResponseType {
     #[serde(rename = "type")]
     pub message_type: u8,
@@ -157,7 +157,7 @@ impl Translate for GenericQuickRepliesResponseType {
 // CARD
 //
 //
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GenericCardResponseButton {
     pub text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -181,7 +181,7 @@ impl Translate for GenericCardResponseButton {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GenericCardResponseType {
     #[serde(rename = "type")]
     pub message_type: u8,
@@ -245,7 +245,7 @@ impl Translate for GenericCardResponseType {
 // CUSTOM PAYLOADS
 //
 //
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GACustomPayloadType {
     #[serde(rename = "type")]
     pub message_type: String, // platform is string
@@ -257,7 +257,7 @@ pub struct GACustomPayloadType {
 }
 
 // platform is number (all other channels supporting custom payload)
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GenericCustomPayloadType {
     #[serde(rename = "type")]
     pub message_type: u8,
@@ -270,7 +270,7 @@ pub struct GenericCustomPayloadType {
 }
 
 // no platform specified (DEFAULT CHANNEL)
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DefaultCustomPayloadType {
     #[serde(rename = "type")]
     pub message_type: u8,
@@ -285,7 +285,7 @@ pub struct DefaultCustomPayloadType {
 // GOOGLE ASSISTANT (so special ;) )
 //
 //
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GAImage {
     pub url: String,
     #[serde(rename = "accessibilityText")]
@@ -312,7 +312,7 @@ impl Translate for GAImage {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GASimpleResponseItem {
     #[serde(rename = "textToSpeech")]
     pub text_to_speech: String,
@@ -321,7 +321,7 @@ pub struct GASimpleResponseItem {
     pub display_text: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GASimpleResponseType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -371,7 +371,7 @@ impl Translate for GASimpleResponseType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GASimpleResponseType2 {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -438,7 +438,7 @@ impl Translate for GASimpleResponseType2 {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GACardTypeButton {
     pub title: String,
     #[serde(rename = "openUrlAction")]
@@ -462,14 +462,14 @@ impl Translate for GACardTypeButton {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GAOpenUrlAction {
     pub url: String,
     #[serde(rename = "urlTypeHint")]
     pub url_type_hint: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GABasicCardType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -555,7 +555,7 @@ impl Translate for GABasicCardType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GAListTypeItemOptionInfo {
     key: String,
     synonyms: Vec<String>,
@@ -589,7 +589,7 @@ impl Translate for GAListTypeItemOptionInfo {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GAItem {
     #[serde(rename = "optionInfo")]
     pub option_info: GAListTypeItemOptionInfo,
@@ -629,7 +629,7 @@ impl Translate for GAItem {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GAItemBrowseCarousel {
     pub footer: String,
     #[serde(rename = "openUrlAction")]
@@ -680,7 +680,7 @@ impl Translate for GAItemBrowseCarousel {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GAListType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -724,7 +724,7 @@ impl Translate for GAListType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GASuggestionChipsTypeSuggestion {
     pub title: String,
 }
@@ -746,7 +746,7 @@ impl Translate for GASuggestionChipsTypeSuggestion {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GASuggestionChipsType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -775,7 +775,7 @@ impl Translate for GASuggestionChipsType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GALinkOutSuggestionType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -808,7 +808,7 @@ impl Translate for GALinkOutSuggestionType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GACarouselCardType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -837,7 +837,7 @@ impl Translate for GACarouselCardType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GABrowseCarouselCardType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -866,7 +866,7 @@ impl Translate for GABrowseCarouselCardType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GAMediaObject {
     name: String,
     description: String,
@@ -905,7 +905,7 @@ impl Translate for GAMediaObject {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GAMediaContentType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -937,7 +937,7 @@ impl Translate for GAMediaContentType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GATableCardRowCell {
     pub text: String,
 }
@@ -959,7 +959,7 @@ impl Translate for GATableCardRowCell {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GATableCardRow {
     pub cells: Vec<GATableCardRowCell>,
     #[serde(rename = "dividerAfter")]
@@ -984,7 +984,7 @@ impl Translate for GATableCardRow {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GATableCardType {
     #[serde(rename = "type")]
     pub message_type: String,
@@ -1039,7 +1039,12 @@ impl Translate for GATableCardType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+pub struct NewLangMessageItem {
+    pub cloned_message: MessageType,
+    pub translations: collections::HashMap<String, String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum MessageType {
     // In untagged serde enums more specific enum value must be listed before more generic values!
@@ -1063,6 +1068,140 @@ pub enum MessageType {
     GASimpleResponse2(GASimpleResponseType2),
     DefaultCustomPayload(DefaultCustomPayloadType),
     GenericTextResponse(GenericTextResponseType),
+}
+
+impl MessageType {
+    pub fn get_message_lang(&self) -> &String {
+        match self {
+            MessageType::GenericCustomPayload(m) => &m.lang,
+            MessageType::GenericQuickRepliesResponse(m) => &m.lang,
+            MessageType::GenericCardResponse(m) => &m.lang,
+            MessageType::GenericImageResponse(m) => &m.lang,
+            MessageType::GATableCard(m) => &m.lang,
+            MessageType::GACustomPayload(m) => &m.lang,
+            MessageType::GABasicCard(m) => &m.lang,
+            MessageType::GASuggestionChips(m) => &m.lang,
+            MessageType::GAList(m) => &m.lang,
+            MessageType::GALinkOutSuggestion(m) => &m.lang,
+            MessageType::GACarouselCard(m) => &m.lang,
+            MessageType::GABrowseCarouselCard(m) => &m.lang,
+            MessageType::GAMediaContent(m) => &m.lang,
+            MessageType::GASimpleResponse(m) => &m.lang,
+            MessageType::GASimpleResponse2(m) => &m.lang,
+            MessageType::DefaultCustomPayload(m) => &m.lang,
+            MessageType::GenericTextResponse(m) => &m.lang,
+        }
+    }
+
+    pub fn to_new_language(&self, new_lang_code: &str) -> Option<NewLangMessageItem> {
+        let mut to_translate = collections::HashMap::new();
+        let cloned_message = match self {
+            MessageType::GenericCustomPayload(_) => None,
+            MessageType::GenericQuickRepliesResponse(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GenericQuickRepliesResponse(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GenericCardResponse(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GenericCardResponse(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GenericImageResponse(_) => None,
+            MessageType::GATableCard(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GATableCard(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GACustomPayload(_) => None,
+            MessageType::GABasicCard(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GABasicCard(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GASuggestionChips(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GASuggestionChips(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GAList(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GAList(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GALinkOutSuggestion(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GALinkOutSuggestion(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GACarouselCard(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GACarouselCard(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GABrowseCarouselCard(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GABrowseCarouselCard(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GAMediaContent(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GAMediaContent(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GASimpleResponse(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GASimpleResponse(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GASimpleResponse2(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GASimpleResponse2(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::DefaultCustomPayload(_) => None,
+            MessageType::GenericTextResponse(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                to_translate.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GenericTextResponse(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+        };
+
+        if let Some(message) = cloned_message {
+            Some(NewLangMessageItem {
+                cloned_message: message,
+                translations: to_translate,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 // removes all whitespaces and replaces some characters (as produced by serde serialization)

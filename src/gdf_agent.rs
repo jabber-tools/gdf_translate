@@ -591,6 +591,48 @@ impl GoogleDialogflowAgent {
         -otherwise clone every message with source language (to_new_language) and add it to translation map
         */
 
+        // first find intents that should not be translated
+        let mut intents_not_to_translate = vec![];
+        'intent_loop: for intent_file in self.intents.iter() {
+            let intent = &intent_file.file_content;
+            for intent_response in intent.responses.iter() {
+                for intent_response_message in intent_response.messages.iter() {
+                    if intent_response_message.get_message_lang() == lang_to {
+                        // if intent has already messages in target language just skip it
+                        // DialogFlow will translate some intent sby default when new lang is added
+                        // e.g. Default Welcome Intent, Fallback
+                        intents_not_to_translate.push(intent.name.to_string());
+                        continue 'intent_loop;
+                    }
+                }
+            }
+        }
+
+        // now iterate intent file again this time already skipping the intents
+        // which are already translated...
+        for intent_file in self.intents.iter_mut() {
+            let intent = &mut intent_file.file_content;
+            if intents_not_to_translate.contains(&intent.name) {
+                continue;
+            }
+
+            //... for those taht still needs to be translated iterate all responses in source language
+            // clone them (while changing the target language) + add the references' addresses into translation map
+            for intent_response in intent.responses.iter_mut() {
+                let mut new_messages = vec![];
+                for intent_response_message in intent_response.messages.iter() {
+                    if intent_response_message.get_message_lang() == lang_from {
+                        let translated_message = intent_response_message.to_new_language(lang_to);
+                        if let Some(message) = translated_message {
+                            translations_map.extend(message.translations);
+                            new_messages.push(message.cloned_message);
+                        }
+                    }
+                }
+                intent_response.messages.extend(new_messages);
+            }
+        }
+
         translations_map
     }
     #[allow(unused_variables)]
