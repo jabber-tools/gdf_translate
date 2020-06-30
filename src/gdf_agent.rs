@@ -447,6 +447,20 @@ impl IntentUtterancesFile {
     }
 }
 
+// entity entries file is something like sys.color_entries_en.json
+// we need to calculate lenght of '_entries' + 'en' so that we can remove
+// it and get entity master file name, i.e. sys.color.json
+fn entity_entry_file_name_to_entity_filename(entity_entry_file_name: &str) -> String {
+    let caps = RE_ENTITY_ENTRY_FILE
+        .captures(entity_entry_file_name)
+        .unwrap();
+
+    let suffix_len = &caps[2].len() + 14; // 14 = len(_entries_)  + len (.json). suffix len = 14 + len(lang code)
+    let prefix_len = entity_entry_file_name.len() - suffix_len;
+    let entity_file_name = &entity_entry_file_name[0..prefix_len];
+    format!("{}{}", entity_file_name, ".json")
+}
+
 #[derive(Debug)]
 pub struct GoogleDialogflowAgent {
     entities: Vec<EntityFile>,
@@ -477,6 +491,7 @@ impl GoogleDialogflowAgent {
     }
 
     // TBD: this will be probably not used in the end
+    #[allow(dead_code)]
     fn group_entities(&self) -> collections::HashMap<String, Vec<&EntityEntriesFile>> {
         let mut output_collection = collections::HashMap::new();
         for entity in self.entities.iter() {
@@ -505,6 +520,7 @@ impl GoogleDialogflowAgent {
     }
 
     // TBD: this will be probably not used in the end
+    #[allow(dead_code)]
     fn group_intents(&self) -> collections::HashMap<String, Vec<&IntentUtterancesFile>> {
         let mut output_collection = collections::HashMap::new();
         for intent in self.intents.iter() {
@@ -547,9 +563,22 @@ impl GoogleDialogflowAgent {
                 .captures(&entity_entry_file.file_name)
                 .unwrap();
 
+            let entity_file_name =
+                entity_entry_file_name_to_entity_filename(&entity_entry_file.file_name);
+
+            let entity_files: Vec<EntityFile> = self
+                .entities
+                .iter()
+                .filter(|entity| entity.file_name == entity_file_name)
+                .cloned()
+                .collect();
+            if entity_files[0].file_content.is_regexp == true {
+                // we are skipping regex entities
+                continue;
+            }
+
             if &caps[2] == lang_from {
                 new_entity_entry_files.push(entity_entry_file.to_new_language(lang_to));
-                break; // no need to iterate further, there will be always only one file with particular lang_from
             }
         }
 
@@ -570,7 +599,6 @@ impl GoogleDialogflowAgent {
 
             if &caps[2] == lang_from {
                 new_utterance_files.push(utterance_file.to_new_language(lang_to));
-                break; // no need to iterate further, there will be always only one file with particular lang_from
             }
         }
 
@@ -583,13 +611,6 @@ impl GoogleDialogflowAgent {
         }
 
         self.utterances.extend(new_utterance_files);
-
-        // TBD: intent responses(messages)
-        /*
-        -for every intent iterate messages
-        -if messages contain target language skipt this intent
-        -otherwise clone every message with source language (to_new_language) and add it to translation map
-        */
 
         // first find intents that should not be translated
         let mut intents_not_to_translate = vec![];
@@ -740,6 +761,7 @@ parse_gdf_agent_files!(
     IntentUtterancesFile
 );
 
+#[allow(dead_code)]
 fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     // create temp folder name as epoch time in sec
     let ts_sec = SystemTime::now()
@@ -829,37 +851,6 @@ fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
         package,
     ))
 }
-
-//  TBD: not used currently
-pub fn get_gdf_agent_from_zip(zip_path: &str) -> Result<()> {
-    let agent = parse_gdf_agent_zip(zip_path)?;
-    let entity_groups = agent.group_entities();
-    let intent_groups = agent.group_intents();
-    debug!("entity_groups {:#?}", entity_groups);
-    debug!("intent_groups {:#?}", intent_groups);
-    Ok(())
-}
-
-/*
-pub fn prepare_translation_map(
-    gdf_agent: &GoogleDialogflowAgent,
-    source_lang: &str,
-    entity_groups: &collections::HashMap<String, Vec<&EntityEntriesFile>>,
-    intent_groups: &collections::HashMap<String, Vec<&IntentUtterancesFile>>,
-) -> collections::HashMap<String, String> {
-    let translations_map = collections::HashMap::new();
-
-    for entity in gdf_agent.entities.iter() {
-        if let Some(entity_entries) = entity_groups.get(&entity.file_name) {
-            for entity_entry in entity_entries.iter() {
-
-            }
-        }
-    }
-
-    translations_map
-}
-*/
 
 #[cfg(test)]
 mod tests {
@@ -1606,6 +1597,18 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn test_entity_entry_file_name_to_entity_filename() {
+        assert_eq!(
+            entity_entry_file_name_to_entity_filename("sys.color_entries_en.json"),
+            "sys.color.json"
+        );
+        assert_eq!(
+            entity_entry_file_name_to_entity_filename("PlacementLocationSide_entries_pt-br.json"),
+            "PlacementLocationSide.json"
+        );
+    }
+
     //
     // integration tests
     //
@@ -1627,9 +1630,11 @@ mod tests {
     #[test]
     #[ignore]
     fn test_parse_gdf_agent_zip() -> Result<()> {
-        let path = "c:/tmp/z/Express_CS_AM_PRD.zip";
-        let _agent = parse_gdf_agent_zip(path)?;
-        println!("{:#?}", _agent);
+        let path = "c:/tmp/AdamEnvs.zip";
+        let mut agent = parse_gdf_agent_zip(path)?;
+        println!("{:#?}", agent);
+        let map = agent.to_translation("en", "de");
+        println!("{:#?}", map);
         Ok(())
     }
 
