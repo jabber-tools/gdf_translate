@@ -1666,11 +1666,7 @@ mod tests {
         println!("agent before{:#?}", agent);
         let mut translation_map = agent.to_translation("en", "de");
         println!("translation_map before{:#?}", translation_map);
-
-        for val in translation_map.values_mut() {
-            let translated_text = format!("{}{}", val, "_translated");
-            *val = translated_text;
-        }
+        dummy_translate(&mut translation_map);
         println!("translation_map after{:#?}", translation_map);
 
         agent.from_translation(&translation_map);
