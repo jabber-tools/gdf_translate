@@ -78,16 +78,24 @@ impl Translate for EntityEntry {
     }
 
     fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
-        self.value = translations_map
-            .get(&format!("{:p}", &self.value))
-            .unwrap()
-            .to_owned();
+        if let Some(val) = translations_map.get(&format!("{:p}", &self.value)) {
+            self.value = val.to_owned();
+        }
+        /*self.value = translations_map
+        .get(&format!("{:p}", &self.value))
+        .unwrap()
+        .to_owned();*/
 
         for synonym in self.synonyms.iter_mut() {
-            *synonym = translations_map
-                .get(&format!("{:p}", synonym))
-                .unwrap()
-                .to_owned();
+            if let Some(syn) = translations_map.get(&format!("{:p}", synonym)) {
+                *synonym = syn.to_owned();
+            }
+            /*
+                *synonym = translations_map
+                    .get(&format!("{:p}", synonym))
+                    .unwrap()
+                    .to_owned();
+            */
         }
     }
 }
@@ -657,13 +665,12 @@ impl GoogleDialogflowAgent {
         translations_map
     }
     #[allow(unused_variables)]
-    pub fn from_translation(
-        &mut self,
-        translations_map: &collections::HashMap<String, String>,
-        lang_from: &str,
-        lang_to: &str,
-    ) {
-        // TBD
+    pub fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        for entity_entry_file in self.entity_entries.iter_mut() {
+            for entity_entry in entity_entry_file.file_content.iter_mut() {
+                entity_entry.from_translation(translations_map);
+            }
+        }
     }
 }
 
@@ -1647,6 +1654,27 @@ mod tests {
         let intent_groups = agent.group_intents();
         println!("entity_groups {:#?}", entity_groups);
         println!("intent_groups {:#?}", intent_groups);
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_dummy_translate_agent
+    #[test]
+    #[ignore]
+    fn test_dummy_translate_agent() -> Result<()> {
+        let path = "c:/tmp/AdamEnvs.zip";
+        let mut agent = parse_gdf_agent_zip(path)?;
+        println!("agent before{:#?}", agent);
+        let mut translation_map = agent.to_translation("en", "de");
+        println!("translation_map before{:#?}", translation_map);
+
+        for val in translation_map.values_mut() {
+            let translated_text = format!("{}{}", val, "_translated");
+            *val = translated_text;
+        }
+        println!("translation_map after{:#?}", translation_map);
+
+        agent.from_translation(&translation_map);
+        println!("agent after{:#?}", agent);
         Ok(())
     }
 }
