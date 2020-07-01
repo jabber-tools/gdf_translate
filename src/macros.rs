@@ -93,3 +93,28 @@ macro_rules! parse_gdf_agent_files {
         }
     };
 }
+
+#[macro_export]
+macro_rules! serialize_gdf_agent_section {
+    ($section:ident, $folder:expr) => {
+        for item in $section.iter() {
+            let item_str = normalize_json_for_gdf_agent_serialization(
+                &serde_json::to_string_pretty(&item.file_content)?,
+            );
+            let file_stem_option = Path::new(&item.file_name).file_stem();
+            if let Some(file_stem) = file_stem_option {
+                let mut file_handle = File::create($folder.join(format!(
+                    "{}{}",
+                    file_stem.to_str().unwrap(),
+                    ".json"
+                )))?;
+                file_handle.write_all(item_str.as_bytes())?;
+            } else {
+                return Err(Error::new(format!(
+                    "Unable to serialize file {}",
+                    &item.file_name
+                )));
+            }
+        }
+    };
+}

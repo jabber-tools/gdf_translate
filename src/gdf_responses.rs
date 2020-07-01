@@ -1217,6 +1217,17 @@ pub fn normalize_json(s: &str) -> String {
         .replace("=", "\\u003d")
 }
 
+pub fn normalize_json_for_gdf_agent_serialization(s: &str) -> String {
+    let normalized_str = s
+        .replace("&", "\\u0026")
+        .replace("'", "\\u0027")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("=", "\\u003d");
+
+    normalized_str
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

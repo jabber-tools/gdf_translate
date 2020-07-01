@@ -1,6 +1,10 @@
 use crate::errors::{Error, Result};
+use crate::gdf_responses::normalize_json_for_gdf_agent_serialization;
 use crate::gdf_responses::MessageType;
 use crate::parse_gdf_agent_files;
+#[allow(unused_imports)]
+use crate::serialize_gdf_agent_section;
+use crate::zip::{unzip_file, zip_directory};
 use assert_json_diff::assert_json_eq_no_panic;
 use glob::glob;
 use lazy_static::lazy_static;
@@ -12,10 +16,10 @@ use serde_json;
 use std::collections;
 use std::env::current_exe;
 use std::fs;
-use std::io;
+use std::fs::File;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use zip;
 
 lazy_static! {
     static ref RE_ENTITY_ENTRY_FILE: Regex = Regex::new(r"(\w+entries_)([a-zA-Z-]+).json").unwrap();
@@ -672,51 +676,110 @@ impl GoogleDialogflowAgent {
             }
         }
     }
-}
 
-pub fn unzip_file(zip_path: &str, target_folder: &str) -> Result<()> {
-    let fname = std::path::Path::new(zip_path);
-    let file = fs::File::open(&fname)?;
-    let mut archive = zip::ZipArchive::new(file)?;
+    pub fn serialize(&self, target_folder: &str) -> Result<()> {
+        let base_path = Path::new(target_folder);
+        let intents_folder = base_path.join("intents");
+        let entities_folder = base_path.join("entities");
 
-    let base_path = Path::new(target_folder);
+        fs::create_dir_all(&intents_folder)?;
+        fs::create_dir_all(&entities_folder)?;
 
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        let outpath = base_path.join(file.sanitized_name());
+        let package_file_str = serde_json::to_string_pretty(&self.package)?;
+        let mut package_file_handle = File::create(base_path.join("package.json"))?;
+        package_file_handle.write_all(package_file_str.as_bytes())?;
 
-        {
-            let comment = file.comment();
-            if !comment.is_empty() {
-                debug!("File {} comment: {}", i, comment);
+        let agent_file_str = serde_json::to_string_pretty(&self.agent)?;
+        let mut agent_file_handle = File::create(base_path.join("agent.json"))?;
+        agent_file_handle.write_all(agent_file_str.as_bytes())?;
+
+        // TBD: use macro once it works
+        // serialize_gdf_agent_section!(self.entities, entities_folder);
+        for entity in self.entities.iter() {
+            let entity_str = normalize_json_for_gdf_agent_serialization(
+                &serde_json::to_string_pretty(&entity.file_content)?,
+            );
+            let file_stem_option = Path::new(&entity.file_name).file_stem();
+            if let Some(file_stem) = file_stem_option {
+                let mut entity_file_handle = File::create(entities_folder.join(format!(
+                    "{}{}",
+                    file_stem.to_str().unwrap(),
+                    ".json"
+                )))?;
+                entity_file_handle.write_all(entity_str.as_bytes())?;
+            } else {
+                return Err(Error::new(format!(
+                    "Unable to serialize file {}",
+                    &entity.file_name
+                )));
             }
         }
 
-        if (&*file.name()).ends_with('/') {
-            debug!(
-                "File {} extracted to \"{}\"",
-                i,
-                outpath.as_path().display()
+        for entity_entry in self.entity_entries.iter() {
+            let entity_entry_str = normalize_json_for_gdf_agent_serialization(
+                &serde_json::to_string_pretty(&entity_entry.file_content)?,
             );
-            fs::create_dir_all(&outpath)?;
-        } else {
-            debug!(
-                "File {} extracted to \"{}\" ({} bytes)",
-                i,
-                outpath.as_path().display(),
-                file.size()
-            );
-            if let Some(p) = outpath.parent() {
-                if !p.exists() {
-                    fs::create_dir_all(&p)?;
-                }
+            let file_stem_option = Path::new(&entity_entry.file_name).file_stem();
+            if let Some(file_stem) = file_stem_option {
+                let mut entity_entry_file_handle = File::create(entities_folder.join(format!(
+                    "{}{}",
+                    file_stem.to_str().unwrap(),
+                    ".json"
+                )))?;
+                entity_entry_file_handle.write_all(entity_entry_str.as_bytes())?;
+            } else {
+                return Err(Error::new(format!(
+                    "Unable to serialize file {}",
+                    &entity_entry.file_name
+                )));
             }
-            let mut outfile = fs::File::create(&outpath)?;
-            io::copy(&mut file, &mut outfile)?;
         }
+
+        for intent in self.intents.iter() {
+            let intent_str = normalize_json_for_gdf_agent_serialization(
+                &serde_json::to_string_pretty(&intent.file_content)?,
+            );
+            let file_stem_option = Path::new(&intent.file_name).file_stem();
+            if let Some(file_stem) = file_stem_option {
+                let mut intent_file_handle = File::create(intents_folder.join(format!(
+                    "{}{}",
+                    file_stem.to_str().unwrap(),
+                    ".json"
+                )))?;
+                intent_file_handle.write_all(intent_str.as_bytes())?;
+            } else {
+                return Err(Error::new(format!(
+                    "Unable to serialize file {}",
+                    &intent.file_name
+                )));
+            }
+        }
+
+        for utterance in self.utterances.iter() {
+            let utterance_str = normalize_json_for_gdf_agent_serialization(
+                &serde_json::to_string_pretty(&utterance.file_content)?,
+            );
+            let file_stem_option = Path::new(&utterance.file_name).file_stem();
+            if let Some(file_stem) = file_stem_option {
+                let mut utterance_file_handle = File::create(intents_folder.join(format!(
+                    "{}{}",
+                    file_stem.to_str().unwrap(),
+                    ".json"
+                )))?;
+                utterance_file_handle.write_all(utterance_str.as_bytes())?;
+            } else {
+                return Err(Error::new(format!(
+                    "Unable to serialize file {}",
+                    &utterance.file_name
+                )));
+            }
+        }
+        zip_directory(
+            base_path.to_str().unwrap(),
+            base_path.join("TranslatedAgent.zip").to_str().unwrap(),
+        )?;
+        Ok(())
     }
-
-    Ok(())
 }
 
 // not used in the end, if we actually wanted to put somewhere deserialized that generics would become
@@ -1671,6 +1734,16 @@ mod tests {
 
         agent.from_translation(&translation_map);
         println!("agent after{:#?}", agent);
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_serialize_agent
+    #[test]
+    #[ignore]
+    fn test_serialize_agent() -> Result<()> {
+        let path = "c:/tmp/AdamEnvs.zip";
+        let agent = parse_gdf_agent_zip(path)?;
+        agent.serialize("c:/tmp/out")?;
         Ok(())
     }
 }
