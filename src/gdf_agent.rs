@@ -84,21 +84,11 @@ impl Translate for EntityEntry {
         if let Some(val) = translations_map.get(&format!("{:p}", &self.value)) {
             self.value = val.to_owned();
         }
-        /*self.value = translations_map
-        .get(&format!("{:p}", &self.value))
-        .unwrap()
-        .to_owned();*/
 
         for synonym in self.synonyms.iter_mut() {
             if let Some(syn) = translations_map.get(&format!("{:p}", synonym)) {
                 *synonym = syn.to_owned();
             }
-            /*
-                *synonym = translations_map
-                    .get(&format!("{:p}", synonym))
-                    .unwrap()
-                    .to_owned();
-            */
         }
     }
 }
@@ -255,6 +245,27 @@ pub struct IntentResponseAffectedContext {
     pub lifespan: i8,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct IntentResponseParameterPrompt {
+    lang: String,
+    value: String,
+}
+
+impl Translate for IntentResponseParameterPrompt {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+        map_to_translate.insert(format!("{:p}", &self.value), self.value.to_owned());
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        self.value = translations_map
+            .get(&format!("{:p}", &self.value))
+            .unwrap()
+            .to_owned();
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntentResponseParameter {
     id: String,
@@ -266,6 +277,9 @@ pub struct IntentResponseParameter {
     name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     value: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    prompts: Option<Vec<IntentResponseParameterPrompt>>,
 
     #[serde(rename = "promptMessages")]
     prompt_messages: Vec<String>, // ??
@@ -281,6 +295,28 @@ pub struct IntentResponseParameter {
 
     #[serde(rename = "isList")]
     is_list: bool,
+}
+
+impl Translate for IntentResponseParameter {
+    fn to_translation(&self) -> collections::HashMap<String, String> {
+        let mut map_to_translate = collections::HashMap::new();
+
+        if let Some(prompts) = &self.prompts {
+            for prompt in prompts.iter() {
+                map_to_translate.extend(prompt.to_translation());
+            }
+        }
+
+        map_to_translate
+    }
+
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        if let Some(prompts) = &mut self.prompts {
+            for prompt in prompts.iter_mut() {
+                prompt.from_translation(translations_map);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -358,10 +394,9 @@ impl Translate for IntentUtteranceData {
     }
 
     fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
-        self.text = translations_map
-            .get(&format!("{:p}", &self.text))
-            .unwrap()
-            .to_owned();
+        if let Some(text) = translations_map.get(&format!("{:p}", &self.text)) {
+            self.text = text.to_owned()
+        }
     }
 }
 
@@ -667,11 +702,30 @@ impl GoogleDialogflowAgent {
 
         translations_map
     }
-    #[allow(unused_variables)]
-    pub fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+
+    pub fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>, lang_to: &str,) {
         for entity_entry_file in self.entity_entries.iter_mut() {
             for entity_entry in entity_entry_file.file_content.iter_mut() {
                 entity_entry.from_translation(translations_map);
+            }
+        }
+
+        for utterances_file in self.utterances.iter_mut() {
+            for utterance_file in utterances_file.file_content.iter_mut() {
+                for utterance_data in utterance_file.data.iter_mut() {
+                    utterance_data.from_translation(translations_map);
+                }
+            }
+        }
+
+        for intent_file in self.intents.iter_mut() {
+            println!("___intent {}", intent_file.file_name);
+            for intent_response in intent_file.file_content.responses.iter_mut() {
+                for message in intent_response.messages.iter_mut() {
+                    if message.get_message_lang() == lang_to {
+                        message.from_translation(translations_map);
+                    }
+                }
             }
         }
     }
@@ -854,6 +908,9 @@ mod tests {
     use crate::gdf_responses::normalize_json;
     use crate::translation_tests_assertions;
     use assert_json_diff::assert_json_eq;
+
+    const SAMPLE_AGENTS_FOLDER: &str =
+        "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/";
 
     #[derive(Debug)]
     struct DummyStructSlave {
@@ -1186,7 +1243,7 @@ mod tests {
     }
 
     #[test]
-    // speech with single string specified  + aeeay of responses for response message
+    // speech with single string specified  + array of responses for response message
     fn test_intent_deser_ser_2() -> Result<()> {
         let intent_str = r#"
         {
@@ -1283,6 +1340,149 @@ mod tests {
 
         let serialized_str = serde_json::to_string(&intent).unwrap();
         assert_eq!(normalize_json(&serialized_str), normalize_json(&intent_str));
+        Ok(())
+    }
+
+    #[test]
+    // intent with parameter prompts
+    fn test_intent_deser_ser_3() -> Result<()> {
+        let intent_str = r#"
+        {
+            "id": "85ee820c-b534-457e-a943-eb89570e074b",
+            "name": "bot.order",
+            "auto": true,
+            "contexts": [],
+            "responses": [
+              {
+                "resetContexts": false,
+                "action": "bot.order",
+                "affectedContexts": [
+                  {
+                    "name": "botorder-followup",
+                    "parameters": {},
+                    "lifespan": 2
+                  }
+                ],
+                "parameters": [
+                  {
+                    "id": "a666588f-0e23-44a0-bafb-c39ee0067706",
+                    "required": true,
+                    "dataType": "@industry",
+                    "name": "industry",
+                    "value": "$industry",
+                    "prompts": [
+                      {
+                        "lang": "en",
+                        "value": "What\u0027s the industry you\u0027re working at?"
+                      },
+                      {
+                        "lang": "en",
+                        "value": "What field are you working in?"
+                      }
+                    ],
+                    "promptMessages": [],
+                    "noMatchPromptMessages": [],
+                    "noInputPromptMessages": [],
+                    "outputDialogContexts": [],
+                    "isList": false
+                  },
+                  {
+                    "id": "017d987e-f30f-4f01-b946-3329d10b910b",
+                    "required": true,
+                    "dataType": "@platform",
+                    "name": "platform",
+                    "value": "$platform",
+                    "prompts": [
+                      {
+                        "lang": "en",
+                        "value": "What platform are you launching for?"
+                      }
+                    ],
+                    "promptMessages": [],
+                    "noMatchPromptMessages": [],
+                    "noInputPromptMessages": [],
+                    "outputDialogContexts": [],
+                    "isList": false
+                  }
+                ],
+                "messages": [
+                  {
+                    "type": 2,
+                    "platform": "slack",
+                    "lang": "en",
+                    "condition": "",
+                    "title": "",
+                    "replies": [
+                      "Yes",
+                      "No"
+                    ]
+                  },
+                  {
+                    "type": 2,
+                    "platform": "facebook",
+                    "lang": "en",
+                    "condition": "",
+                    "title": "",
+                    "replies": [
+                      "Yes",
+                      "No"
+                    ]
+                  },
+                  {
+                    "type": "suggestion_chips",
+                    "platform": "google",
+                    "lang": "en",
+                    "condition": "",
+                    "suggestions": [
+                      {
+                        "title": "Yes"
+                      },
+                      {
+                        "title": "No"
+                      }
+                    ]
+                  },
+                  {
+                    "type": 0,
+                    "lang": "en",
+                    "condition": "",
+                    "speech": "Are you planning to use a web service?"
+                  }
+                ],
+                "defaultResponsePlatforms": {
+                    "facebook": true,
+                    "slack": true,
+                    "google": true
+                },
+                "speech": []
+              }
+            ],
+            "priority": 500000,
+            "webhookUsed": false,
+            "webhookForSlotFilling": false,
+            "fallbackIntent": false,
+            "events": [],
+            "conditionalResponses": [],
+            "condition": "",
+            "conditionalFollowupEvents": []
+          }
+        "#;
+        let intent: Intent = serde_json::from_str(intent_str)?;
+        assert_eq!(intent.name, "bot.order");
+
+        let serialized_str = serde_json::to_string(&intent).unwrap();
+        // cannot compare strings due to defaultResponsePlatforms which can come out in different order
+        // assert_eq!(normalize_json(&serialized_str), normalize_json(&intent_str));
+
+        let comparison_result = assert_json_eq_no_panic(
+            &serde_json::from_str(&serialized_str)?,
+            &serde_json::from_str(&intent_str)?,
+        );
+
+        if let Err(err_msg) = comparison_result {
+            return Err(Error::new(err_msg));
+        }
+
         Ok(())
     }
 
@@ -1593,6 +1793,32 @@ mod tests {
         Ok(())
     }
 
+    // cargo test -- --show-output test_translate_intent_parameter_prompt
+    #[test]
+    fn test_translate_intent_parameter_prompt() -> Result<()> {
+        let prompts_str = r#"
+        {
+            "lang": "en",
+            "value": "What field are you working in?"
+          }
+        "#;
+
+        let prompts_str_translated_exptected = r#"
+        {
+            "lang": "en",
+            "value": "What field are you working in?_translated"
+          }
+        "#;
+
+        translation_tests_assertions!(
+            IntentResponseParameterPrompt,
+            prompts_str,
+            prompts_str_translated_exptected,
+            "no_string_comparison"
+        );
+        Ok(())
+    }
+
     #[test]
     fn test_entity_entry_file_name_to_entity_filename() {
         assert_eq!(
@@ -1612,10 +1838,10 @@ mod tests {
     #[test]
     #[ignore]
     fn test_unzip() -> Result<()> {
-        let path = "c:/tmp/z/Express_CS_AM_PRD.zip";
+        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
         let target_folder = "c:/tmp/z/unpacked";
 
-        unzip_file(path, target_folder)?;
+        unzip_file(&path, target_folder)?;
 
         Ok(())
     }
@@ -1626,8 +1852,8 @@ mod tests {
     #[test]
     #[ignore]
     fn test_parse_gdf_agent_zip() -> Result<()> {
-        let path = "c:/tmp/AdamEnvs.zip";
-        let mut agent = parse_gdf_agent_zip(path)?;
+        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
+        let mut agent = parse_gdf_agent_zip(&path)?;
         println!("{:#?}", agent);
         let map = agent.to_translation("en", "de");
         println!("{:#?}", map);
@@ -1638,7 +1864,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_get_gdf_agent_from_zip() -> Result<()> {
-        let agent = parse_gdf_agent_zip("c:/tmp/AdamEnvs.zip")?;
+        let agent = parse_gdf_agent_zip(&format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip"))?;
         let entity_groups = agent.group_entities();
         let intent_groups = agent.group_intents();
         println!("entity_groups {:#?}", entity_groups);
@@ -1650,15 +1876,15 @@ mod tests {
     #[test]
     #[ignore]
     fn test_dummy_translate_agent() -> Result<()> {
-        let path = "c:/tmp/AdamEnvs.zip";
-        let mut agent = parse_gdf_agent_zip(path)?;
+        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
+        let mut agent = parse_gdf_agent_zip(&path)?;
         println!("agent before{:#?}", agent);
         let mut translation_map = agent.to_translation("en", "de");
         println!("translation_map before{:#?}", translation_map);
         dummy_translate(&mut translation_map);
         println!("translation_map after{:#?}", translation_map);
 
-        agent.from_translation(&translation_map);
+        agent.from_translation(&translation_map, "de");
         println!("agent after{:#?}", agent);
         Ok(())
     }
@@ -1667,8 +1893,24 @@ mod tests {
     #[test]
     #[ignore]
     fn test_serialize_agent() -> Result<()> {
-        let path = "c:/tmp/AdamEnvs.zip";
-        let agent = parse_gdf_agent_zip(path)?;
+        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
+        let agent = parse_gdf_agent_zip(&path)?;
+        agent.serialize("c:/tmp/out")?;
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent
+    #[test]
+    // #[ignore]
+    fn test_dummy_translate_and_serialize_agent() -> Result<()> {
+        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
+        let mut agent = parse_gdf_agent_zip(&path)?;
+        let mut translation_map = agent.to_translation("en", "de");
+        println!("translation_map before{:#?}", translation_map);
+        dummy_translate(&mut translation_map);
+        println!("translation_map after{:#?}", translation_map);
+        agent.from_translation(&translation_map, "de");
+        // println!("agent after{:#?}", agent);
         agent.serialize("c:/tmp/out")?;
         Ok(())
     }

@@ -521,6 +521,8 @@ impl Translate for GABasicCardType {
 
     fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
         if let Some(title) = &self.title {
+          println!(">>>>>>>>>>{}", title);
+          println!(">>>>>>>>>>{}", &format!("{:p}", title));
             self.title = Some(
                 translations_map
                     .get(&format!("{:p}", title))
@@ -1090,6 +1092,28 @@ impl MessageType {
             MessageType::GASimpleResponse2(m) => &m.lang,
             MessageType::DefaultCustomPayload(m) => &m.lang,
             MessageType::GenericTextResponse(m) => &m.lang,
+        }
+    }
+
+    pub fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
+        match self {
+            MessageType::GenericCustomPayload(_) => {}
+            MessageType::GenericQuickRepliesResponse(m) => m.from_translation(translations_map),
+            MessageType::GenericCardResponse(m) => m.from_translation(translations_map),
+            MessageType::GenericImageResponse(_) => {}
+            MessageType::GATableCard(m) => m.from_translation(translations_map),
+            MessageType::GACustomPayload(_) => {}
+            MessageType::GABasicCard(m) => m.from_translation(translations_map),
+            MessageType::GASuggestionChips(m) => m.from_translation(translations_map),
+            MessageType::GAList(m) => m.from_translation(translations_map),
+            MessageType::GALinkOutSuggestion(m) => m.from_translation(translations_map),
+            MessageType::GACarouselCard(m) => m.from_translation(translations_map),
+            MessageType::GABrowseCarouselCard(m) => m.from_translation(translations_map),
+            MessageType::GAMediaContent(m) => m.from_translation(translations_map),
+            MessageType::GASimpleResponse(m) => m.from_translation(translations_map),
+            MessageType::GASimpleResponse2(m) => m.from_translation(translations_map),
+            MessageType::DefaultCustomPayload(_) => {}
+            MessageType::GenericTextResponse(m) => m.from_translation(translations_map),
         }
     }
 
