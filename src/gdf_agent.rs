@@ -2,7 +2,6 @@ use crate::errors::{Error, Result};
 use crate::gdf_responses::normalize_json_for_gdf_agent_serialization;
 use crate::gdf_responses::MessageType;
 use crate::parse_gdf_agent_files;
-#[allow(unused_imports)]
 use crate::serialize_gdf_agent_section;
 use crate::zip::{unzip_file, zip_directory};
 use assert_json_diff::assert_json_eq_no_panic;
@@ -679,104 +678,31 @@ impl GoogleDialogflowAgent {
 
     pub fn serialize(&self, target_folder: &str) -> Result<()> {
         let base_path = Path::new(target_folder);
-        let intents_folder = base_path.join("intents");
-        let entities_folder = base_path.join("entities");
+        let unpacked_folder = base_path.join("_unpacked");
+        let intents_folder = unpacked_folder.join("intents");
+        let entities_folder = unpacked_folder.join("entities");
+        let packed_folder = base_path.join("_packed");
 
         fs::create_dir_all(&intents_folder)?;
         fs::create_dir_all(&entities_folder)?;
+        fs::create_dir_all(&packed_folder)?;
 
         let package_file_str = serde_json::to_string_pretty(&self.package)?;
-        let mut package_file_handle = File::create(base_path.join("package.json"))?;
+        let mut package_file_handle = File::create(unpacked_folder.join("package.json"))?;
         package_file_handle.write_all(package_file_str.as_bytes())?;
 
         let agent_file_str = serde_json::to_string_pretty(&self.agent)?;
-        let mut agent_file_handle = File::create(base_path.join("agent.json"))?;
+        let mut agent_file_handle = File::create(unpacked_folder.join("agent.json"))?;
         agent_file_handle.write_all(agent_file_str.as_bytes())?;
 
-        // TBD: use macro once it works
-        // serialize_gdf_agent_section!(self.entities, entities_folder);
-        for entity in self.entities.iter() {
-            let entity_str = normalize_json_for_gdf_agent_serialization(
-                &serde_json::to_string_pretty(&entity.file_content)?,
-            );
-            let file_stem_option = Path::new(&entity.file_name).file_stem();
-            if let Some(file_stem) = file_stem_option {
-                let mut entity_file_handle = File::create(entities_folder.join(format!(
-                    "{}{}",
-                    file_stem.to_str().unwrap(),
-                    ".json"
-                )))?;
-                entity_file_handle.write_all(entity_str.as_bytes())?;
-            } else {
-                return Err(Error::new(format!(
-                    "Unable to serialize file {}",
-                    &entity.file_name
-                )));
-            }
-        }
+        serialize_gdf_agent_section!(self.entities.iter(), entities_folder);
+        serialize_gdf_agent_section!(self.entity_entries.iter(), entities_folder);
+        serialize_gdf_agent_section!(self.intents.iter(), intents_folder);
+        serialize_gdf_agent_section!(self.utterances.iter(), intents_folder);
 
-        for entity_entry in self.entity_entries.iter() {
-            let entity_entry_str = normalize_json_for_gdf_agent_serialization(
-                &serde_json::to_string_pretty(&entity_entry.file_content)?,
-            );
-            let file_stem_option = Path::new(&entity_entry.file_name).file_stem();
-            if let Some(file_stem) = file_stem_option {
-                let mut entity_entry_file_handle = File::create(entities_folder.join(format!(
-                    "{}{}",
-                    file_stem.to_str().unwrap(),
-                    ".json"
-                )))?;
-                entity_entry_file_handle.write_all(entity_entry_str.as_bytes())?;
-            } else {
-                return Err(Error::new(format!(
-                    "Unable to serialize file {}",
-                    &entity_entry.file_name
-                )));
-            }
-        }
-
-        for intent in self.intents.iter() {
-            let intent_str = normalize_json_for_gdf_agent_serialization(
-                &serde_json::to_string_pretty(&intent.file_content)?,
-            );
-            let file_stem_option = Path::new(&intent.file_name).file_stem();
-            if let Some(file_stem) = file_stem_option {
-                let mut intent_file_handle = File::create(intents_folder.join(format!(
-                    "{}{}",
-                    file_stem.to_str().unwrap(),
-                    ".json"
-                )))?;
-                intent_file_handle.write_all(intent_str.as_bytes())?;
-            } else {
-                return Err(Error::new(format!(
-                    "Unable to serialize file {}",
-                    &intent.file_name
-                )));
-            }
-        }
-
-        for utterance in self.utterances.iter() {
-            let utterance_str = normalize_json_for_gdf_agent_serialization(
-                &serde_json::to_string_pretty(&utterance.file_content)?,
-            );
-            let file_stem_option = Path::new(&utterance.file_name).file_stem();
-            if let Some(file_stem) = file_stem_option {
-                let mut utterance_file_handle = File::create(intents_folder.join(format!(
-                    "{}{}",
-                    file_stem.to_str().unwrap(),
-                    ".json"
-                )))?;
-                utterance_file_handle.write_all(utterance_str.as_bytes())?;
-            } else {
-                return Err(Error::new(format!(
-                    "Unable to serialize file {}",
-                    &utterance.file_name
-                )));
-            }
-        }
         zip_directory(
-            base_path.to_str().unwrap(),
-            base_path.join("TranslatedAgent.zip").to_str().unwrap(),
+            unpacked_folder.to_str().unwrap(),
+            packed_folder.join("TranslatedAgent.zip").to_str().unwrap(),
         )?;
         Ok(())
     }

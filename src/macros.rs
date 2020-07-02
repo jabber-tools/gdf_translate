@@ -96,8 +96,8 @@ macro_rules! parse_gdf_agent_files {
 
 #[macro_export]
 macro_rules! serialize_gdf_agent_section {
-    ($section:ident, $folder:expr) => {
-        for item in $section.iter() {
+    ($iterator:expr, $folder:expr) => {
+        for item in $iterator {
             let item_str = normalize_json_for_gdf_agent_serialization(
                 &serde_json::to_string_pretty(&item.file_content)?,
             );
