@@ -707,12 +707,16 @@ impl GoogleDialogflowAgent {
                     }
                 }
             }
-        }        
+        }
 
         translations_map
     }
 
-    pub fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>, lang_to: &str,) {
+    pub fn from_translation(
+        &mut self,
+        translations_map: &collections::HashMap<String, String>,
+        lang_to: &str,
+    ) {
         for entity_entry_file in self.entity_entries.iter_mut() {
             for entity_entry in entity_entry_file.file_content.iter_mut() {
                 entity_entry.from_translation(translations_map);

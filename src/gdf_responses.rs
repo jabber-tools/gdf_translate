@@ -1089,28 +1089,28 @@ impl MessageType {
     }
 
     pub fn to_translation(&self) -> collections::HashMap<String, String> {
-      let mut col = collections::HashMap::new();
-      match self {
-          MessageType::GenericCustomPayload(_) => {}
-          MessageType::GenericQuickRepliesResponse(m) => col.extend(m.to_translation()),
-          MessageType::GenericCardResponse(m) => col.extend(m.to_translation()),
-          MessageType::GenericImageResponse(_) => {}
-          MessageType::GATableCard(m) => col.extend(m.to_translation()),
-          MessageType::GACustomPayload(_) => {}
-          MessageType::GABasicCard(m) => col.extend(m.to_translation()),
-          MessageType::GASuggestionChips(m) => col.extend(m.to_translation()),
-          MessageType::GAList(m) => col.extend(m.to_translation()),
-          MessageType::GALinkOutSuggestion(m) => col.extend(m.to_translation()),
-          MessageType::GACarouselCard(m) => col.extend(m.to_translation()),
-          MessageType::GABrowseCarouselCard(m) => col.extend(m.to_translation()),
-          MessageType::GAMediaContent(m) => col.extend(m.to_translation()),
-          MessageType::GASimpleResponse(m) => col.extend(m.to_translation()),
-          MessageType::GASimpleResponse2(m) => col.extend(m.to_translation()),
-          MessageType::DefaultCustomPayload(_) => {}
-          MessageType::GenericTextResponse(m) => col.extend(m.to_translation()),
-      }
-      col
-  }    
+        let mut col = collections::HashMap::new();
+        match self {
+            MessageType::GenericCustomPayload(_) => {}
+            MessageType::GenericQuickRepliesResponse(m) => col.extend(m.to_translation()),
+            MessageType::GenericCardResponse(m) => col.extend(m.to_translation()),
+            MessageType::GenericImageResponse(_) => {}
+            MessageType::GATableCard(m) => col.extend(m.to_translation()),
+            MessageType::GACustomPayload(_) => {}
+            MessageType::GABasicCard(m) => col.extend(m.to_translation()),
+            MessageType::GASuggestionChips(m) => col.extend(m.to_translation()),
+            MessageType::GAList(m) => col.extend(m.to_translation()),
+            MessageType::GALinkOutSuggestion(m) => col.extend(m.to_translation()),
+            MessageType::GACarouselCard(m) => col.extend(m.to_translation()),
+            MessageType::GABrowseCarouselCard(m) => col.extend(m.to_translation()),
+            MessageType::GAMediaContent(m) => col.extend(m.to_translation()),
+            MessageType::GASimpleResponse(m) => col.extend(m.to_translation()),
+            MessageType::GASimpleResponse2(m) => col.extend(m.to_translation()),
+            MessageType::DefaultCustomPayload(_) => {}
+            MessageType::GenericTextResponse(m) => col.extend(m.to_translation()),
+        }
+        col
+    }
 
     pub fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
         match self {
@@ -1135,7 +1135,6 @@ impl MessageType {
     }
 
     pub fn new_message(&self, new_lang_code: &str) -> Option<MessageType> {
-        
         let cloned_message = match self {
             MessageType::GenericCustomPayload(_) => None,
             MessageType::GenericQuickRepliesResponse(m) => {
@@ -1224,110 +1223,111 @@ impl MessageType {
         cloned_message
     }
 
+    pub fn to_new_language(
+        &self,
+        new_lang_code: &str,
+        translations_map: &mut collections::HashMap<String, String>,
+    ) -> Option<MessageType> {
+        let cloned_message = match self {
+            MessageType::GenericCustomPayload(_) => None,
+            MessageType::GenericQuickRepliesResponse(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GenericQuickRepliesResponse(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GenericCardResponse(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GenericCardResponse(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GenericImageResponse(_) => None,
+            MessageType::GATableCard(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GATableCard(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GACustomPayload(_) => None,
+            MessageType::GABasicCard(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GABasicCard(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GASuggestionChips(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GASuggestionChips(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GAList(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GAList(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GALinkOutSuggestion(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GALinkOutSuggestion(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GACarouselCard(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GACarouselCard(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GABrowseCarouselCard(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GABrowseCarouselCard(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GAMediaContent(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GAMediaContent(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GASimpleResponse(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GASimpleResponse(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::GASimpleResponse2(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GASimpleResponse2(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+            MessageType::DefaultCustomPayload(_) => None,
+            MessageType::GenericTextResponse(m) => {
+                let mut inner_msg_clone = m.clone();
+                inner_msg_clone.lang = format!("{}", new_lang_code);
+                translations_map.extend(inner_msg_clone.to_translation());
+                let outer_msg_clone = MessageType::GenericTextResponse(inner_msg_clone);
+                Some(outer_msg_clone)
+            }
+        };
 
-    pub fn to_new_language(&self, new_lang_code: &str, translations_map: &mut collections::HashMap<String, String>) -> Option<MessageType> {
-        
-      let cloned_message = match self {
-          MessageType::GenericCustomPayload(_) => None,
-          MessageType::GenericQuickRepliesResponse(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GenericQuickRepliesResponse(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GenericCardResponse(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GenericCardResponse(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GenericImageResponse(_) => None,
-          MessageType::GATableCard(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GATableCard(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GACustomPayload(_) => None,
-          MessageType::GABasicCard(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GABasicCard(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GASuggestionChips(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GASuggestionChips(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GAList(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GAList(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GALinkOutSuggestion(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GALinkOutSuggestion(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GACarouselCard(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GACarouselCard(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GABrowseCarouselCard(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GABrowseCarouselCard(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GAMediaContent(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GAMediaContent(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GASimpleResponse(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GASimpleResponse(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::GASimpleResponse2(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GASimpleResponse2(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-          MessageType::DefaultCustomPayload(_) => None,
-          MessageType::GenericTextResponse(m) => {
-              let mut inner_msg_clone = m.clone();
-              inner_msg_clone.lang = format!("{}", new_lang_code);
-              translations_map.extend(inner_msg_clone.to_translation());
-              let outer_msg_clone = MessageType::GenericTextResponse(inner_msg_clone);
-              Some(outer_msg_clone)
-          }
-      };
-
-      cloned_message
-  }    
-
+        cloned_message
+    }
 }
 
 // removes all whitespaces and replaces some characters (as produced by serde serialization)
