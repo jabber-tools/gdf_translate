@@ -689,16 +689,25 @@ impl GoogleDialogflowAgent {
                 let mut new_messages = vec![];
                 for intent_response_message in intent_response.messages.iter() {
                     if intent_response_message.get_message_lang() == lang_from {
-                        let translated_message = intent_response_message.to_new_language(lang_to);
-                        if let Some(message) = translated_message {
-                            translations_map.extend(message.translations);
-                            new_messages.push(message.cloned_message);
+                        let new_message = intent_response_message.new_message(lang_to);
+                        if let Some(message) = new_message {
+                            new_messages.push(message);
                         }
                     }
                 }
                 intent_response.messages.extend(new_messages);
             }
         }
+
+        for intent_file in self.intents.iter() {
+            for intent_response in intent_file.file_content.responses.iter() {
+                for message in intent_response.messages.iter() {
+                    if message.get_message_lang() == lang_to {
+                        translations_map.extend(message.to_translation());
+                    }
+                }
+            }
+        }        
 
         translations_map
     }
@@ -719,7 +728,6 @@ impl GoogleDialogflowAgent {
         }
 
         for intent_file in self.intents.iter_mut() {
-            println!("___intent {}", intent_file.file_name);
             for intent_response in intent_file.file_content.responses.iter_mut() {
                 for message in intent_response.messages.iter_mut() {
                     if message.get_message_lang() == lang_to {
@@ -1906,9 +1914,9 @@ mod tests {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
-        println!("translation_map before{:#?}", translation_map);
+        // println!("translation_map before{:#?}", translation_map);
         dummy_translate(&mut translation_map);
-        println!("translation_map after{:#?}", translation_map);
+        // println!("translation_map after{:#?}", translation_map);
         agent.from_translation(&translation_map, "de");
         // println!("agent after{:#?}", agent);
         agent.serialize("c:/tmp/out")?;
