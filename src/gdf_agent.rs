@@ -1,6 +1,7 @@
 use crate::errors::{Error, Result};
-use crate::gdf_responses::normalize_json_for_gdf_agent_serialization;
-use crate::gdf_responses::MessageType;
+use crate::google::dialogflow::responses::{
+    normalize_json_for_gdf_agent_serialization, MessageType,
+};
 use crate::parse_gdf_agent_files;
 use crate::serialize_gdf_agent_section;
 use crate::zip::{unzip_file, zip_directory};
@@ -922,7 +923,7 @@ fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gdf_responses::normalize_json;
+    use crate::google::dialogflow::responses::normalize_json;
     use crate::translation_tests_assertions;
     use assert_json_diff::assert_json_eq;
 
