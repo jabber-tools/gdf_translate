@@ -24,6 +24,7 @@ lazy_static! {
     static ref RE_ENTITY_ENTRY_FILE: Regex = Regex::new(r"(\w+entries_)([a-zA-Z-]+).json").unwrap();
     static ref RE_INTENT_UTTERANCE_FILE: Regex =
         Regex::new(r"(\w+usersays_)([a-zA-Z-]+).json").unwrap();
+    static ref RE_COMPOSITE_ENTITY: Regex = Regex::new(r"@\w+:\w+").unwrap();
 }
 
 pub trait Translate {
@@ -630,7 +631,11 @@ impl GoogleDialogflowAgent {
 
         for new_entity_entry_file in new_entity_entry_files.iter() {
             for new_entity_entry in new_entity_entry_file.file_content.iter() {
-                translations_map.extend(new_entity_entry.to_translation());
+                if RE_COMPOSITE_ENTITY.is_match(&new_entity_entry.value) == false
+                /* skip composite entities*/
+                {
+                    translations_map.extend(new_entity_entry.to_translation());
+                }
             }
         }
 
