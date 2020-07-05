@@ -45,6 +45,40 @@ macro_rules! translation_tests_assertions {
 // used in gdf_responses
 // definying this function with generics is quite tricky becase of calling <<DeserializedStructType>>::new
 // macro is good way here how to prevent writing same function multiple times
+// original function was something like this, see usage of DeserializeOwned
+/* fn check_gdf_zip_glob_files<T>(glob_exp: &str, contains_array: bool) -> Result<()>
+where
+    T: serde::de::DeserializeOwned + Serialize, // see https://serde.rs/lifetimes.html !
+{
+    for entry in glob(glob_exp)? {
+        let path = entry?;
+
+        let file_name = path.as_path().to_str().unwrap();
+
+        if contains_array == false
+            && (file_name.contains("_entries_") || file_name.contains("_usersays_"))
+        {
+            continue; // if not processing arrays (entity entries or intent utterances) skip respective files!
+        }
+
+        debug!("processing file {}", file_name);
+        let file_str = fs::read_to_string(file_name)?;
+
+        let deserialized_struct: T = serde_json::from_str(&file_str)?;
+
+        let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+        let comparison_result = assert_json_eq_no_panic(
+            &serde_json::from_str(&serialized_str)?,
+            &serde_json::from_str(&file_str)?,
+        );
+
+        if let Err(err_msg) = comparison_result {
+            return Err(Error::new(err_msg));
+        }
+    }
+    Ok(())
+} */
+
 #[macro_export]
 macro_rules! parse_gdf_agent_files {
     ($name:ident, $type_deserialized:ty, $type_output:ty) => {

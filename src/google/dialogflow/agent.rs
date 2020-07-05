@@ -1,7 +1,13 @@
+mod entities;
+mod intents;
+mod utterances;
+
+use entities::*;
+use intents::*;
+use utterances::*;
+
 use crate::errors::{Error, Result};
-use crate::google::dialogflow::responses::{
-    normalize_json_for_gdf_agent_serialization, MessageType,
-};
+use crate::google::dialogflow::responses::normalize_json_for_gdf_agent_serialization;
 use crate::parse_gdf_agent_files;
 use crate::serialize_gdf_agent_section;
 use crate::zip::{unzip_file, zip_directory};
@@ -9,8 +15,7 @@ use assert_json_diff::assert_json_eq_no_panic;
 use glob::glob;
 use lazy_static::lazy_static;
 use log::debug;
-use regex::{Captures, Regex};
-use serde::de::DeserializeOwned;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections;
@@ -21,16 +26,17 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-lazy_static! {
-    static ref RE_ENTITY_ENTRY_FILE: Regex = Regex::new(r"(\w+entries_)([a-zA-Z-]+).json").unwrap();
-    static ref RE_INTENT_UTTERANCE_FILE: Regex =
-        Regex::new(r"(\w+usersays_)([a-zA-Z-]+).json").unwrap();
-    static ref RE_COMPOSITE_ENTITY: Regex = Regex::new(r"@\w+:\w+").unwrap();
-}
-
 pub trait Translate {
     fn to_translation(&self) -> collections::HashMap<String, String>;
     fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>);
+}
+
+lazy_static! {
+    pub static ref RE_ENTITY_ENTRY_FILE: Regex =
+        Regex::new(r"(\w+entries_)([a-zA-Z-]+).json").unwrap();
+    pub static ref RE_INTENT_UTTERANCE_FILE: Regex =
+        Regex::new(r"(\w+usersays_)([a-zA-Z-]+).json").unwrap();
+    pub static ref RE_COMPOSITE_ENTITY: Regex = Regex::new(r"@\w+:\w+").unwrap();
 }
 
 // used in unit tests in gdf_responses and gdf_agent
@@ -38,60 +44,6 @@ pub fn dummy_translate(translation_map: &mut collections::HashMap<String, String
     for val in translation_map.values_mut() {
         let translated_text = format!("{}{}", val, "_translated");
         *val = translated_text;
-    }
-}
-
-// see https://serde.rs/field-attrs.html
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Entity {
-    pub id: String,
-    pub name: String,
-
-    #[serde(rename = "isOverridable")]
-    pub is_overridable: bool,
-
-    #[serde(rename = "isEnum")]
-    pub is_enum: bool,
-
-    #[serde(rename = "isRegexp")]
-    pub is_regexp: bool,
-
-    #[serde(rename = "automatedExpansion")]
-    pub automated_expansion: bool,
-
-    #[serde(rename = "allowFuzzyExtraction")]
-    pub allow_fuzzy_extraction: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct EntityEntry {
-    pub value: String,
-    pub synonyms: Vec<String>,
-}
-
-impl Translate for EntityEntry {
-    fn to_translation(&self) -> collections::HashMap<String, String> {
-        let mut map_to_translate = collections::HashMap::new();
-
-        map_to_translate.insert(format!("{:p}", &self.value), self.value.to_owned());
-
-        for synonym in self.synonyms.iter() {
-            map_to_translate.insert(format!("{:p}", synonym), synonym.to_owned());
-        }
-
-        map_to_translate
-    }
-
-    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
-        if let Some(val) = translations_map.get(&format!("{:p}", &self.value)) {
-            self.value = val.to_owned();
-        }
-
-        for synonym in self.synonyms.iter_mut() {
-            if let Some(syn) = translations_map.get(&format!("{:p}", synonym)) {
-                *synonym = syn.to_owned();
-            }
-        }
     }
 }
 
@@ -147,7 +99,7 @@ pub struct AgentManifestGoogleAssistant {
     #[serde(rename = "voiceType")]
     pub voice_type: String,
 
-    pub capabilities: Vec<String>, // ??
+    pub capabilities: Vec<String>,
     pub env: String,
 
     #[serde(rename = "protocolVersion")]
@@ -235,280 +187,6 @@ pub struct AgentManifest {
     pub base_action_packages_url: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IntentEvent {
-    name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IntentResponseAffectedContext {
-    pub name: String,
-    pub parameters: collections::HashMap<String, String>, // ??
-    pub lifespan: i8,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct IntentResponseParameterPrompt {
-    lang: String,
-    value: String,
-}
-
-impl Translate for IntentResponseParameterPrompt {
-    fn to_translation(&self) -> collections::HashMap<String, String> {
-        let mut map_to_translate = collections::HashMap::new();
-        map_to_translate.insert(format!("{:p}", &self.value), self.value.to_owned());
-        map_to_translate
-    }
-
-    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
-        self.value = translations_map
-            .get(&format!("{:p}", &self.value))
-            .unwrap()
-            .to_owned();
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IntentResponseParameter {
-    id: String,
-    required: bool,
-
-    #[serde(rename = "dataType")]
-    data_type: String,
-
-    name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    value: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    prompts: Option<Vec<IntentResponseParameterPrompt>>,
-
-    #[serde(rename = "promptMessages")]
-    prompt_messages: Vec<String>, // ??
-
-    #[serde(rename = "noMatchPromptMessages")]
-    no_match_prompt_messages: Vec<String>, // ??
-
-    #[serde(rename = "noInputPromptMessages")]
-    no_input_prompt_messages: Vec<String>, // ??
-
-    #[serde(rename = "outputDialogContexts")]
-    output_dialog_contexts: Vec<String>, // ??
-
-    #[serde(rename = "isList")]
-    is_list: bool,
-}
-
-impl Translate for IntentResponseParameter {
-    fn to_translation(&self) -> collections::HashMap<String, String> {
-        let mut map_to_translate = collections::HashMap::new();
-
-        if let Some(prompts) = &self.prompts {
-            for prompt in prompts.iter() {
-                map_to_translate.extend(prompt.to_translation());
-            }
-        }
-
-        map_to_translate
-    }
-
-    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
-        if let Some(prompts) = &mut self.prompts {
-            for prompt in prompts.iter_mut() {
-                prompt.from_translation(translations_map);
-            }
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IntentResponse {
-    #[serde(rename = "resetContexts")]
-    pub reset_contexts: bool,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub action: Option<String>,
-
-    #[serde(rename = "affectedContexts")]
-    pub affected_contexts: Vec<IntentResponseAffectedContext>,
-
-    pub parameters: Vec<IntentResponseParameter>,
-
-    pub messages: Vec<MessageType>,
-
-    #[serde(rename = "defaultResponsePlatforms")]
-    pub default_response_platforms: collections::HashMap<String, bool>,
-
-    pub speech: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Intent {
-    pub id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "parentId")]
-    pub parent_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "rootParentId")]
-    pub root_parent_id: Option<String>,
-    pub name: String,
-    pub auto: bool,
-    pub contexts: Vec<String>,
-
-    pub responses: Vec<IntentResponse>,
-
-    pub priority: i64,
-
-    #[serde(rename = "webhookUsed")]
-    pub webhook_used: bool,
-
-    #[serde(rename = "webhookForSlotFilling")]
-    pub webhook_for_slot_filling: bool,
-
-    #[serde(rename = "fallbackIntent")]
-    pub fallback_intent: bool,
-
-    pub events: Vec<IntentEvent>,
-
-    #[serde(rename = "conditionalResponses")]
-    pub conditional_responses: Vec<String>, // TBD: no idea what is in these attribute, we do not use it
-    pub condition: String,
-    #[serde(rename = "conditionalFollowupEvents")]
-    pub conditional_followup_events: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct IntentUtteranceData {
-    text: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    alias: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    meta: Option<String>,
-    #[serde(rename = "userDefined")]
-    user_defined: bool,
-}
-
-impl Translate for IntentUtteranceData {
-    fn to_translation(&self) -> collections::HashMap<String, String> {
-        let mut map_to_translate = collections::HashMap::new();
-        map_to_translate.insert(format!("{:p}", &self.text), self.text.to_owned());
-        map_to_translate
-    }
-
-    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
-        if let Some(text) = translations_map.get(&format!("{:p}", &self.text)) {
-            self.text = text.to_owned()
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct IntentUtterance {
-    pub id: String,
-    pub data: Vec<IntentUtteranceData>,
-
-    #[serde(rename = "isTemplate")]
-    pub is_template: bool,
-    pub count: i8,
-    pub updated: i64,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct EntityFile {
-    pub file_name: String,
-    pub file_content: Entity,
-}
-
-impl EntityFile {
-    fn new(file_name: String, file_content: Entity) -> Self {
-        EntityFile {
-            file_name,
-            file_content,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct EntityEntriesFile {
-    pub file_name: String,
-    pub file_content: Vec<EntityEntry>,
-}
-
-impl EntityEntriesFile {
-    fn new(file_name: String, file_content: Vec<EntityEntry>) -> Self {
-        EntityEntriesFile {
-            file_name,
-            file_content,
-        }
-    }
-
-    fn to_new_language(&self, new_lang_code: &str) -> Self {
-        let mut cloned = self.clone();
-        cloned.file_name = RE_ENTITY_ENTRY_FILE
-            .replace(&self.file_name, |caps: &Captures| {
-                format!("{}{}{}", &caps[1], new_lang_code, ".json")
-            })
-            .to_string();
-
-        cloned
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IntentFile {
-    pub file_name: String,
-    pub file_content: Intent,
-}
-
-impl IntentFile {
-    fn new(file_name: String, file_content: Intent) -> Self {
-        IntentFile {
-            file_name,
-            file_content,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct IntentUtterancesFile {
-    pub file_name: String,
-    pub file_content: Vec<IntentUtterance>,
-}
-
-impl IntentUtterancesFile {
-    fn new(file_name: String, file_content: Vec<IntentUtterance>) -> Self {
-        IntentUtterancesFile {
-            file_name,
-            file_content,
-        }
-    }
-
-    fn to_new_language(&self, new_lang_code: &str) -> Self {
-        let mut cloned = self.clone();
-        cloned.file_name = RE_INTENT_UTTERANCE_FILE
-            .replace(&self.file_name, |caps: &Captures| {
-                format!("{}{}{}", &caps[1], new_lang_code, ".json")
-            })
-            .to_string();
-
-        cloned
-    }
-}
-
-// entity entries file is something like sys.color_entries_en.json
-// we need to calculate lenght of '_entries' + 'en' so that we can remove
-// it and get entity master file name, i.e. sys.color.json
-fn entity_entry_file_name_to_entity_filename(entity_entry_file_name: &str) -> String {
-    let caps = RE_ENTITY_ENTRY_FILE
-        .captures(entity_entry_file_name)
-        .unwrap();
-
-    let suffix_len = &caps[2].len() + 14; // 14 = len(_entries_)  + len (.json). suffix len = 14 + len(lang code)
-    let prefix_len = entity_entry_file_name.len() - suffix_len;
-    let entity_file_name = &entity_entry_file_name[0..prefix_len];
-    format!("{}{}", entity_file_name, ".json")
-}
-
 #[derive(Debug)]
 pub struct GoogleDialogflowAgent {
     entities: Vec<EntityFile>,
@@ -538,62 +216,18 @@ impl GoogleDialogflowAgent {
         }
     }
 
-    // TBD: this will be probably not used in the end
-    #[allow(dead_code)]
-    fn group_entities(&self) -> collections::HashMap<String, Vec<&EntityEntriesFile>> {
-        let mut output_collection = collections::HashMap::new();
-        for entity in self.entities.iter() {
-            let entity_file_name = entity.file_name.to_string();
-            for entity_entry in self.entity_entries.iter() {
-                if entity_entry.file_name.starts_with(&format!(
-                    "{}{}",
-                    &entity_file_name[0..entity_file_name.len() - 5],
-                    "_entries_"
-                ))
-                // remove last 5 characters which is '.json'
-                {
-                    let map = output_collection.get_mut(&entity_file_name);
-                    match map {
-                        None => {
-                            output_collection.insert(entity_file_name.clone(), vec![entity_entry]);
-                        }
-                        Some(vec_of_entries) => {
-                            vec_of_entries.push(entity_entry);
-                        }
-                    }
-                }
-            }
-        }
-        output_collection
-    }
+    // entity entries file is something like sys.color_entries_en.json
+    // we need to calculate lenght of '_entries' + 'en' so that we can remove
+    // it and get entity master file name, i.e. sys.color.json
+    fn entity_entry_file_name_to_entity_filename(entity_entry_file_name: &str) -> String {
+        let caps = RE_ENTITY_ENTRY_FILE
+            .captures(entity_entry_file_name)
+            .unwrap();
 
-    // TBD: this will be probably not used in the end
-    #[allow(dead_code)]
-    fn group_intents(&self) -> collections::HashMap<String, Vec<&IntentUtterancesFile>> {
-        let mut output_collection = collections::HashMap::new();
-        for intent in self.intents.iter() {
-            let intent_file_name = intent.file_name.to_string();
-            for utterance in self.utterances.iter() {
-                if utterance.file_name.starts_with(&format!(
-                    "{}{}",
-                    &intent_file_name[0..intent_file_name.len() - 5],
-                    "_usersays_"
-                ))
-                // remove last 5 characters which is '.json'
-                {
-                    let map = output_collection.get_mut(&intent_file_name);
-                    match map {
-                        None => {
-                            output_collection.insert(intent_file_name.clone(), vec![utterance]);
-                        }
-                        Some(vec_of_entries) => {
-                            vec_of_entries.push(utterance);
-                        }
-                    }
-                }
-            }
-        }
-        output_collection
+        let suffix_len = &caps[2].len() + 14; // 14 = len(_entries_)  + len (.json). suffix len = 14 + len(lang code)
+        let prefix_len = entity_entry_file_name.len() - suffix_len;
+        let entity_file_name = &entity_entry_file_name[0..prefix_len];
+        format!("{}{}", entity_file_name, ".json")
     }
 
     pub fn to_translation(
@@ -611,8 +245,9 @@ impl GoogleDialogflowAgent {
                 .captures(&entity_entry_file.file_name)
                 .unwrap();
 
-            let entity_file_name =
-                entity_entry_file_name_to_entity_filename(&entity_entry_file.file_name);
+            let entity_file_name = GoogleDialogflowAgent::entity_entry_file_name_to_entity_filename(
+                &entity_entry_file.file_name,
+            );
 
             let entity_files: Vec<EntityFile> = self
                 .entities
@@ -778,43 +413,7 @@ impl GoogleDialogflowAgent {
         )?;
         Ok(())
     }
-}
-
-// not used in the end, if we actually wanted to put somewhere deserialized that generics would become
-// quite cumbersome and nasty using macro instead
-#[allow(dead_code)]
-fn check_gdf_zip_glob_files<T>(glob_exp: &str, contains_array: bool) -> Result<()>
-where
-    T: DeserializeOwned + Serialize, // see https://serde.rs/lifetimes.html !
-{
-    for entry in glob(glob_exp)? {
-        let path = entry?;
-
-        let file_name = path.as_path().to_str().unwrap();
-
-        if contains_array == false
-            && (file_name.contains("_entries_") || file_name.contains("_usersays_"))
-        {
-            continue; // if not processing arrays (entity entries or intent utterances) skip respective files!
-        }
-
-        debug!("processing file {}", file_name);
-        let file_str = fs::read_to_string(file_name)?;
-
-        let deserialized_struct: T = serde_json::from_str(&file_str)?;
-
-        let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
-        let comparison_result = assert_json_eq_no_panic(
-            &serde_json::from_str(&serialized_str)?,
-            &serde_json::from_str(&file_str)?,
-        );
-
-        if let Err(err_msg) = comparison_result {
-            return Err(Error::new(err_msg));
-        }
-    }
-    Ok(())
-}
+} // impl GoogleDialogflowAgent
 
 parse_gdf_agent_files!(parse_gdf_agent_files_entity, Entity, EntityFile);
 parse_gdf_agent_files!(
@@ -1840,11 +1439,15 @@ mod tests {
     #[test]
     fn test_entity_entry_file_name_to_entity_filename() {
         assert_eq!(
-            entity_entry_file_name_to_entity_filename("sys.color_entries_en.json"),
+            GoogleDialogflowAgent::entity_entry_file_name_to_entity_filename(
+                "sys.color_entries_en.json"
+            ),
             "sys.color.json"
         );
         assert_eq!(
-            entity_entry_file_name_to_entity_filename("PlacementLocationSide_entries_pt-br.json"),
+            GoogleDialogflowAgent::entity_entry_file_name_to_entity_filename(
+                "PlacementLocationSide_entries_pt-br.json"
+            ),
             "PlacementLocationSide.json"
         );
     }
@@ -1878,18 +1481,6 @@ mod tests {
         Ok(())
     }
 
-    // cargo test -- --show-output test_get_gdf_agent_from_zip
-    #[test]
-    #[ignore]
-    fn test_get_gdf_agent_from_zip() -> Result<()> {
-        let agent = parse_gdf_agent_zip(&format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip"))?;
-        let entity_groups = agent.group_entities();
-        let intent_groups = agent.group_intents();
-        println!("entity_groups {:#?}", entity_groups);
-        println!("intent_groups {:#?}", intent_groups);
-        Ok(())
-    }
-
     // cargo test -- --show-output test_dummy_translate_agent
     #[test]
     #[ignore]
@@ -1919,7 +1510,7 @@ mod tests {
 
     // cargo test -- --show-output test_dummy_translate_and_serialize_agent
     #[test]
-    // #[ignore]
+    #[ignore]
     fn test_dummy_translate_and_serialize_agent() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
