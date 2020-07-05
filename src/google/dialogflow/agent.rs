@@ -1508,10 +1508,10 @@ mod tests {
         Ok(())
     }
 
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_1
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_alarm
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_1() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agent_alarm() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Alarm.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1524,10 +1524,10 @@ mod tests {
         Ok(())
     }
     
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_2
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_appmgmt
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_2() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agent_appmgmt() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "App-Management.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1540,10 +1540,10 @@ mod tests {
         Ok(())
     }
     
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_3
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_banking
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_3() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agent_banking() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Banking.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1556,10 +1556,10 @@ mod tests {
         Ok(())
     }
     
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_4
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_car
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_4() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agent_car() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Car.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1572,10 +1572,10 @@ mod tests {
         Ok(())
     }
     
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_5
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_coffee_shop
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_5() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agent_coffee_shop() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Coffee-Shop.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1588,10 +1588,10 @@ mod tests {
         Ok(())
     }
 
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_6
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_faq
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_6() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agent_faq() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1604,10 +1604,10 @@ mod tests {
         Ok(())
     }
 
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_7
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_hotel_booking
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_7() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agent_hotel_booking() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Hotel-Booking.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1620,10 +1620,10 @@ mod tests {
         Ok(())
     }
     
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_8
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_navigation
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_8() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agent_navigation() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Navigation.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1636,10 +1636,10 @@ mod tests {
         Ok(())
     }
     
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_9
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_smarthome
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_9() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agent_smarthome() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Smart-Home.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1652,10 +1652,10 @@ mod tests {
         Ok(())
     }
     
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_10
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_support
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_10() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agent_support() -> Result<()> {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Support.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
