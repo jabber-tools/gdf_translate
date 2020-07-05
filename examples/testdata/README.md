@@ -1,0 +1,1 @@
+put into this folder all sensitive testing data that should be not committed like Google credential JSONs for service accounts, clients' DialogFlow agents etc.
