@@ -26,6 +26,7 @@ mod ga_carousel_card;
 mod ga_link_out_suggestion;
 mod ga_list;
 mod ga_media_content;
+mod ga_shared;
 mod ga_simple;
 mod ga_simple2;
 mod ga_suggestions_chips;
@@ -58,44 +59,6 @@ use ga_table::GATableCardType;
 // GDF phone gateway (Play audio, Transfer call, Synthetize speech)
 // Telegram (Text Resoponse + Image + Card + Quick Replies + Custom Payload)
 // RCS Business Messaging (Standalone Rich Card + Carousel Rich Card + Simple Response)
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum StringOrVecOfString {
-    Str(String),
-    StrArray(Vec<String>),
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct GACardTypeButton {
-    pub title: String,
-    #[serde(rename = "openUrlAction")]
-    pub open_url_action: GAOpenUrlAction,
-}
-
-impl Translate for GACardTypeButton {
-    fn to_translation(&self) -> collections::HashMap<String, String> {
-        let mut map_to_translate = collections::HashMap::new();
-
-        map_to_translate.insert(format!("{:p}", &self.title), self.title.to_owned());
-
-        map_to_translate
-    }
-
-    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
-        self.title = translations_map
-            .get(&format!("{:p}", &self.title))
-            .unwrap()
-            .to_owned();
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct GAOpenUrlAction {
-    pub url: String,
-    #[serde(rename = "urlTypeHint")]
-    pub url_type_hint: String,
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]

@@ -1,7 +1,13 @@
 use crate::gdf_agent::Translate;
-use crate::google::dialogflow::responses::StringOrVecOfString;
 use serde::{Deserialize, Serialize};
 use std::collections;
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum StringOrVecOfString {
+    Str(String),
+    StrArray(Vec<String>),
+}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GenericTextResponseType {

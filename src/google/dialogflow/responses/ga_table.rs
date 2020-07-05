@@ -1,5 +1,5 @@
 use crate::gdf_agent::Translate;
-use crate::google::dialogflow::responses::GACardTypeButton;
+use crate::google::dialogflow::responses::ga_shared::GACardTypeButton;
 use serde::{Deserialize, Serialize};
 use std::collections;
 

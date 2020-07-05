@@ -1,6 +1,6 @@
 use crate::gdf_agent::Translate;
 use crate::google::dialogflow::responses::ga_image::GAImage;
-use crate::google::dialogflow::responses::GAOpenUrlAction;
+use crate::google::dialogflow::responses::ga_shared::GAOpenUrlAction;
 use serde::{Deserialize, Serialize};
 use std::collections;
 
