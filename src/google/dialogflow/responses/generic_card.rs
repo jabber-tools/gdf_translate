@@ -1,7 +1,7 @@
 use crate::google::dialogflow::agent::Translate;
+use crate::google::dialogflow::responses::ga_shared::StringOrVecOfString;
 use serde::{Deserialize, Serialize};
 use std::collections;
-use crate::google::dialogflow::responses::ga_shared::StringOrVecOfString;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GenericCardResponseButton {
@@ -44,7 +44,7 @@ pub struct GenericCardResponseType {
     pub image_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub buttons: Option<Vec<GenericCardResponseButton>>,
-    
+
     // card cannot have really speech but after title was converted to Option
     // GenericTextResponseType got confused with GenericCardResponseType (i.e. text response identified as generic card response)
     // and we lost speech during serialization
@@ -80,8 +80,7 @@ impl Translate for GenericCardResponseType {
                         map_to_translate.insert(format!("{:p}", item), item.to_owned());
                     }
                 }
-            }        
-    
+            }
         }
 
         map_to_translate
@@ -134,7 +133,7 @@ impl Translate for GenericCardResponseType {
                     }
                     self.speech = Some(StringOrVecOfString::StrArray(speech_vec));
                 }
-            }    
+            }
         }
     }
 }

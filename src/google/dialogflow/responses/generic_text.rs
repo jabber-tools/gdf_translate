@@ -1,7 +1,7 @@
 use crate::google::dialogflow::agent::Translate;
+use crate::google::dialogflow::responses::ga_shared::StringOrVecOfString;
 use serde::{Deserialize, Serialize};
 use std::collections;
-use crate::google::dialogflow::responses::ga_shared::StringOrVecOfString;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GenericTextResponseType {

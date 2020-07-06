@@ -1530,167 +1530,44 @@ mod tests {
         Ok(())
     }
 
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_alarm
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agents
     #[test]
     //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_alarm() -> Result<()> {
+    fn test_dummy_translate_and_serialize_agents() -> Result<()> {
         init_logging();
-        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Alarm.zip");
-        let mut agent = parse_gdf_agent_zip(&path)?;
-        let mut translation_map = agent.to_translation("en", "de");
-        // println!("translation_map before{:#?}", translation_map);
-        dummy_translate(&mut translation_map);
-        // println!("translation_map after{:#?}", translation_map);
-        agent.from_translation(&translation_map, "de");
-        // println!("agent after{:#?}", agent);
-        agent.serialize("c:/tmp/out/alarm")?;
-        Ok(())
-    }
 
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_appmgmt
-    #[test]
-    //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_appmgmt() -> Result<()> {
-        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "App-Management.zip");
-        let mut agent = parse_gdf_agent_zip(&path)?;
-        let mut translation_map = agent.to_translation("en", "de");
-        // println!("translation_map before{:#?}", translation_map);
-        dummy_translate(&mut translation_map);
-        // println!("translation_map after{:#?}", translation_map);
-        agent.from_translation(&translation_map, "de");
-        // println!("agent after{:#?}", agent);
-        agent.serialize("c:/tmp/out/appmgmt")?;
-        Ok(())
-    }
+        let agents: Vec<(&str, &str, bool)> = vec![
+            ("Alarm.zip", "c:/tmp/out/alarm", true),
+            ("App-Management.zip", "c:/tmp/out/appmgmt", true),
+            ("Banking.zip", "c:/tmp/out/banking", true),
+            ("Car.zip", "c:/tmp/out/car", true),
+            ("Coffee-Shop.zip", "c:/tmp/out/coffeeshop", true),
+            ("FAQ.zip", "c:/tmp/out/faq", true),
+            ("Hotel-Booking.zip", "c:/tmp/out/hotelbooking", true),
+            ("Navigation.zip", "c:/tmp/out/navigation", true),
+            ("Smart-Home.zip", "c:/tmp/out/smarthome", true),
+            ("Support.zip", "c:/tmp/out/support", true),
+        ];
 
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_banking
-    #[test]
-    //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_banking() -> Result<()> {
-        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Banking.zip");
-        let mut agent = parse_gdf_agent_zip(&path)?;
-        let mut translation_map = agent.to_translation("en", "de");
-        // println!("translation_map before{:#?}", translation_map);
-        dummy_translate(&mut translation_map);
-        // println!("translation_map after{:#?}", translation_map);
-        agent.from_translation(&translation_map, "de");
-        // println!("agent after{:#?}", agent);
-        agent.serialize("c:/tmp/out/banking")?;
-        Ok(())
-    }
+        for agent in agents.iter() {
+            let agent_zip = agent.0;
+            let agent_output = agent.1;
+            let agent_enabled = agent.2;
+            if agent_enabled == false {
+                continue;
+            }
 
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_car
-    #[test]
-    //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_car() -> Result<()> {
-        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Car.zip");
-        let mut agent = parse_gdf_agent_zip(&path)?;
-        let mut translation_map = agent.to_translation("en", "de");
-        // println!("translation_map before{:#?}", translation_map);
-        dummy_translate(&mut translation_map);
-        // println!("translation_map after{:#?}", translation_map);
-        agent.from_translation(&translation_map, "de");
-        // println!("agent after{:#?}", agent);
-        agent.serialize("c:/tmp/out/car")?;
-        Ok(())
-    }
+            let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, agent_zip);
+            let mut agent = parse_gdf_agent_zip(&path)?;
+            let mut translation_map = agent.to_translation("en", "de");
+            // println!("translation_map before{:#?}", translation_map);
+            dummy_translate(&mut translation_map);
+            // println!("translation_map after{:#?}", translation_map);
+            agent.from_translation(&translation_map, "de");
+            // println!("agent after{:#?}", agent);
+            agent.serialize(agent_output)?;
+        }
 
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_coffee_shop
-    #[test]
-    //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_coffee_shop() -> Result<()> {
-        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Coffee-Shop.zip");
-        let mut agent = parse_gdf_agent_zip(&path)?;
-        let mut translation_map = agent.to_translation("en", "de");
-        // println!("translation_map before{:#?}", translation_map);
-        dummy_translate(&mut translation_map);
-        // println!("translation_map after{:#?}", translation_map);
-        agent.from_translation(&translation_map, "de");
-        // println!("agent after{:#?}", agent);
-        agent.serialize("c:/tmp/out/coffeeshop")?;
-        Ok(())
-    }
-
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_faq
-    #[test]
-    //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_faq() -> Result<()> {
-        init_logging();
-        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
-        let mut agent = parse_gdf_agent_zip(&path)?;
-        let mut translation_map = agent.to_translation("en", "de");
-        // println!("translation_map before{:#?}", translation_map);
-        dummy_translate(&mut translation_map);
-        // println!("translation_map after{:#?}", translation_map);
-        agent.from_translation(&translation_map, "de");
-        // println!("agent after{:#?}", agent);
-        agent.serialize("c:/tmp/out/faq")?;
-        Ok(())
-    }
-
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_hotel_booking
-    #[test]
-    //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_hotel_booking() -> Result<()> {
-        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Hotel-Booking.zip");
-        let mut agent = parse_gdf_agent_zip(&path)?;
-        let mut translation_map = agent.to_translation("en", "de");
-        // println!("translation_map before{:#?}", translation_map);
-        dummy_translate(&mut translation_map);
-        // println!("translation_map after{:#?}", translation_map);
-        agent.from_translation(&translation_map, "de");
-        // println!("agent after{:#?}", agent);
-        agent.serialize("c:/tmp/out/hotelbooking")?;
-        Ok(())
-    }
-
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_navigation
-    #[test]
-    //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_navigation() -> Result<()> {
-        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Navigation.zip");
-        let mut agent = parse_gdf_agent_zip(&path)?;
-        let mut translation_map = agent.to_translation("en", "de");
-        // println!("translation_map before{:#?}", translation_map);
-        dummy_translate(&mut translation_map);
-        // println!("translation_map after{:#?}", translation_map);
-        agent.from_translation(&translation_map, "de");
-        // println!("agent after{:#?}", agent);
-        agent.serialize("c:/tmp/out/navigation")?;
-        Ok(())
-    }
-
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_smarthome
-    #[test]
-    //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_smarthome() -> Result<()> {
-        // init_logging();
-        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Smart-Home.zip");
-        let mut agent = parse_gdf_agent_zip(&path)?;
-        let mut translation_map = agent.to_translation("en", "de");
-        // println!("translation_map before{:#?}", translation_map);
-        dummy_translate(&mut translation_map);
-        // println!("translation_map after{:#?}", translation_map);
-        agent.from_translation(&translation_map, "de");
-        // println!("agent after{:#?}", agent);
-        agent.serialize("c:/tmp/out/smarthome")?;
-        Ok(())
-    }
-
-    // cargo test -- --show-output test_dummy_translate_and_serialize_agent_support
-    #[test]
-    //#[ignore]
-    fn test_dummy_translate_and_serialize_agent_support() -> Result<()> {
-        init_logging();
-        let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Support.zip");
-        let mut agent = parse_gdf_agent_zip(&path)?;
-        let mut translation_map = agent.to_translation("en", "de");
-        // println!("translation_map before{:#?}", translation_map);
-        dummy_translate(&mut translation_map);
-        // println!("translation_map after{:#?}", translation_map);
-        agent.from_translation(&translation_map, "de");
-        // println!("agent after{:#?}", agent);
-        agent.serialize("c:/tmp/out/support")?;
         Ok(())
     }
 }
