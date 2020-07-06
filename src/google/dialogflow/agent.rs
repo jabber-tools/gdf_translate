@@ -139,6 +139,10 @@ pub struct AgentManifest {
 
     pub examples: String,
 
+    #[serde(rename = "activeAssistantAgents")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_assistant_agents: Option<Vec<String>>,
+
     #[serde(rename = "linkToDocs")]
     pub link_to_docs: String,
 
@@ -451,30 +455,30 @@ fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     let mut glob_entity_entries = tmp_working_folder_path.clone();
     glob_entity_entries.push("entities");
     glob_entity_entries.push("*_entries_*.json");
-    debug!("glob_entity_entries={:?}", glob_entity_entries);
+    debug!("parse_gdf_agent_zip: glob_entity_entries={:?}", glob_entity_entries);
 
     // create glob search expression <<tmp_working_folder_path>>/entities/*_entries_*.json
     let mut glob_entities = tmp_working_folder_path.clone();
     glob_entities.push("entities");
     glob_entities.push("*.json");
-    debug!("glob_entities={:?}", glob_entities);
+    debug!("parse_gdf_agent_zip: glob_entities={:?}", glob_entities);
 
     // create glob search expression <<tmp_working_folder_path>>/intents/*_usersays_*.json
     let mut glob_intents_usersays = tmp_working_folder_path.clone();
     glob_intents_usersays.push("intents");
     glob_intents_usersays.push("*_usersays_*.json");
-    debug!("glob_intents_usersays={:?}", glob_intents_usersays);
+    debug!("parse_gdf_agent_zip: glob_intents_usersays={:?}", glob_intents_usersays);
 
     // create glob search expression <<tmp_working_folder_path>>/intents/*.json
     let mut glob_intents = tmp_working_folder_path.clone();
     glob_intents.push("intents");
     glob_intents.push("*.json");
-    debug!("glob_intents={:?}", glob_intents);
+    debug!("parse_gdf_agent_zip: glob_intents={:?}", glob_intents);
 
     // convert to string slice
     let tmp_working_folder_path = tmp_working_folder_path.to_str().unwrap();
 
-    println!("creating folder={}", tmp_working_folder_path);
+    debug!("parse_gdf_agent_zip: creating folder={}", tmp_working_folder_path);
     fs::create_dir_all(tmp_working_folder_path)?;
     unzip_file(zip_path, tmp_working_folder_path)?;
 
@@ -484,6 +488,7 @@ fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     let utterances = parse_gdf_agent_files_intent_utterances(&glob_intents_usersays)?;
 
     // process agent.json
+    debug!("parse_gdf_agent_zip: processing agent.json");
     let file_str = fs::read_to_string(agent_manifest_file)?;
     let agent_manifest: AgentManifest = serde_json::from_str(&file_str)?;
     let serialized_str = serde_json::to_string(&agent_manifest).unwrap();
@@ -497,6 +502,7 @@ fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     }
 
     // process package.json
+    debug!("parse_gdf_agent_zip: processing package.json");
     let file_str = fs::read_to_string(package_file)?;
     let package: Package = serde_json::from_str(&file_str)?;
     let serialized_str = serde_json::to_string(&package).unwrap();
@@ -528,6 +534,11 @@ mod tests {
 
     const SAMPLE_AGENTS_FOLDER: &str =
         "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/";
+
+    fn init_logging() {
+        // set RUST_LOG=gdf_translate::google::dialogflow::agent=debug 
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
 
     #[derive(Debug)]
     struct DummyStructSlave {
@@ -1512,6 +1523,7 @@ mod tests {
     #[test]
     //#[ignore]
     fn test_dummy_translate_and_serialize_agent_alarm() -> Result<()> {
+        init_logging();
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Alarm.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");

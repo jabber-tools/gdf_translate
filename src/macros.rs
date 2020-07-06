@@ -86,25 +86,25 @@ macro_rules! parse_gdf_agent_files {
             let mut output_vec: Vec<$type_output> = vec![];
             let glob_str = glob_exp.as_path().to_str().unwrap();
             debug!(
-                "entering parse_gdf_agent_files macro with glob_str {}",
+                "parse_gdf_agent_files: entering parse_gdf_agent_files macro with glob_str {}",
                 glob_str
             );
             for entry in glob(glob_str)? {
                 let path = entry?;
 
                 let file_name = path.as_path().to_str().unwrap();
-                debug!("going to process file {}", file_name);
+                debug!("parse_gdf_agent_files: going to process file {}", file_name);
 
                 // if not processing arrays (entity entries or intent utterances) skip
                 // respective files (which are otherwise include in glob expresion)!
                 if !glob_str.contains("_*.json")
                     && (file_name.contains("_entries_") || file_name.contains("_usersays_"))
                 {
-                    debug!("skipping the processing of the file file {}", file_name);
+                    debug!("parse_gdf_agent_files: skipping the processing of the file file {}", file_name);
                     continue; // if not processing arrays (entity entries or intent utterances) skip respective files!
                 }
 
-                debug!("processing file {}", file_name);
+                debug!("parse_gdf_agent_files: processing file {}", file_name);
                 let file_str = fs::read_to_string(file_name)?;
 
                 let deserialized_struct: $type_deserialized = serde_json::from_str(&file_str)?;
@@ -118,6 +118,7 @@ macro_rules! parse_gdf_agent_files {
                 if let Err(err_msg) = comparison_result {
                     return Err(Error::new(err_msg));
                 }
+                debug!("parse_gdf_agent_files: processed file {}", file_name);
                 output_vec.push(<$type_output>::new(
                     file_name.to_string(),
                     deserialized_struct,
