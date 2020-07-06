@@ -546,7 +546,7 @@ mod tests {
 
     // not to be shared in github, contains client's GDF agents!
     const SAMPLE_SENSITIVE_AGENTS_FOLDER: &str =
-        "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/testdata/agents/";        
+        "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/testdata/agents/";
 
     #[allow(dead_code)]
     fn init_logging() {
@@ -1624,7 +1624,6 @@ mod tests {
         let agents: Vec<(&str, &str, bool)> = vec![
             ("Express_CS_AM_PRD.zip", "c:/tmp/out/express/am", true),
             ("Express_CS_AP_PRD.zip", "c:/tmp/out/express/ap", true),
-
         ];
 
         for agent in agents.iter() {
@@ -1648,5 +1647,5 @@ mod tests {
         }
 
         Ok(())
-    }    
+    }
 }
