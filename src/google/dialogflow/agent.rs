@@ -1170,122 +1170,6 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_entity_entries() -> Result<()> {
-        for entry in glob("./examples/testdata/entities/*_entries_*.json")
-            .expect("Failed to read glob pattern")
-        {
-            match entry {
-                Ok(path) => {
-                    let file_name = path.as_path().to_str().unwrap();
-                    // println!("processing file {}", file_name);
-                    let file_str = fs::read_to_string(file_name)?;
-
-                    let deserialized_struct: Vec<EntityEntry> = serde_json::from_str(&file_str)?;
-
-                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
-                    assert_eq!(normalize_json(&serialized_str), normalize_json(&file_str));
-                }
-                Err(e) => {
-                    println!("error when processing file");
-                    panic!(e);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_entities() -> Result<()> {
-        for entry in
-            glob("./examples/testdata/entities/*.json").expect("Failed to read glob pattern")
-        {
-            match entry {
-                Ok(path) => {
-                    let file_name = path.as_path().to_str().unwrap();
-                    if file_name.contains("_entries_") {
-                        continue; // skip entries, process entities only!
-                    }
-                    // println!("processing file {}", file_name);
-                    let file_str = fs::read_to_string(file_name)?;
-
-                    let deserialized_struct: Entity = serde_json::from_str(&file_str)?;
-
-                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
-                    assert_eq!(normalize_json(&serialized_str), normalize_json(&file_str));
-                }
-                Err(e) => {
-                    println!("error when processing file");
-                    panic!(e);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_utterances() -> Result<()> {
-        for entry in glob("./examples/testdata/intents/*_usersays_*.json")
-            .expect("Failed to read glob pattern")
-        {
-            match entry {
-                Ok(path) => {
-                    let file_name = path.as_path().to_str().unwrap();
-                    // println!("processing file {}", file_name);
-                    let file_str = fs::read_to_string(file_name)?;
-
-                    let deserialized_struct: Vec<IntentUtterance> =
-                        serde_json::from_str(&file_str)?;
-
-                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
-                    assert_eq!(normalize_json(&serialized_str), normalize_json(&file_str));
-                }
-                Err(e) => {
-                    println!("error when processing file");
-                    panic!(e);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_intents() -> Result<()> {
-        for entry in
-            glob("./examples/testdata/intents/*.json").expect("Failed to read glob pattern")
-        {
-            match entry {
-                Ok(path) => {
-                    let file_name = path.as_path().to_str().unwrap();
-                    if file_name.contains("_usersays_") {
-                        continue; // skip utterances, process intents only!
-                    }
-                    println!("processing file {}", file_name);
-                    let file_str = fs::read_to_string(file_name)?;
-
-                    let deserialized_struct: Intent = serde_json::from_str(&file_str)?;
-                    let serialized_str = serde_json::to_string(&deserialized_struct)?;
-
-                    println!("deserialized_struct: {:#?}", deserialized_struct);
-                    println!("serialized_str: {}", serialized_str);
-                    assert_json_eq!(
-                        serde_json::from_str(&serialized_str)?,
-                        serde_json::from_str(&file_str)?
-                    );
-                }
-                Err(e) => {
-                    println!("error when processing file");
-                    panic!(e);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     // cargo test -- --show-output test_file_regex_operations
     #[test]
     fn test_file_regex_operations() {
@@ -1644,6 +1528,130 @@ mod tests {
             agent.from_translation(&translation_map, "de");
             // println!("agent after{:#?}", agent);
             agent.serialize(agent_output)?;
+        }
+
+        Ok(())
+    }
+
+    // 4 tests below (test_intents, test_utterances, test_entities, test_entity_entries)
+    // are not really usefull anymore since we have more complex integration tests that test the same (and more)
+    // e.g. test_dummy_translate_and_serialize_agents_sensitive, test_dummy_translate_and_serialize_agents
+    // -> they were moved under integration (they use data under uncommited folder testdata/* anyway) tests and disabled, keeping here just for sure
+    #[test]
+    #[ignore]
+    fn test_entity_entries() -> Result<()> {
+        for entry in glob("./examples/testdata/entities/*_entries_*.json")
+            .expect("Failed to read glob pattern")
+        {
+            match entry {
+                Ok(path) => {
+                    let file_name = path.as_path().to_str().unwrap();
+                    // println!("processing file {}", file_name);
+                    let file_str = fs::read_to_string(file_name)?;
+
+                    let deserialized_struct: Vec<EntityEntry> = serde_json::from_str(&file_str)?;
+
+                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+                    assert_eq!(normalize_json(&serialized_str), normalize_json(&file_str));
+                }
+                Err(e) => {
+                    println!("error when processing file");
+                    panic!(e);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_entities() -> Result<()> {
+        for entry in
+            glob("./examples/testdata/entities/*.json").expect("Failed to read glob pattern")
+        {
+            match entry {
+                Ok(path) => {
+                    let file_name = path.as_path().to_str().unwrap();
+                    if file_name.contains("_entries_") {
+                        continue; // skip entries, process entities only!
+                    }
+                    // println!("processing file {}", file_name);
+                    let file_str = fs::read_to_string(file_name)?;
+
+                    let deserialized_struct: Entity = serde_json::from_str(&file_str)?;
+
+                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+                    assert_eq!(normalize_json(&serialized_str), normalize_json(&file_str));
+                }
+                Err(e) => {
+                    println!("error when processing file");
+                    panic!(e);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_utterances() -> Result<()> {
+        for entry in glob("./examples/testdata/intents/*_usersays_*.json")
+            .expect("Failed to read glob pattern")
+        {
+            match entry {
+                Ok(path) => {
+                    let file_name = path.as_path().to_str().unwrap();
+                    // println!("processing file {}", file_name);
+                    let file_str = fs::read_to_string(file_name)?;
+
+                    let deserialized_struct: Vec<IntentUtterance> =
+                        serde_json::from_str(&file_str)?;
+
+                    let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();
+                    assert_eq!(normalize_json(&serialized_str), normalize_json(&file_str));
+                }
+                Err(e) => {
+                    println!("error when processing file");
+                    panic!(e);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_intents() -> Result<()> {
+        for entry in
+            glob("./examples/testdata/intents/*.json").expect("Failed to read glob pattern")
+        {
+            match entry {
+                Ok(path) => {
+                    let file_name = path.as_path().to_str().unwrap();
+                    if file_name.contains("_usersays_") {
+                        continue; // skip utterances, process intents only!
+                    }
+                    println!("processing file {}", file_name);
+                    let file_str = fs::read_to_string(file_name)?;
+
+                    let deserialized_struct: Intent = serde_json::from_str(&file_str)?;
+                    let serialized_str = serde_json::to_string(&deserialized_struct)?;
+
+                    println!("deserialized_struct: {:#?}", deserialized_struct);
+                    println!("serialized_str: {}", serialized_str);
+                    assert_json_eq!(
+                        serde_json::from_str(&serialized_str)?,
+                        serde_json::from_str(&file_str)?
+                    );
+                }
+                Err(e) => {
+                    println!("error when processing file");
+                    panic!(e);
+                }
+            }
         }
 
         Ok(())
