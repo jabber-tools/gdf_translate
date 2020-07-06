@@ -63,12 +63,12 @@ pub struct IntentResponseParameter {
     #[serde(rename = "outputDialogContexts")]
     output_dialog_contexts: Vec<String>,
 
-    // see Smart-Home example, intent smarthome.locks.open.json. 
+    // see Smart-Home example, intent smarthome.locks.open.json.
     // Not sure hwo to set this up in DialogFlow UI and whether we  should actuallyt ranslate it
     // For now just adding here so that we can properly deserialize and serialize back, not translating
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "defaultValue")]
-    default_value: Option<String>, 
+    default_value: Option<String>,
 
     #[serde(rename = "isList")]
     is_list: bool,

@@ -1534,7 +1534,7 @@ mod tests {
     #[test]
     //#[ignore]
     fn test_dummy_translate_and_serialize_agent_alarm() -> Result<()> {
-        // init_logging();
+        init_logging();
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Alarm.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1615,6 +1615,7 @@ mod tests {
     #[test]
     //#[ignore]
     fn test_dummy_translate_and_serialize_agent_faq() -> Result<()> {
+        init_logging();
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1663,7 +1664,7 @@ mod tests {
     #[test]
     //#[ignore]
     fn test_dummy_translate_and_serialize_agent_smarthome() -> Result<()> {
-        init_logging();
+        // init_logging();
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Smart-Home.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");

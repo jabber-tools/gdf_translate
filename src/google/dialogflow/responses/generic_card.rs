@@ -1,6 +1,7 @@
 use crate::google::dialogflow::agent::Translate;
 use serde::{Deserialize, Serialize};
 use std::collections;
+use crate::google::dialogflow::responses::ga_shared::StringOrVecOfString;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GenericCardResponseButton {
@@ -34,7 +35,8 @@ pub struct GenericCardResponseType {
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub condition: Option<String>,
-    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subtitle: Option<String>,
     #[serde(rename = "imageUrl")]
@@ -42,13 +44,22 @@ pub struct GenericCardResponseType {
     pub image_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub buttons: Option<Vec<GenericCardResponseButton>>,
+    
+    // card cannot have really speech but after title was converted to Option
+    // GenericTextResponseType got confused with GenericCardResponseType (i.e. text response identified as generic card response)
+    // and we lost speech during serialization
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speech: Option<StringOrVecOfString>,
 }
 
 impl Translate for GenericCardResponseType {
     fn to_translation(&self) -> collections::HashMap<String, String> {
         let mut map_to_translate = collections::HashMap::new();
 
-        map_to_translate.insert(format!("{:p}", &self.title), self.title.to_owned());
+        if let Some(title) = &self.title {
+            map_to_translate.insert(format!("{:p}", title), title.to_owned());
+        }
+
         if let Some(subtitle) = &self.subtitle {
             map_to_translate.insert(format!("{:p}", subtitle), subtitle.to_owned());
         }
@@ -59,14 +70,32 @@ impl Translate for GenericCardResponseType {
             }
         }
 
+        if let Some(speech) = &self.speech {
+            match speech {
+                StringOrVecOfString::Str(str_val) => {
+                    map_to_translate.insert(format!("{:p}", str_val), str_val.to_owned());
+                }
+                StringOrVecOfString::StrArray(str_vec) => {
+                    for item in str_vec.iter() {
+                        map_to_translate.insert(format!("{:p}", item), item.to_owned());
+                    }
+                }
+            }        
+    
+        }
+
         map_to_translate
     }
 
     fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>) {
-        self.title = translations_map
-            .get(&format!("{:p}", &self.title))
-            .unwrap()
-            .to_owned();
+        if let Some(title) = &self.title {
+            self.title = Some(
+                translations_map
+                    .get(&format!("{:p}", title))
+                    .unwrap()
+                    .to_owned(),
+            );
+        }
 
         if let Some(subtitle) = &self.subtitle {
             self.subtitle = Some(
@@ -81,6 +110,31 @@ impl Translate for GenericCardResponseType {
             for button in buttons.iter_mut() {
                 button.from_translation(translations_map);
             }
+        }
+
+        if let Some(speech) = &self.speech {
+            match speech {
+                StringOrVecOfString::Str(str_val) => {
+                    self.speech = Some(StringOrVecOfString::Str(
+                        translations_map
+                            .get(&format!("{:p}", str_val))
+                            .unwrap()
+                            .to_owned(),
+                    ));
+                }
+                StringOrVecOfString::StrArray(str_vec) => {
+                    let mut speech_vec = vec![];
+                    for item in str_vec.iter() {
+                        speech_vec.push(
+                            translations_map
+                                .get(&format!("{:p}", item))
+                                .unwrap()
+                                .to_owned(),
+                        );
+                    }
+                    self.speech = Some(StringOrVecOfString::StrArray(speech_vec));
+                }
+            }    
         }
     }
 }

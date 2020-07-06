@@ -3,6 +3,13 @@ use serde::{Deserialize, Serialize};
 use std::collections;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum StringOrVecOfString {
+    Str(String),
+    StrArray(Vec<String>),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GACardTypeButton {
     pub title: String,
     #[serde(rename = "openUrlAction")]

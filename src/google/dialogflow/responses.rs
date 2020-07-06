@@ -1093,6 +1093,51 @@ mod tests {
         Ok(())
     }
 
+    /* Slack */
+
+    #[test]
+    fn test_slack() -> Result<()> {
+        let slack_card_response = r#"
+        {
+          "type": 1,
+          "platform": "slack",
+          "lang": "en",
+          "condition": "",
+          "buttons": [
+            {
+              "text": "Website",
+              "postback": "http://example.com/"
+            }
+          ]
+        }
+        "#;
+
+        let messages = format!(
+            r#"
+          {{
+            "messages": [
+            {slack_card_response}
+          ]
+        }}
+        "#,
+            slack_card_response = slack_card_response
+        );
+
+        println!("messages: {}", messages);
+
+        let messages_struct: Messages = serde_json::from_str(&messages)?;
+        println!("messages_struct {:#?}", messages_struct);
+
+        let back_to_str = serde_json::to_string(&messages_struct)?;
+
+        assert_json_eq!(
+            serde_json::from_str(&messages)?,
+            serde_json::from_str(&back_to_str)?
+        );
+
+        Ok(())
+    }
+
     /* Skype */
 
     #[test]
