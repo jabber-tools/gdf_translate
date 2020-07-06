@@ -455,7 +455,10 @@ fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     let mut glob_entity_entries = tmp_working_folder_path.clone();
     glob_entity_entries.push("entities");
     glob_entity_entries.push("*_entries_*.json");
-    debug!("parse_gdf_agent_zip: glob_entity_entries={:?}", glob_entity_entries);
+    debug!(
+        "parse_gdf_agent_zip: glob_entity_entries={:?}",
+        glob_entity_entries
+    );
 
     // create glob search expression <<tmp_working_folder_path>>/entities/*_entries_*.json
     let mut glob_entities = tmp_working_folder_path.clone();
@@ -467,7 +470,10 @@ fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     let mut glob_intents_usersays = tmp_working_folder_path.clone();
     glob_intents_usersays.push("intents");
     glob_intents_usersays.push("*_usersays_*.json");
-    debug!("parse_gdf_agent_zip: glob_intents_usersays={:?}", glob_intents_usersays);
+    debug!(
+        "parse_gdf_agent_zip: glob_intents_usersays={:?}",
+        glob_intents_usersays
+    );
 
     // create glob search expression <<tmp_working_folder_path>>/intents/*.json
     let mut glob_intents = tmp_working_folder_path.clone();
@@ -478,7 +484,10 @@ fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     // convert to string slice
     let tmp_working_folder_path = tmp_working_folder_path.to_str().unwrap();
 
-    debug!("parse_gdf_agent_zip: creating folder={}", tmp_working_folder_path);
+    debug!(
+        "parse_gdf_agent_zip: creating folder={}",
+        tmp_working_folder_path
+    );
     fs::create_dir_all(tmp_working_folder_path)?;
     unzip_file(zip_path, tmp_working_folder_path)?;
 
@@ -535,8 +544,10 @@ mod tests {
     const SAMPLE_AGENTS_FOLDER: &str =
         "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/";
 
+    #[allow(dead_code)]
     fn init_logging() {
-        // set RUST_LOG=gdf_translate::google::dialogflow::agent=debug 
+        // enable in unit/integration tests selectivelly only when needed!
+        // set RUST_LOG=gdf_translate::google::dialogflow::agent=debug
         let _ = env_logger::builder().is_test(true).try_init();
     }
 
@@ -1523,7 +1534,7 @@ mod tests {
     #[test]
     //#[ignore]
     fn test_dummy_translate_and_serialize_agent_alarm() -> Result<()> {
-        init_logging();
+        // init_logging();
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Alarm.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1535,7 +1546,7 @@ mod tests {
         agent.serialize("c:/tmp/out/alarm")?;
         Ok(())
     }
-    
+
     // cargo test -- --show-output test_dummy_translate_and_serialize_agent_appmgmt
     #[test]
     //#[ignore]
@@ -1551,7 +1562,7 @@ mod tests {
         agent.serialize("c:/tmp/out/appmgmt")?;
         Ok(())
     }
-    
+
     // cargo test -- --show-output test_dummy_translate_and_serialize_agent_banking
     #[test]
     //#[ignore]
@@ -1567,7 +1578,7 @@ mod tests {
         agent.serialize("c:/tmp/out/banking")?;
         Ok(())
     }
-    
+
     // cargo test -- --show-output test_dummy_translate_and_serialize_agent_car
     #[test]
     //#[ignore]
@@ -1583,7 +1594,7 @@ mod tests {
         agent.serialize("c:/tmp/out/car")?;
         Ok(())
     }
-    
+
     // cargo test -- --show-output test_dummy_translate_and_serialize_agent_coffee_shop
     #[test]
     //#[ignore]
@@ -1631,7 +1642,7 @@ mod tests {
         agent.serialize("c:/tmp/out/hotelbooking")?;
         Ok(())
     }
-    
+
     // cargo test -- --show-output test_dummy_translate_and_serialize_agent_navigation
     #[test]
     //#[ignore]
@@ -1647,11 +1658,12 @@ mod tests {
         agent.serialize("c:/tmp/out/navigation")?;
         Ok(())
     }
-    
+
     // cargo test -- --show-output test_dummy_translate_and_serialize_agent_smarthome
     #[test]
     //#[ignore]
     fn test_dummy_translate_and_serialize_agent_smarthome() -> Result<()> {
+        init_logging();
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Smart-Home.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1663,11 +1675,12 @@ mod tests {
         agent.serialize("c:/tmp/out/smarthome")?;
         Ok(())
     }
-    
+
     // cargo test -- --show-output test_dummy_translate_and_serialize_agent_support
     #[test]
     //#[ignore]
     fn test_dummy_translate_and_serialize_agent_support() -> Result<()> {
+        init_logging();
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Support.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -1678,5 +1691,5 @@ mod tests {
         // println!("agent after{:#?}", agent);
         agent.serialize("c:/tmp/out/support")?;
         Ok(())
-    }    
+    }
 }

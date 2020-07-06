@@ -100,7 +100,10 @@ macro_rules! parse_gdf_agent_files {
                 if !glob_str.contains("_*.json")
                     && (file_name.contains("_entries_") || file_name.contains("_usersays_"))
                 {
-                    debug!("parse_gdf_agent_files: skipping the processing of the file file {}", file_name);
+                    debug!(
+                        "parse_gdf_agent_files: skipping the processing of the file file {}",
+                        file_name
+                    );
                     continue; // if not processing arrays (entity entries or intent utterances) skip respective files!
                 }
 

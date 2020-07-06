@@ -52,16 +52,23 @@ pub struct IntentResponseParameter {
     prompts: Option<Vec<IntentResponseParameterPrompt>>,
 
     #[serde(rename = "promptMessages")]
-    prompt_messages: Vec<String>, // ??
+    prompt_messages: Vec<String>,
 
     #[serde(rename = "noMatchPromptMessages")]
-    no_match_prompt_messages: Vec<String>, // ??
+    no_match_prompt_messages: Vec<String>,
 
     #[serde(rename = "noInputPromptMessages")]
-    no_input_prompt_messages: Vec<String>, // ??
+    no_input_prompt_messages: Vec<String>,
 
     #[serde(rename = "outputDialogContexts")]
-    output_dialog_contexts: Vec<String>, // ??
+    output_dialog_contexts: Vec<String>,
+
+    // see Smart-Home example, intent smarthome.locks.open.json. 
+    // Not sure hwo to set this up in DialogFlow UI and whether we  should actuallyt ranslate it
+    // For now just adding here so that we can properly deserialize and serialize back, not translating
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "defaultValue")]
+    default_value: Option<String>, 
 
     #[serde(rename = "isList")]
     is_list: bool,
