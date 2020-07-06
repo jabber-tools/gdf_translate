@@ -31,7 +31,12 @@ impl Translate for GenericCardResponseButton {
 pub struct GenericCardResponseType {
     #[serde(rename = "type")]
     pub message_type: u8,
-    pub platform: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub platform: Option<String>,
+    // see prebuilt agent Online Shopping, intent delivery.options
+    // somehow they managed to define Card on default channel ->
+    // mandatory platform was changed to optional platform, seems to be working fine
+    // pub platform: String,
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub condition: Option<String>,

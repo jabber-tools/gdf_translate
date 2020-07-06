@@ -544,6 +544,10 @@ mod tests {
     const SAMPLE_AGENTS_FOLDER: &str =
         "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/";
 
+    // not to be shared in github, contains client's GDF agents!
+    const SAMPLE_SENSITIVE_AGENTS_FOLDER: &str =
+        "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/testdata/agents/";        
+
     #[allow(dead_code)]
     fn init_logging() {
         // enable in unit/integration tests selectivelly only when needed!
@@ -1532,7 +1536,7 @@ mod tests {
 
     // cargo test -- --show-output test_dummy_translate_and_serialize_agents
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_dummy_translate_and_serialize_agents() -> Result<()> {
         init_logging();
 
@@ -1547,7 +1551,11 @@ mod tests {
             ("Navigation.zip", "c:/tmp/out/navigation", true),
             ("Smart-Home.zip", "c:/tmp/out/smarthome", true),
             ("Support.zip", "c:/tmp/out/support", true),
-            ("Currency-Converter.zip", "c:/tmp/out/currencyconverter", true),
+            (
+                "Currency-Converter.zip",
+                "c:/tmp/out/currencyconverter",
+                true,
+            ),
             ("Date.zip", "c:/tmp/out/date", true),
             ("Device.zip", "c:/tmp/out/device", true),
             ("Dining-Out.zip", "c:/tmp/out/diningout", true),
@@ -1564,10 +1572,16 @@ mod tests {
             ("Mobile-Accounts.zip", "c:/tmp/out/mobileaccounts", true),
             ("Music.zip", "c:/tmp/out/music", true),
             ("News.zip", "c:/tmp/out/news", true),
-            ("Online-Shopping.zip", "c:/tmp/out/onlineshopping", false), // disabked for now, seems to contain card on default channel whic is not even possible to define in UI
+            // disabled for now, seems to contain card on default channel whic is not even possible to define in UI
+            // ("Online-Shopping.zip", "c:/tmp/out/onlineshopping", false),
+            ("Online-Shopping.zip", "c:/tmp/out/onlineshopping", true),
             ("Radio.zip", "c:/tmp/out/radio", true),
             ("Reminders.zip", "c:/tmp/out/reminders", true),
-            ("Restaurant-Booking.zip", "c:/tmp/out/restaurantbooking", true),
+            (
+                "Restaurant-Booking.zip",
+                "c:/tmp/out/restaurantbooking",
+                true,
+            ),
             ("Small-Talk.zip", "c:/tmp/out/smalltalk", true),
             ("TV.zip", "c:/tmp/out/tv", true),
             ("Time.zip", "c:/tmp/out/time", true),
@@ -1600,4 +1614,39 @@ mod tests {
 
         Ok(())
     }
+
+    // cargo test -- --show-output test_dummy_translate_and_serialize_agents_sensitive
+    #[test]
+    #[ignore]
+    fn test_dummy_translate_and_serialize_agents_sensitive() -> Result<()> {
+        init_logging();
+
+        let agents: Vec<(&str, &str, bool)> = vec![
+            ("Express_CS_AM_PRD.zip", "c:/tmp/out/express/am", true),
+            ("Express_CS_AP_PRD.zip", "c:/tmp/out/express/ap", true),
+
+        ];
+
+        for agent in agents.iter() {
+            let agent_zip = agent.0;
+            let agent_output = agent.1;
+            let agent_enabled = agent.2;
+            if agent_enabled == false {
+                continue;
+            }
+
+            let path = format!("{}{}", SAMPLE_SENSITIVE_AGENTS_FOLDER, agent_zip);
+            debug!("processing agent {}", agent_zip);
+            let mut agent = parse_gdf_agent_zip(&path)?;
+            let mut translation_map = agent.to_translation("en", "de");
+            // println!("translation_map before{:#?}", translation_map);
+            dummy_translate(&mut translation_map);
+            // println!("translation_map after{:#?}", translation_map);
+            agent.from_translation(&translation_map, "de");
+            // println!("agent after{:#?}", agent);
+            agent.serialize(agent_output)?;
+        }
+
+        Ok(())
+    }    
 }
