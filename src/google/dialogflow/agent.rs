@@ -1547,6 +1547,35 @@ mod tests {
             ("Navigation.zip", "c:/tmp/out/navigation", true),
             ("Smart-Home.zip", "c:/tmp/out/smarthome", true),
             ("Support.zip", "c:/tmp/out/support", true),
+            ("Currency-Converter.zip", "c:/tmp/out/currencyconverter", true),
+            ("Date.zip", "c:/tmp/out/date", true),
+            ("Device.zip", "c:/tmp/out/device", true),
+            ("Dining-Out.zip", "c:/tmp/out/diningout", true),
+            ("Easter-Eggs.zip", "c:/tmp/out/eastereggs", true),
+            ("Events-Search.zip", "c:/tmp/out/eventssearch", true),
+            ("Flights.zip", "c:/tmp/out/flights", true),
+            ("Food-Delivery.zip", "c:/tmp/out/fooddelivery", true),
+            ("Formats.zip", "c:/tmp/out/formats", true),
+            ("Job-Interview.zip", "c:/tmp/out/jobinterview", true),
+            ("Jokes.zip", "c:/tmp/out/jokes", true),
+            ("Language-Settings.zip", "c:/tmp/out/languagesettings", true),
+            ("Local-Services.zip", "c:/tmp/out/localservices", true),
+            ("Maps.zip", "c:/tmp/out/maps", true),
+            ("Mobile-Accounts.zip", "c:/tmp/out/mobileaccounts", true),
+            ("Music.zip", "c:/tmp/out/music", true),
+            ("News.zip", "c:/tmp/out/news", true),
+            ("Online-Shopping.zip", "c:/tmp/out/onlineshopping", false), // disabked for now, seems to contain card on default channel whic is not even possible to define in UI
+            ("Radio.zip", "c:/tmp/out/radio", true),
+            ("Reminders.zip", "c:/tmp/out/reminders", true),
+            ("Restaurant-Booking.zip", "c:/tmp/out/restaurantbooking", true),
+            ("Small-Talk.zip", "c:/tmp/out/smalltalk", true),
+            ("TV.zip", "c:/tmp/out/tv", true),
+            ("Time.zip", "c:/tmp/out/time", true),
+            ("Tips-Calculator.zip", "c:/tmp/out/tipscalculator", true),
+            ("Tourism.zip", "c:/tmp/out/tourism", true),
+            ("Traffic.zip", "c:/tmp/out/traffic", true),
+            ("Translate.zip", "c:/tmp/out/translate", true),
+            ("Unit-Converter.zip", "c:/tmp/out/unitconverter", true),
         ];
 
         for agent in agents.iter() {
@@ -1558,6 +1587,7 @@ mod tests {
             }
 
             let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, agent_zip);
+            debug!("processing agent {}", agent_zip);
             let mut agent = parse_gdf_agent_zip(&path)?;
             let mut translation_map = agent.to_translation("en", "de");
             // println!("translation_map before{:#?}", translation_map);
