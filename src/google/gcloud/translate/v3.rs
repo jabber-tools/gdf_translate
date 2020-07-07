@@ -39,27 +39,3 @@ curl --location --request POST 'https://translation.googleapis.com/v3/projects/d
 }'
 
 */
-use crate::translate::*;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // cargo test -- --show-output test_translate_v3
-    #[test]
-    #[ignore]
-    fn test_translate_v3() -> Result<()> {
-        // TBD create translate_v3 functions
-        let result: Result<TranslateResponse> = task::block_on(translate(
-            "./examples/testdata/credentials.json",
-            "en",
-            "de",
-            "Rust is wonderfull programming language",
-            TranslateFormat::Plain,
-        ));
-        println!("result from translate: {:#?}", result.unwrap().body);
-        Ok(())
-    }    
-
-}
-    
