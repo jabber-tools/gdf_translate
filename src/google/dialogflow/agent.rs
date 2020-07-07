@@ -37,6 +37,7 @@ lazy_static! {
     pub static ref RE_INTENT_UTTERANCE_FILE: Regex =
         Regex::new(r"(\w+usersays_)([a-zA-Z-]+).json").unwrap();
     pub static ref RE_COMPOSITE_ENTITY: Regex = Regex::new(r"@\w+:\w+").unwrap();
+    pub static ref RE_COMPOSITE_ENTITY_NO_ALIAS: Regex = Regex::new(r"@\w+").unwrap();
 }
 
 // used in unit tests in gdf_responses and gdf_agent
@@ -272,6 +273,7 @@ impl GoogleDialogflowAgent {
         for new_entity_entry_file in new_entity_entry_files.iter() {
             for new_entity_entry in new_entity_entry_file.file_content.iter() {
                 if RE_COMPOSITE_ENTITY.is_match(&new_entity_entry.value) == false
+                    && RE_COMPOSITE_ENTITY_NO_ALIAS.is_match(&new_entity_entry.value) == false
                 /* skip composite entities*/
                 {
                     translations_map.extend(new_entity_entry.to_translation());
