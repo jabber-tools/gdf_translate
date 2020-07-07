@@ -1474,6 +1474,11 @@ mod tests {
             ("Traffic.zip", "c:/tmp/out/traffic", true),
             ("Translate.zip", "c:/tmp/out/translate", true),
             ("Unit-Converter.zip", "c:/tmp/out/unitconverter", true),
+            ("Web-Search.zip", "c:/tmp/out/websearch", true),
+            ("Weather.zip", "c:/tmp/out/weather", true),
+            ("Volume.zip", "c:/tmp/out/volume", true),
+            ("User-Name.zip", "c:/tmp/out/username", true),
+            ("Video.zip", "c:/tmp/out/video", true),
         ];
 
         for agent in agents.iter() {
