@@ -1,45 +1,57 @@
-// https://cloud.google.com/translate/docs/intro-to-v3
-// https://cloud.google.com/translate/docs/reference/rest/v3/projects/translateText
-// https://cloud.google.com/translate/docs/reference/rest/v3/projects.locations/batchTranslateText
-// https://cloud.google.com/translate/docs/reference/rest/v3/projects.locations.operations#Operation
-// https://cloud.google.com/translate/docs/reference/rest/v3/projects.locations.operations/get
-// https://cloud.google.com/translate/docs/reference/rest/v3/projects.locations.operations/wait
-
-/*
-
-curl --location --request POST 'https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1:batchTranslateText' \
---header 'Authorization: Bearer ya29.c....' \
---header 'Content-Type: application/javascript' \
---data-raw '{
-    "sourceLanguageCode": "en",
-    "targetLanguageCodes": "de",
-    "inputConfigs": [{
-        "mimeType":  "text/html",
-        "gcsSource": {
-            "inputUri": "gs://translate_v3_test_in/input.tsv"
-        }
-    }],
-    "outputConfig": {
-        "gcsDestination": {
-            "outputUriPrefix": "gs://translate_v3_test_out/"
-        }
-    }
-}'
-
-
-curl --location --request GET 'https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1/operations/20200615-11411592246465-5edebebf-0000-2598-9feb-24058877eccc' \
---header 'Authorization: Bearer ya29.c....'
-
-
-curl --location --request POST 'https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1/operations/20200615-11581592247524-5edeccd9-0000-26b7-bd4f-30fd38139c64:wait' \
---header 'Authorization: Bearer ya29.c....' \
---header 'Content-Type: application/json' \
---data-raw '{
-  "timeout": "60s"
-}'
-
-*/
-
+//! # implementation of google translation api v3
+//!
+//! See following links
+//! 
+//! * [Google Translate V3 Intro](https://cloud.google.com/translate/docs/intro-to-v3)
+//! * [translateText API](https://cloud.google.com/translate/docs/reference/rest/v3/projects/translateText)
+//! * [batchTranslateText API](https://cloud.google.com/translate/docs/reference/rest/v3/projects.locations/batchTranslateText)
+//! * [batch translation result -long running operation](https://cloud.google.com/translate/docs/reference/rest/v3/projects.locations.operations#Operation)
+//! * [get long running operatopm result - short polling approach](https://cloud.google.com/translate/docs/reference/rest/v3/projects.locations.operations/get)
+//! * [get long running operatopm result - long polling approach](https://cloud.google.com/translate/docs/reference/rest/v3/projects.locations.operations/wait)
+//!
+//! Sample curls:
+//! 
+//! 
+//! Initiate batch translation
+//! ```
+//! curl --location --request POST &apos;https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1:batchTranslateText&apos; \
+//! --header &apos;Authorization: Bearer ya29.c....&apos; \
+//! --header &apos;Content-Type: application/javascript&apos; \
+//! --data-raw &apos;{
+//!     "sourceLanguageCode": "en",
+//!     "targetLanguageCodes": "de",
+//!     "inputConfigs": [{
+//!         "mimeType":  "text/html",
+//!         "gcsSource": {
+//!             "inputUri": "gs://translate_v3_test_in/input.tsv"
+//!         }
+//!     }],
+//!     "outputConfig": {
+//!         "gcsDestination": {
+//!             "outputUriPrefix": "gs://translate_v3_test_out/"
+//!         }
+//!     }
+//! }&apos;
+//! ```
+//!
+//! 
+//! Check long running operation status with immediate response (kind of short polling)
+//! ```
+//! curl --location --request GET &apos;https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1/operations/20200615-11581592247524-5edeccd9-0000-26b7-bd4f-30fd38139c64&apos; \
+//! --header &apos;Authorization: Bearer ya29.c....&apos; \
+//! ```
+//! 
+//! 
+//! Check long running operation status with delayed response (kind of long polling)
+//! ```
+//! curl --location --request POST &apos;https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1/operations/20200615-11581592247524-5edeccd9-0000-26b7-bd4f-30fd38139c64:wait&apos; \
+//! --header &apos;Authorization: Bearer ya29.c....&apos; \
+//! --header &apos;Content-Type: application/json&apos; \
+//! --data-raw &apos;{
+//!   "timeout": "60s"
+//! }&apos;
+//! ```
+//! 
 use crate::errors::Result;
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -245,64 +257,11 @@ pub async fn batch_translate_text(
     })
 }
 
-/*
-State running
-{
-  "name": "projects/345634260051/locations/us-central1/operations/20200711-05411594471274-5f058a7e-0000-2140-8a4b-24058878f154",
-  "metadata": {
-    "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateMetadata",
-    "state": "RUNNING",
-    "totalCharacters": "52",
-    "submitTime": "2020-07-11T12:41:14Z"
-  }
-}
-
-State done
-{
-  "name": "projects/345634260051/locations/us-central1/operations/20200711-05411594471274-5f058a7e-0000-2140-8a4b-24058878f154",
-  "metadata": {
-    "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateMetadata",
-    "state": "SUCCEEDED",
-    "translatedCharacters": "52",
-    "totalCharacters": "52",
-    "submitTime": "2020-07-11T12:41:14Z"
-  },
-  "done": true,
-  "response": {
-    "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateResponse",
-    "totalCharacters": "52",
-    "translatedCharacters": "52",
-    "submitTime": "2020-07-11T12:41:14Z",
-    "endTime": "2020-07-11T12:42:23Z"
-  }
-}
-
-State failed/error:
-{
-  "name": "projects/345634260051/locations/us-central1/operations/20200711-05421594471378-5f058a16-0000-2dd4-8106-883d24f67490",
-  "metadata": {
-    "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateMetadata",
-    "state": "FAILED",
-    "submitTime": "2020-07-11T12:42:58Z"
-  },
-  "done": true,
-  "error": {
-    "code": 3,
-    "message": "Output uri prefix must be an empty bucket",
-    "details": [
-      {
-        "@type": "type.googleapis.com/google.rpc.DebugInfo",
-        "detail": " cloud/ml/api/translation/service/v3/orchestration_batch_server/batch_translation_job_handler.cc:2516. project_number: 345634260051, job_id: 20200711-05421594471378-5f058a16-0000-2dd4-8106-883d24f67490. "
-      },
-      {
-        "@type": "type.googleapis.com/google.rpc.DebugInfo",
-        "detail": " cloud/ml/api/translation/service/v3/orchestration_batch_server/batch_translation_job_handler.cc:373. project_number: 345634260051, job_id: 20200711-05421594471378-5f058a16-0000-2dd4-8106-883d24f67490. "
-      }
-    ]
-  }
-}
-
-*/
+/// Check the status of long running operation representing batch translation request
+///
+/// * `token`: Bearer token
+/// * `long_running_operation`: something like projects/345634260051/locations/us-central1/operations/20200711-05421594471378-5f058a16-0000-2dd4-8106-883d24f67490.
+/// Returned by https://translation.googleapis.com/v3/projects/{}/locations/us-central1:batchTranslateText API
 pub async fn batch_translate_text_check_status(
     token: &str,
     long_running_operation: &str,
@@ -399,6 +358,96 @@ mod tests {
         );
 
         println!("api_response {:#?}", api_response);
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_deser_google_translate_v3_wait_response
+    #[test]
+    fn test_deser_google_translate_v3_wait_response() -> Result<()> {
+        let response_running = r#"
+        {
+            "name": "projects/345634260051/locations/us-central1/operations/20200711-05411594471274-5f058a7e-0000-2140-8a4b-24058878f154",
+            "metadata": {
+              "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateMetadata",
+              "state": "RUNNING",
+              "totalCharacters": "52",
+              "submitTime": "2020-07-11T12:41:14Z"
+            }
+          }
+        "#;
+
+        let response_done = r#"
+        {
+            "name": "projects/345634260051/locations/us-central1/operations/20200711-05411594471274-5f058a7e-0000-2140-8a4b-24058878f154",
+            "metadata": {
+              "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateMetadata",
+              "state": "SUCCEEDED",
+              "translatedCharacters": "52",
+              "totalCharacters": "52",
+              "submitTime": "2020-07-11T12:41:14Z"
+            },
+            "done": true,
+            "response": {
+              "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateResponse",
+              "totalCharacters": "52",
+              "translatedCharacters": "52",
+              "submitTime": "2020-07-11T12:41:14Z",
+              "endTime": "2020-07-11T12:42:23Z"
+            }
+          }
+        "#;
+
+        let response_failed = r#"
+        {
+            "name": "projects/345634260051/locations/us-central1/operations/20200711-05421594471378-5f058a16-0000-2dd4-8106-883d24f67490",
+            "metadata": {
+              "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateMetadata",
+              "state": "FAILED",
+              "submitTime": "2020-07-11T12:42:58Z"
+            },
+            "done": true,
+            "error": {
+              "code": 3,
+              "message": "Output uri prefix must be an empty bucket",
+              "details": [
+                {
+                  "@type": "type.googleapis.com/google.rpc.DebugInfo",
+                  "detail": " cloud/ml/api/translation/service/v3/orchestration_batch_server/batch_translation_job_handler.cc:2516. project_number: 345634260051, job_id: 20200711-05421594471378-5f058a16-0000-2dd4-8106-883d24f67490. "
+                },
+                {
+                  "@type": "type.googleapis.com/google.rpc.DebugInfo",
+                  "detail": " cloud/ml/api/translation/service/v3/orchestration_batch_server/batch_translation_job_handler.cc:373. project_number: 345634260051, job_id: 20200711-05421594471378-5f058a16-0000-2dd4-8106-883d24f67490. "
+                }
+              ]
+            }
+          }
+        "#;
+
+        let response_body: GoogleTranslateV3WaitResponse = serde_json::from_str(&response_running)?;
+        assert_eq!(response_body.name, "projects/345634260051/locations/us-central1/operations/20200711-05411594471274-5f058a7e-0000-2140-8a4b-24058878f154");
+
+        let response_body: GoogleTranslateV3WaitResponse = serde_json::from_str(&response_done)?;
+        if let Some(done) = response_body.done {
+            assert_eq!(done, true);
+        } else {
+            assert_eq!(false, true);
+        }
+
+        let response_body: GoogleTranslateV3WaitResponse = serde_json::from_str(&response_failed)?;
+
+        if let Some(done) = response_body.done {
+            assert_eq!(done, true);
+        } else {
+            assert_eq!(false, true);
+        }
+
+        if let Some(error) = response_body.error {
+            assert_eq!(error.code, 3);
+            assert_eq!(error.message, "Output uri prefix must be an empty bucket");
+        } else {
+            assert_eq!(false, true);
+        }
+
         Ok(())
     }
 }

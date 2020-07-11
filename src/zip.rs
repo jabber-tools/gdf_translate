@@ -22,7 +22,7 @@ use zip::write::FileOptions;
 /// * `it`: iterator of files within directory (retrieved from walkdir::WalkDir)
 /// * `prefix`: source directory
 /// * `writer`: file wirter/handle
-/// 
+///
 /// Returns
 ///  zip::result::ZipResult<()>
 fn zip_dir<T>(
@@ -70,7 +70,7 @@ where
 ///
 /// * `src_dir`: source directory to zip
 /// * `dst_file`: path to destination zip file
-/// 
+///
 /// Returns
 ///  zip::result::ZipResult<()>
 pub fn zip_directory(src_dir: &str, dst_file: &str) -> zip::result::ZipResult<()> {
@@ -95,7 +95,7 @@ pub fn zip_directory(src_dir: &str, dst_file: &str) -> zip::result::ZipResult<()
 ///
 /// * `zip_path`: path to zip file to unzip
 /// * `target_folder`: destination folder
-/// 
+///
 /// Returns
 ///  Result<()>
 pub fn unzip_file(zip_path: &str, target_folder: &str) -> Result<()> {

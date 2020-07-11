@@ -1,3 +1,5 @@
+//! # implementation of google translation api v2
+//!
 use crate::errors::Result;
 use crate::google::gcloud::auth::*;
 #[allow(unused_imports)]
