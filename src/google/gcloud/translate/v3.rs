@@ -42,8 +42,8 @@ curl --location --request POST 'https://translation.googleapis.com/v3/projects/d
 
 use crate::errors::Result;
 use log::debug;
-use serde_json::json;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::collections;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -63,6 +63,77 @@ pub struct GoogleTranslateV3Response {
 pub struct GoogleTranslateV3ApiResponse {
     pub status_code: String,
     pub body: GoogleTranslateV3Response,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTranslateV3WaitResponseMetadata {
+    #[serde(rename = "@type")]
+    type_attr: String,
+    state: String,
+
+    #[serde(rename = "submitTime")]
+    submit_time: String,
+
+    #[serde(rename = "endTime")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    end_time: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTranslateV3WaitResponseMeResponse {
+    #[serde(rename = "@type")]
+    type_attr: String,
+
+    #[serde(rename = "totalCharacters")]
+    total_characters: String,
+
+    #[serde(rename = "translatedCharacters")]
+    translated_characters: String,
+
+    #[serde(rename = "submitTime")]
+    submit_time: String,
+
+    #[serde(rename = "endTime")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    end_time: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTranslateV3WaitResponseErrorDetail {
+    #[serde(rename = "@type")]
+    type_attr: String,
+
+    detail: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTranslateV3WaitResponseError {
+    pub code: u32,
+    pub message: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub details: Option<Vec<GoogleTranslateV3WaitResponseErrorDetail>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTranslateV3WaitResponse {
+    name: String,
+    metadata: GoogleTranslateV3WaitResponseMetadata,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    done: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<GoogleTranslateV3WaitResponseError>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response: Option<GoogleTranslateV3WaitResponseMeResponse>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTranslateV3WaitApiResponse {
+    pub status_code: String,
+    pub body: GoogleTranslateV3WaitResponse,
 }
 
 pub struct GoogleTranslateV3Map {
@@ -117,7 +188,7 @@ impl GoogleTranslateV3Map {
 /// Translates csv/tsv file using Google Translate V3 REST API
 ///
 /// See: https://cloud.google.com/translate/docs/reference/rest/v3/projects/translateText
-/// 
+///
 /// Arguments:
 ///
 /// * `token`: Bearer token
@@ -165,9 +236,101 @@ pub async fn batch_translate_text(
         .body_json(&body)?
         .await?;
 
-    let response_body: GoogleTranslateV3Response = serde_json::from_str(&resp.body_string().await?)?; 
+    let response_body: GoogleTranslateV3Response =
+        serde_json::from_str(&resp.body_string().await?)?;
 
     Ok(GoogleTranslateV3ApiResponse {
+        status_code: resp.status().as_str().to_string(),
+        body: response_body,
+    })
+}
+
+/*
+State running
+{
+  "name": "projects/345634260051/locations/us-central1/operations/20200711-05411594471274-5f058a7e-0000-2140-8a4b-24058878f154",
+  "metadata": {
+    "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateMetadata",
+    "state": "RUNNING",
+    "totalCharacters": "52",
+    "submitTime": "2020-07-11T12:41:14Z"
+  }
+}
+
+State done
+{
+  "name": "projects/345634260051/locations/us-central1/operations/20200711-05411594471274-5f058a7e-0000-2140-8a4b-24058878f154",
+  "metadata": {
+    "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateMetadata",
+    "state": "SUCCEEDED",
+    "translatedCharacters": "52",
+    "totalCharacters": "52",
+    "submitTime": "2020-07-11T12:41:14Z"
+  },
+  "done": true,
+  "response": {
+    "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateResponse",
+    "totalCharacters": "52",
+    "translatedCharacters": "52",
+    "submitTime": "2020-07-11T12:41:14Z",
+    "endTime": "2020-07-11T12:42:23Z"
+  }
+}
+
+State failed/error:
+{
+  "name": "projects/345634260051/locations/us-central1/operations/20200711-05421594471378-5f058a16-0000-2dd4-8106-883d24f67490",
+  "metadata": {
+    "@type": "type.googleapis.com/google.cloud.translation.v3.BatchTranslateMetadata",
+    "state": "FAILED",
+    "submitTime": "2020-07-11T12:42:58Z"
+  },
+  "done": true,
+  "error": {
+    "code": 3,
+    "message": "Output uri prefix must be an empty bucket",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.DebugInfo",
+        "detail": " cloud/ml/api/translation/service/v3/orchestration_batch_server/batch_translation_job_handler.cc:2516. project_number: 345634260051, job_id: 20200711-05421594471378-5f058a16-0000-2dd4-8106-883d24f67490. "
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.DebugInfo",
+        "detail": " cloud/ml/api/translation/service/v3/orchestration_batch_server/batch_translation_job_handler.cc:373. project_number: 345634260051, job_id: 20200711-05421594471378-5f058a16-0000-2dd4-8106-883d24f67490. "
+      }
+    ]
+  }
+}
+
+*/
+pub async fn batch_translate_text_check_status(
+    token: &str,
+    long_running_operation: &str,
+) -> Result<GoogleTranslateV3WaitApiResponse> {
+    let url = format!(
+        "https://translation.googleapis.com/v3/{}:wait",
+        long_running_operation
+    );
+
+    let body = json!({
+        "timeout": "60s"
+    });
+
+    debug!("url: {}", url);
+    debug!("body: {}", body);
+
+    let mut resp = surf::post(url)
+        .set_header("Authorization", token)
+        .body_json(&body)?
+        .await?;
+
+    let body_str = resp.body_string().await?;
+
+    debug!("response body: {}", body_str);
+
+    let response_body: GoogleTranslateV3WaitResponse = serde_json::from_str(&body_str)?;
+
+    Ok(GoogleTranslateV3WaitApiResponse {
         status_code: resp.status().as_str().to_string(),
         body: response_body,
     })
@@ -178,25 +341,64 @@ mod tests {
     use super::*;
     use crate::google::gcloud::auth::*;
     use async_std::task;
+
+    #[allow(dead_code)]
+    fn init_logging() {
+        // enable in unit/integration tests selectivelly only when needed!
+        // set RUST_LOG=gdf_translate::google::gcloud::translate::v3=debug
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
     // cargo test -- --show-output test_batch_translate_text
     #[test]
     //#[ignore]
     fn test_batch_translate_text() -> Result<()> {
-
+        init_logging();
         let token: Result<GoogleApisOauthToken> =
             task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
         let token = format!("Bearer {}", token.unwrap().access_token);
 
+        println!("access_token {:#?}", token);
+        let api_response: Result<GoogleTranslateV3ApiResponse> =
+            task::block_on(batch_translate_text(
+                &token,
+                "express-tracking",
+                "en",
+                "de",
+                "text/html",
+                "gs://translate_v3_test/translation_map.tsv",
+                "gs://translate_v3_test_out/",
+            ));
 
-        let api_response: Result<GoogleTranslateV3ApiResponse> = task::block_on(batch_translate_text(
-            &token,
-            "express-tracking",
-            "en", "de", "text/html",
-            "gs://translate_v3_test/translation_map",
-            "gs://translate_v3_test_out/",
-        ));
+        let api_response = api_response.unwrap();
+        println!("api_response {:#?}", api_response);
 
-        println!("api_response {:#?}", api_response?);
+        let api_response2: Result<GoogleTranslateV3WaitApiResponse> = task::block_on(
+            batch_translate_text_check_status(&token, &api_response.body.name),
+        );
+
+        println!("api_response2 {:#?}", api_response2);
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_batch_translate_text_wait
+    #[test]
+    //#[ignore]
+    fn test_batch_translate_text_wait() -> Result<()> {
+        init_logging();
+        let token: Result<GoogleApisOauthToken> =
+            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
+        let token = format!("Bearer {}", token.unwrap().access_token);
+
+        println!("access_token {:#?}", token);
+        let api_response: Result<GoogleTranslateV3WaitApiResponse> = task::block_on(
+            batch_translate_text_check_status(
+                &token,
+                "projects/345634260051/locations/us-central1/operations/20200711-06301594474232-5f0599bc-0000-2328-9a34-883d24f6d7a8"
+            ),
+        );
+
+        println!("api_response {:#?}", api_response);
         Ok(())
     }
 }

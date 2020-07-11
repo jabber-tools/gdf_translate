@@ -192,7 +192,7 @@ mod tests {
         let api_response: Result<ApiResponse> = task::block_on(upload_object(
             &token,
             "translate_v3_test",
-            "translation_map",
+            "translation_map.tsv",
             &GoogleTranslateV3Map::map_to_string(&translation_map),
         ));
         println!("api_response {:#?}", api_response?);
