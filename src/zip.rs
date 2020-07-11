@@ -1,3 +1,7 @@
+//! # zip module
+//!
+//! `zip` is utility module hosting the zip & unzip functions
+
 use crate::errors::Result;
 use log::debug;
 use std::fs;
@@ -11,6 +15,16 @@ use walkdir::{DirEntry, WalkDir};
 use zip::result::ZipError;
 use zip::write::FileOptions;
 
+/// Zips source folder into destination file
+///
+/// Arguments:
+///
+/// * `it`: iterator of files within directory (retrieved from walkdir::WalkDir)
+/// * `prefix`: source directory
+/// * `writer`: file wirter/handle
+/// 
+/// Returns
+///  zip::result::ZipResult<()>
 fn zip_dir<T>(
     it: &mut dyn Iterator<Item = DirEntry>,
     prefix: &str,
@@ -50,6 +64,15 @@ where
     Ok(())
 }
 
+/// Zips source folder into destination file
+///
+/// Arguments:
+///
+/// * `src_dir`: source directory to zip
+/// * `dst_file`: path to destination zip file
+/// 
+/// Returns
+///  zip::result::ZipResult<()>
 pub fn zip_directory(src_dir: &str, dst_file: &str) -> zip::result::ZipResult<()> {
     if !Path::new(src_dir).is_dir() {
         return Err(ZipError::FileNotFound);
@@ -66,6 +89,15 @@ pub fn zip_directory(src_dir: &str, dst_file: &str) -> zip::result::ZipResult<()
     Ok(())
 }
 
+/// Unzips source zip file into destination folder
+///
+/// Arguments:
+///
+/// * `zip_path`: path to zip file to unzip
+/// * `target_folder`: destination folder
+/// 
+/// Returns
+///  Result<()>
 pub fn unzip_file(zip_path: &str, target_folder: &str) -> Result<()> {
     let fname = std::path::Path::new(zip_path);
     let file = fs::File::open(&fname)?;
