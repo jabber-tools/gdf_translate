@@ -41,10 +41,29 @@ curl --location --request POST 'https://translation.googleapis.com/v3/projects/d
 */
 
 use crate::errors::Result;
-use crate::google::gcloud::ApiResponse;
 use log::debug;
 use serde_json::json;
+use serde::{Deserialize, Serialize};
 use std::collections;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTranslateV3ResponseMetadata {
+    #[serde(rename = "@type")]
+    type_attr: String,
+    state: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTranslateV3Response {
+    name: String,
+    metadata: GoogleTranslateV3ResponseMetadata,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleTranslateV3ApiResponse {
+    pub status_code: String,
+    pub body: GoogleTranslateV3Response,
+}
 
 pub struct GoogleTranslateV3Map {
     pub map_to_translate: collections::HashMap<String, String>,
@@ -95,6 +114,19 @@ impl GoogleTranslateV3Map {
     }
 }
 
+/// Translates csv/tsv file using Google Translate V3 REST API
+///
+/// See: https://cloud.google.com/translate/docs/reference/rest/v3/projects/translateText
+/// 
+/// Arguments:
+///
+/// * `token`: Bearer token
+/// * `project_id`: Google project ID
+/// * `source_lang`: e.g. 'en'
+/// * `target_lang`: e.g. 'de'
+/// * `mime_type`: text/html or text/plain
+/// * `input_uri`: e.g. gs://translate_v3_test_in/input.tsv
+/// * `output_uri_prefix`: e.g. gs://translate_v3_test_out/
 pub async fn batch_translate_text(
     token: &str,
     project_id: &str,
@@ -103,7 +135,7 @@ pub async fn batch_translate_text(
     mime_type: &str,
     input_uri: &str,
     output_uri_prefix: &str,
-) -> Result<ApiResponse> {
+) -> Result<GoogleTranslateV3ApiResponse> {
     let url = format!(
         "https://translation.googleapis.com/v3/projects/{}/locations/us-central1:batchTranslateText",
         project_id
@@ -133,9 +165,11 @@ pub async fn batch_translate_text(
         .body_json(&body)?
         .await?;
 
-    Ok(ApiResponse {
+    let response_body: GoogleTranslateV3Response = serde_json::from_str(&resp.body_string().await?)?; 
+
+    Ok(GoogleTranslateV3ApiResponse {
         status_code: resp.status().as_str().to_string(),
-        body: resp.body_string().await?,
+        body: response_body,
     })
 }
 
@@ -143,13 +177,26 @@ pub async fn batch_translate_text(
 mod tests {
     use super::*;
     use crate::google::gcloud::auth::*;
-    use crate::google::gcloud::translate::v3::GoogleTranslateV3Map;
     use async_std::task;
-    use std::collections;
     // cargo test -- --show-output test_batch_translate_text
     #[test]
     //#[ignore]
     fn test_batch_translate_text() -> Result<()> {
+
+        let token: Result<GoogleApisOauthToken> =
+            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
+        let token = format!("Bearer {}", token.unwrap().access_token);
+
+
+        let api_response: Result<GoogleTranslateV3ApiResponse> = task::block_on(batch_translate_text(
+            &token,
+            "express-tracking",
+            "en", "de", "text/html",
+            "gs://translate_v3_test/translation_map",
+            "gs://translate_v3_test_out/",
+        ));
+
+        println!("api_response {:#?}", api_response?);
         Ok(())
     }
 }
