@@ -1,7 +1,7 @@
 //! # implementation of google translation api v3
 //!
 //! See following links
-//! 
+//!
 //! * [Google Translate V3 Intro](https://cloud.google.com/translate/docs/intro-to-v3)
 //! * [translateText API](https://cloud.google.com/translate/docs/reference/rest/v3/projects/translateText)
 //! * [batchTranslateText API](https://cloud.google.com/translate/docs/reference/rest/v3/projects.locations/batchTranslateText)
@@ -10,8 +10,8 @@
 //! * [get long running operatopm result - long polling approach](https://cloud.google.com/translate/docs/reference/rest/v3/projects.locations.operations/wait)
 //!
 //! Sample curls:
-//! 
-//! 
+//!
+//!
 //! Initiate batch translation
 //! ```
 //! curl --location --request POST &apos;https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1:batchTranslateText&apos; \
@@ -34,14 +34,14 @@
 //! }&apos;
 //! ```
 //!
-//! 
+//!
 //! Check long running operation status with immediate response (kind of short polling)
 //! ```
 //! curl --location --request GET &apos;https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1/operations/20200615-11581592247524-5edeccd9-0000-26b7-bd4f-30fd38139c64&apos; \
 //! --header &apos;Authorization: Bearer ya29.c....&apos; \
 //! ```
-//! 
-//! 
+//!
+//!
 //! Check long running operation status with delayed response (kind of long polling)
 //! ```
 //! curl --location --request POST &apos;https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1/operations/20200615-11581592247524-5edeccd9-0000-26b7-bd4f-30fd38139c64:wait&apos; \
@@ -51,7 +51,7 @@
 //!   "timeout": "60s"
 //! }&apos;
 //! ```
-//! 
+//!
 use crate::errors::Result;
 use log::debug;
 use serde::{Deserialize, Serialize};

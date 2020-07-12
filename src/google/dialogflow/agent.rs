@@ -434,8 +434,7 @@ parse_gdf_agent_files!(
     IntentUtterancesFile
 );
 
-#[allow(dead_code)]
-fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
+pub fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
     // create temp folder name as epoch time in sec
     let ts_sec = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
