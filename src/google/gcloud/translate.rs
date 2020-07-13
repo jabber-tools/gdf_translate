@@ -6,16 +6,30 @@ use std::collections;
 pub mod v2;
 pub mod v3;
 
+/// This trait is implemented by all agent's structs that should be translated
+pub trait Translate {
+    /// for given struct representing part of GDF agent creates
+    /// translation map to be merged into master translation map
+    fn to_translation(&self) -> collections::HashMap<String, String>;
+
+    /// from master translation map retrieves respective translated entry
+    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>);
+}
+
+/// dummy translation method which just adds _translated postfix to every text that should be translated
+pub fn dummy_translate(translation_map: &mut collections::HashMap<String, String>) {
+    for val in translation_map.values_mut() {
+        let translated_text = format!("{}{}", val, "_translated");
+        *val = translated_text;
+    }
+}
+
 // TBD make this trait async (see https://crates.io/crates/async-trait)
+/// represents high level flow of translation
+/// different translation providers (i.e. structs implementing this trait)
+/// utilize different APIs and approaches to perform the actual translations
 pub trait TranslationFlow {
     fn execute_translation(gdf_agent_path: &str, translated_gdf_agent_folder: &str) -> Result<()>;
-    // TBD: remove this method from agent.rs and refactor it to use TranslationFlow::dummy_translate instead!
-    fn dummy_translate(translation_map: &mut collections::HashMap<String, String>) {
-        for val in translation_map.values_mut() {
-            let translated_text = format!("{}{}", val, "_translated");
-            *val = translated_text;
-        }
-    }
 }
 
 pub enum TranslationProviders {
@@ -51,7 +65,7 @@ impl TranslationFlow for DummyTranslate {
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
         let mut translation_map = agent.to_translation("en", "de");
         // debug!("translation_map before{:#?}", translation_map);
-        DummyTranslate::dummy_translate(&mut translation_map);
+        dummy_translate(&mut translation_map);
         // debug!("translation_map after{:#?}", translation_map);
         agent.from_translation(&translation_map, "de");
         // debug!("agent after{:#?}", agent);

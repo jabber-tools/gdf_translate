@@ -1,4 +1,4 @@
-use crate::google::dialogflow::agent::Translate;
+use crate::google::gcloud::translate::Translate;
 use serde::{Deserialize, Serialize};
 use std::collections;
 

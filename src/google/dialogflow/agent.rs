@@ -8,6 +8,7 @@ use utterances::*;
 
 use crate::errors::{Error, Result};
 use crate::google::dialogflow::responses::normalize_json_for_gdf_agent_serialization;
+use crate::google::gcloud::translate::Translate;
 use crate::parse_gdf_agent_files;
 use crate::serialize_gdf_agent_section;
 use crate::zip::{unzip_file, zip_directory};
@@ -26,11 +27,6 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-pub trait Translate {
-    fn to_translation(&self) -> collections::HashMap<String, String>;
-    fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>);
-}
-
 lazy_static! {
     pub static ref RE_ENTITY_ENTRY_FILE: Regex =
         Regex::new(r"(\w+entries_)([a-zA-Z-]+).json").unwrap();
@@ -38,14 +34,6 @@ lazy_static! {
         Regex::new(r"(\w+usersays_)([a-zA-Z-]+).json").unwrap();
     pub static ref RE_COMPOSITE_ENTITY: Regex = Regex::new(r"@\w+:\w+").unwrap();
     pub static ref RE_COMPOSITE_ENTITY_NO_ALIAS: Regex = Regex::new(r"@\w+").unwrap();
-}
-
-// used in unit tests in gdf_responses and gdf_agent
-pub fn dummy_translate(translation_map: &mut collections::HashMap<String, String>) {
-    for val in translation_map.values_mut() {
-        let translated_text = format!("{}{}", val, "_translated");
-        *val = translated_text;
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -539,8 +527,10 @@ pub fn parse_gdf_agent_zip(zip_path: &str) -> Result<GoogleDialogflowAgent> {
 mod tests {
     use super::*;
     use crate::google::dialogflow::responses::normalize_json;
+    use crate::google::gcloud::translate::dummy_translate;
+    use crate::init_logging;
     use crate::translation_tests_assertions;
-    use assert_json_diff::assert_json_eq;
+    use assert_json_diff::assert_json_eq; // set RUST_LOG=gdf_translate::google::dialogflow::agent=debug
 
     const SAMPLE_AGENTS_FOLDER: &str =
         "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/";
@@ -548,13 +538,6 @@ mod tests {
     // not to be shared in github, contains client's GDF agents!
     const SAMPLE_SENSITIVE_AGENTS_FOLDER: &str =
         "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/testdata/agents/";
-
-    #[allow(dead_code)]
-    fn init_logging() {
-        // enable in unit/integration tests selectivelly only when needed!
-        // set RUST_LOG=gdf_translate::google::dialogflow::agent=debug
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
 
     #[derive(Debug)]
     struct DummyStructSlave {

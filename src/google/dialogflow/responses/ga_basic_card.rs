@@ -1,6 +1,6 @@
-use crate::google::dialogflow::agent::Translate;
 use crate::google::dialogflow::responses::ga_image::GAImage;
 use crate::google::dialogflow::responses::ga_shared::GACardTypeButton;
+use crate::google::gcloud::translate::Translate;
 use serde::{Deserialize, Serialize};
 use std::collections;
 

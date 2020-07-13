@@ -127,19 +127,13 @@ mod tests {
     use super::*;
     use crate::google::gcloud::auth::*;
     use crate::google::gcloud::translate::v3::GoogleTranslateV3Map;
+    use crate::init_logging;
     use async_std::task;
-    use std::collections;
-
-    #[allow(dead_code)]
-    fn init_logging() {
-        // enable in unit/integration tests selectivelly only when needed!
-        // set RUST_LOG=gdf_translate::google::gcloud::storage_bucket_mgmt=debug
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
+    use std::collections; // set RUST_LOG=gdf_translate::google::gcloud::storage_bucket_mgmt=debug
 
     // cargo test -- --show-output test_create_bucket
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_create_bucket() -> Result<()> {
         init_logging();
         let token: Result<GoogleApisOauthToken> =
@@ -160,7 +154,7 @@ mod tests {
 
     // cargo test -- --show-output test_delete_bucket
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_delete_bucket() -> Result<()> {
         init_logging();
         let token: Result<GoogleApisOauthToken> =
@@ -176,7 +170,7 @@ mod tests {
 
     // cargo test -- --show-output test_upload_object
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_upload_object() -> Result<()> {
         init_logging();
         let token: Result<GoogleApisOauthToken> =
@@ -201,7 +195,7 @@ mod tests {
 
     // cargo test -- --show-output test_download_object
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_download_object() -> Result<()> {
         init_logging();
         let token: Result<GoogleApisOauthToken> =
@@ -225,7 +219,7 @@ mod tests {
 
     // cargo test -- --show-output test_delete_object
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_delete_object() -> Result<()> {
         init_logging();
         let token: Result<GoogleApisOauthToken> =

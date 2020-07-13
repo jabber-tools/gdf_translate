@@ -1,4 +1,4 @@
-use crate::google::dialogflow::agent::Translate;
+use crate::google::gcloud::translate::Translate;
 use serde::{Deserialize, Serialize};
 use std::collections;
 
@@ -379,7 +379,7 @@ pub fn normalize_json_for_gdf_agent_serialization(s: &str) -> String {
 mod tests {
     use super::*;
     use crate::errors::Result;
-    use crate::google::dialogflow::agent::dummy_translate;
+    use crate::google::gcloud::translate::dummy_translate;
     use crate::translation_tests_assertions;
     use assert_json_diff::assert_json_eq;
     use serde_json::json;

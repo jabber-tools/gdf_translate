@@ -13,7 +13,7 @@
 //!
 //!
 //! Initiate batch translation
-//! ```
+//! ```ignore
 //! curl --location --request POST &apos;https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1:batchTranslateText&apos; \
 //! --header &apos;Authorization: Bearer ya29.c....&apos; \
 //! --header &apos;Content-Type: application/javascript&apos; \
@@ -36,14 +36,14 @@
 //!
 //!
 //! Check long running operation status with immediate response (kind of short polling)
-//! ```
+//! ```ignore
 //! curl --location --request GET &apos;https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1/operations/20200615-11581592247524-5edeccd9-0000-26b7-bd4f-30fd38139c64&apos; \
 //! --header &apos;Authorization: Bearer ya29.c....&apos; \
 //! ```
 //!
 //!
 //! Check long running operation status with delayed response (kind of long polling)
-//! ```
+//! ```ignore
 //! curl --location --request POST &apos;https://translation.googleapis.com/v3/projects/dummy-project-id/locations/us-central1/operations/20200615-11581592247524-5edeccd9-0000-26b7-bd4f-30fd38139c64:wait&apos; \
 //! --header &apos;Authorization: Bearer ya29.c....&apos; \
 //! --header &apos;Content-Type: application/json&apos; \
@@ -299,18 +299,12 @@ pub async fn batch_translate_text_check_status(
 mod tests {
     use super::*;
     use crate::google::gcloud::auth::*;
-    use async_std::task;
-
-    #[allow(dead_code)]
-    fn init_logging() {
-        // enable in unit/integration tests selectivelly only when needed!
-        // set RUST_LOG=gdf_translate::google::gcloud::translate::v3=debug
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
+    use crate::init_logging;
+    use async_std::task; // // set RUST_LOG=gdf_translate::google::gcloud::translate::v3=debug
 
     // cargo test -- --show-output test_batch_translate_text
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_batch_translate_text() -> Result<()> {
         init_logging();
         let token: Result<GoogleApisOauthToken> =
@@ -342,7 +336,7 @@ mod tests {
 
     // cargo test -- --show-output test_batch_translate_text_wait
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_batch_translate_text_wait() -> Result<()> {
         init_logging();
         let token: Result<GoogleApisOauthToken> =
