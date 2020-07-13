@@ -299,8 +299,8 @@ pub async fn batch_translate_text_check_status(
 mod tests {
     use super::*;
     use crate::google::gcloud::auth::*;
-    use crate::init_logging;
-    use async_std::task; // // set RUST_LOG=gdf_translate::google::gcloud::translate::v3=debug
+    use crate::init_logging; // set RUST_LOG=gdf_translate::google::gcloud::translate::v3=debug
+    use async_std::task;
 
     // cargo test -- --show-output test_batch_translate_text
     #[test]

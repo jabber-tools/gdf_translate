@@ -24,14 +24,6 @@ pub fn dummy_translate(translation_map: &mut collections::HashMap<String, String
     }
 }
 
-// TBD make this trait async (see https://crates.io/crates/async-trait)
-/// represents high level flow of translation
-/// different translation providers (i.e. structs implementing this trait)
-/// utilize different APIs and approaches to perform the actual translations
-pub trait TranslationFlow {
-    fn execute_translation(gdf_agent_path: &str, translated_gdf_agent_folder: &str) -> Result<()>;
-}
-
 pub enum TranslationProviders {
     GoogleTranslateV2,
     GoogleTranslateV3,
@@ -43,24 +35,36 @@ pub struct GoogleTranslateV3;
 pub struct DummyTranslate;
 
 #[allow(unused_variables)]
-impl TranslationFlow for GoogleTranslateV2 {
-    fn execute_translation(gdf_agent_path: &str, translated_gdf_agent_folder: &str) -> Result<()> {
+impl GoogleTranslateV2 {
+    #[allow(dead_code)]
+    async fn execute_translation(
+        gdf_agent_path: &str,
+        translated_gdf_agent_folder: &str,
+    ) -> Result<()> {
         // TBD...
         Ok(())
     }
 }
 
 #[allow(unused_variables)]
-impl TranslationFlow for GoogleTranslateV3 {
-    fn execute_translation(gdf_agent_path: &str, translated_gdf_agent_folder: &str) -> Result<()> {
+impl GoogleTranslateV3 {
+    #[allow(dead_code)]
+    async fn execute_translation(
+        gdf_agent_path: &str,
+        translated_gdf_agent_folder: &str,
+    ) -> Result<()> {
         // TBD...
         Ok(())
     }
 }
 
 #[allow(unused_variables)]
-impl TranslationFlow for DummyTranslate {
-    fn execute_translation(gdf_agent_path: &str, translated_gdf_agent_folder: &str) -> Result<()> {
+impl DummyTranslate {
+    #[allow(dead_code)]
+    async fn execute_translation(
+        gdf_agent_path: &str,
+        translated_gdf_agent_folder: &str,
+    ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
         let mut translation_map = agent.to_translation("en", "de");
@@ -74,12 +78,25 @@ impl TranslationFlow for DummyTranslate {
     }
 }
 
-pub fn get_translation_provider(
-    provider_type: TranslationProviders,
-) -> fn(&str, &str) -> Result<()> {
-    match provider_type {
-        TranslationProviders::DummyTranslate => DummyTranslate::execute_translation,
-        TranslationProviders::GoogleTranslateV2 => GoogleTranslateV2::execute_translation,
-        TranslationProviders::GoogleTranslateV3 => GoogleTranslateV3::execute_translation,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_std::task;
+
+    const SAMPLE_AGENTS_FOLDER: &str =
+        "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/";
+
+    // cargo test -- --show-output test_execute_translation_dummy
+    #[test]
+    #[ignore]
+    fn test_execute_translation_dummy() -> Result<()> {
+        let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
+
+        let _ = task::block_on(DummyTranslate::execute_translation(
+            &agent_path,
+            "c:/tmp/out_translated",
+        ));
+
+        Ok(())
     }
 }
