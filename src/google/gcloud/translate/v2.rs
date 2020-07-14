@@ -1,7 +1,6 @@
 //! # implementation of google translation api v2
 //!
 use crate::errors::Result;
-use crate::google::gcloud::auth::*;
 #[allow(unused_imports)]
 use async_std::{fs, task};
 use serde::{Deserialize, Serialize};
@@ -48,15 +47,15 @@ pub struct TranslateResponseBody {
 
 // see https://cloud.google.com/translate/docs/reference/rest/v2/translate
 pub async fn translate(
-    gdf_credentials_file: &str,
+    token: &str,
     source_lang: &str,
     target_lang: &str,
     text: &str,
     format: TranslateFormat,
 ) -> Result<TranslateResponse> {
     let api_url = "https://translation.googleapis.com/language/translate/v2";
-    let token = get_google_api_token(gdf_credentials_file).await?;
-    let token_header = format!("Bearer {}", token.access_token);
+    // let token = get_google_api_token(gdf_credentials_file).await?;
+    // let token_header = format!("Bearer {}", token.access_token);
 
     let format_str = match format {
         TranslateFormat::Html => "html",
@@ -64,7 +63,7 @@ pub async fn translate(
     };
 
     let mut resp = surf::post(api_url)
-        .set_header("Authorization", token_header)
+        .set_header("Authorization", token)
         .set_query(&TranslateQuery {
             q: text.to_owned(),
             target: target_lang.to_owned(),
@@ -88,6 +87,7 @@ async fn sample_http_call() -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::google::gcloud::auth::*;
 
     // cargo test -- --show-output test_sample_http_call
     #[test]
@@ -111,8 +111,13 @@ mod tests {
     #[test]
     #[ignore]
     fn test_translate() -> Result<()> {
+
+        let token: Result<GoogleApisOauthToken> =
+            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
+        let token = format!("Bearer {}", token.unwrap().access_token);
+
         let result: Result<TranslateResponse> = task::block_on(translate(
-            "./examples/testdata/credentials.json",
+            &token,
             "en",
             "de",
             "Rust is wonderfull programming language",
