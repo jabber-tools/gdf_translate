@@ -1,4 +1,4 @@
-use crate::errors::Result;
+use crate::errors::{Error, Result};
 use crate::google::dialogflow::agent::parse_gdf_agent_zip;
 use log::debug;
 use std::collections;
@@ -40,8 +40,46 @@ impl GoogleTranslateV2 {
     async fn execute_translation(
         gdf_agent_path: &str,
         translated_gdf_agent_folder: &str,
+        token: &str,
+        source_lang: &str,
+        target_lang: &str,
     ) -> Result<()> {
-        // TBD...
+        debug!("processing agent {}", gdf_agent_path);
+        let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
+        let mut translation_map = agent.to_translation(source_lang, target_lang);
+
+        for val in translation_map.values_mut() {
+            debug!("translating value {}", *val);
+            let translation_response = v2::translate(
+                token,
+                source_lang,
+                target_lang,
+                val,
+                v2::TranslateFormat::Plain,
+            )
+            .await?;
+
+            debug!("translation_response {:#?}", translation_response);
+
+            if translation_response.status != "200" {
+                return Err(Error::new(format!(
+                    "GoogleTranslateV2.execute_translation error {:#?}",
+                    translation_response
+                )));
+            }
+
+            *val = translation_response
+                .body
+                .data
+                .translations
+                .iter()
+                .map(|x| x.translated_text.to_owned())
+                .collect::<Vec<String>>()
+                .join(""); /**/
+        }
+
+        agent.from_translation(&translation_map, target_lang);
+        agent.serialize(translated_gdf_agent_folder)?;
         Ok(())
     }
 }
@@ -68,11 +106,8 @@ impl DummyTranslate {
         debug!("processing agent {}", gdf_agent_path);
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
         let mut translation_map = agent.to_translation("en", "de");
-        // debug!("translation_map before{:#?}", translation_map);
         dummy_translate(&mut translation_map);
-        // debug!("translation_map after{:#?}", translation_map);
         agent.from_translation(&translation_map, "de");
-        // debug!("agent after{:#?}", agent);
         agent.serialize(translated_gdf_agent_folder)?;
         Ok(())
     }
@@ -81,6 +116,8 @@ impl DummyTranslate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::google::gcloud::auth::*;
+    use crate::init_logging; // set RUST_LOG=gdf_translate::google::gcloud::translate=debug
     use async_std::task;
 
     const SAMPLE_AGENTS_FOLDER: &str =
@@ -88,13 +125,41 @@ mod tests {
 
     // cargo test -- --show-output test_execute_translation_dummy
     #[test]
-    #[ignore]
+    //#[ignore]
     fn test_execute_translation_dummy() -> Result<()> {
+        init_logging();
         let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
+        println!("getting bearer token...");
+        let token: Result<GoogleApisOauthToken> =
+            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
+        let token = format!("Bearer {}", token.unwrap().access_token);
+        println!("bearer token retrieved {}", token);
 
         let _ = task::block_on(DummyTranslate::execute_translation(
             &agent_path,
             "c:/tmp/out_translated",
+        ));
+
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_execute_translation_google_v2
+    #[test]
+    //#[ignore]
+    fn test_execute_translation_google_v2() -> Result<()> {
+        init_logging();
+        let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
+        println!("getting bearer token...");
+        let token: Result<GoogleApisOauthToken> =
+            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
+        let token = format!("Bearer {}", token.unwrap().access_token);
+        println!("bearer token retrieved {}", token);
+        let _ = task::block_on(GoogleTranslateV2::execute_translation(
+            &agent_path,
+            "c:/tmp/out_translated",
+            &token,
+            "en",
+            "de",
         ));
 
         Ok(())

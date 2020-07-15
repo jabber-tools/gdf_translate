@@ -3,6 +3,7 @@
 use crate::errors::Result;
 #[allow(unused_imports)]
 use async_std::{fs, task};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use surf;
 
@@ -19,6 +20,7 @@ pub struct TranslateQuery {
     source: String,
 }
 
+#[derive(Debug)]
 pub struct TranslateResponse {
     pub status: String,
     pub body: TranslateResponseBody,
@@ -54,14 +56,13 @@ pub async fn translate(
     format: TranslateFormat,
 ) -> Result<TranslateResponse> {
     let api_url = "https://translation.googleapis.com/language/translate/v2";
-    // let token = get_google_api_token(gdf_credentials_file).await?;
-    // let token_header = format!("Bearer {}", token.access_token);
 
     let format_str = match format {
         TranslateFormat::Html => "html",
         TranslateFormat::Plain => "text",
     };
 
+    debug!("going to translate text {}", text);
     let mut resp = surf::post(api_url)
         .set_header("Authorization", token)
         .set_query(&TranslateQuery {
@@ -109,9 +110,8 @@ mod tests {
 
     // cargo test -- --show-output test_translate
     #[test]
-    #[ignore]
+    //#[ignore]
     fn test_translate() -> Result<()> {
-
         let token: Result<GoogleApisOauthToken> =
             task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
         let token = format!("Bearer {}", token.unwrap().access_token);

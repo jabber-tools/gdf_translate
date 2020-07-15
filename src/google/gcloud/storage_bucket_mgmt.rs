@@ -127,9 +127,9 @@ mod tests {
     use super::*;
     use crate::google::gcloud::auth::*;
     use crate::google::gcloud::translate::v3::GoogleTranslateV3Map;
-    use crate::init_logging;
+    use crate::init_logging; // set RUST_LOG=gdf_translate::google::gcloud::storage_bucket_mgmt=debug
     use async_std::task;
-    use std::collections; // set RUST_LOG=gdf_translate::google::gcloud::storage_bucket_mgmt=debug
+    use std::collections;
 
     // cargo test -- --show-output test_create_bucket
     #[test]
