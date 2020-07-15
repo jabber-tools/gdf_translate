@@ -90,6 +90,22 @@ mod tests {
     use super::*;
     use crate::google::gcloud::auth::*;
 
+    async fn translate_v2_dummy_wrapper(
+        token: &str,
+        source_lang: &str,
+        target_lang: &str,
+        text: &str
+    ) -> Result<()> {
+        let iter_vec: Vec<u8> = vec![1,2,3];
+        for idx in iter_vec.iter() {
+            println!("iteration {}", idx);
+            let resp = translate(token, source_lang, target_lang, text, TranslateFormat::Plain).await?;
+            println!("resp={:#?}", resp);
+        }
+
+        Ok(())
+    }
+
     // cargo test -- --show-output test_sample_http_call
     #[test]
     #[ignore]
@@ -108,10 +124,10 @@ mod tests {
         Ok(())
     }
 
-    // cargo test -- --show-output test_translate
+    // cargo test -- --show-output test_translate_v2
     #[test]
-    //#[ignore]
-    fn test_translate() -> Result<()> {
+    #[ignore]
+    fn test_translate_v2() -> Result<()> {
         let token: Result<GoogleApisOauthToken> =
             task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
         let token = format!("Bearer {}", token.unwrap().access_token);
@@ -126,4 +142,21 @@ mod tests {
         println!("result from translate: {:#?}", result.unwrap().body);
         Ok(())
     }
+
+    // cargo test -- --show-output test_translate_v2_wrapped
+    #[test]
+    #[ignore]
+    fn test_translate_v2_wrapped() -> Result<()> {
+        let token: Result<GoogleApisOauthToken> =
+            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
+        let token = format!("Bearer {}", token.unwrap().access_token);
+
+        let _ = task::block_on(translate_v2_dummy_wrapper(
+            &token,
+            "en",
+            "de",
+            "Rust is wonderfull programming language. This is wrapped translation!"
+        ));
+        Ok(())
+    }    
 }
