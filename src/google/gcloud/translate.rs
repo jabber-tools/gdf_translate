@@ -48,8 +48,12 @@ impl GoogleTranslateV2 {
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
         let mut translation_map = agent.to_translation(source_lang, target_lang);
 
+        let translation_count = translation_map.len();
+        let mut translated_item_idx = 0;
+
         for val in translation_map.values_mut() {
-            debug!("translating value {}", *val);
+            translated_item_idx = translated_item_idx + 1;
+            debug!("translating value({}/{}): {}", translated_item_idx, translation_count, *val);
             let translation_response = v2::translate(
                 token,
                 source_lang,
@@ -78,8 +82,14 @@ impl GoogleTranslateV2 {
                 .join(""); /**/
         }
 
+        debug!("translation finished. updated translation map");
+        debug!("{:#?}", translation_map);
+
+        debug!("applying translated map to agent");
         agent.from_translation(&translation_map, target_lang);
+        debug!("serializing agent");
         agent.serialize(translated_gdf_agent_folder)?;
+        debug!("agent serialized!");
         Ok(())
     }
 }
@@ -90,6 +100,9 @@ impl GoogleTranslateV3 {
     async fn execute_translation(
         gdf_agent_path: &str,
         translated_gdf_agent_folder: &str,
+        token: &str,
+        source_lang: &str,
+        target_lang: &str,
     ) -> Result<()> {
         // TBD...
         Ok(())
@@ -102,12 +115,15 @@ impl DummyTranslate {
     async fn execute_translation(
         gdf_agent_path: &str,
         translated_gdf_agent_folder: &str,
+        token: &str,
+        source_lang: &str,
+        target_lang: &str,
     ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
-        let mut translation_map = agent.to_translation("en", "de");
+        let mut translation_map = agent.to_translation(source_lang, target_lang);
         dummy_translate(&mut translation_map);
-        agent.from_translation(&translation_map, "de");
+        agent.from_translation(&translation_map, target_lang);
         agent.serialize(translated_gdf_agent_folder)?;
         Ok(())
     }
@@ -125,7 +141,7 @@ mod tests {
 
     // cargo test -- --show-output test_execute_translation_dummy
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_execute_translation_dummy() -> Result<()> {
         init_logging();
         let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
@@ -138,6 +154,9 @@ mod tests {
         let _ = task::block_on(DummyTranslate::execute_translation(
             &agent_path,
             "c:/tmp/out_translated",
+            "token n/a",
+            "en",
+            "de",
         ));
 
         Ok(())

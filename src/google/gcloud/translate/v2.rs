@@ -94,12 +94,19 @@ mod tests {
         token: &str,
         source_lang: &str,
         target_lang: &str,
-        text: &str
+        text: &str,
     ) -> Result<()> {
-        let iter_vec: Vec<u8> = vec![1,2,3];
+        let iter_vec: Vec<u8> = vec![1, 2, 3];
         for idx in iter_vec.iter() {
             println!("iteration {}", idx);
-            let resp = translate(token, source_lang, target_lang, text, TranslateFormat::Plain).await?;
+            let resp = translate(
+                token,
+                source_lang,
+                target_lang,
+                text,
+                TranslateFormat::Plain,
+            )
+            .await?;
             println!("resp={:#?}", resp);
         }
 
@@ -155,8 +162,8 @@ mod tests {
             &token,
             "en",
             "de",
-            "Rust is wonderfull programming language. This is wrapped translation!"
+            "Rust is wonderfull programming language. This is wrapped translation!",
         ));
         Ok(())
-    }    
+    }
 }
