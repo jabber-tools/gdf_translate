@@ -53,15 +53,48 @@ impl GoogleTranslateV2 {
 
         for val in translation_map.values_mut() {
             translated_item_idx = translated_item_idx + 1;
-            debug!("translating value({}/{}): {}", translated_item_idx, translation_count, *val);
-            let translation_response = v2::translate(
+            debug!(
+                "translating value({}/{}): {}",
+                translated_item_idx, translation_count, *val
+            );
+            let translation_response;
+            let mut translation_result = v2::translate(
                 token,
                 source_lang,
                 target_lang,
                 val,
                 v2::TranslateFormat::Plain,
             )
-            .await?;
+            .await;
+
+            if let Err(translation_error) = translation_result {
+                debug!(
+                    "error while translating value {}/{}. Attempting one more time",
+                    translated_item_idx, translation_count
+                );
+                translation_result = v2::translate(
+                    token,
+                    source_lang,
+                    target_lang,
+                    val,
+                    v2::TranslateFormat::Plain,
+                )
+                .await;
+            }
+
+            if let Err(translation_error) = translation_result {
+                debug!(
+                    "2nd error while translating value {}/{}. Skipping",
+                    translated_item_idx, translation_count
+                );
+                continue;
+            } else {
+                debug!(
+                    "2nd attempt to translate item {}/{} succeeded!",
+                    translated_item_idx, translation_count
+                );
+                translation_response = translation_result.unwrap();
+            }
 
             debug!("translation_response {:#?}", translation_response);
 
@@ -79,7 +112,7 @@ impl GoogleTranslateV2 {
                 .iter()
                 .map(|x| x.translated_text.to_owned())
                 .collect::<Vec<String>>()
-                .join(""); /**/
+                .join("");
         }
 
         debug!("translation finished. updated translation map");
@@ -145,11 +178,11 @@ mod tests {
     fn test_execute_translation_dummy() -> Result<()> {
         init_logging();
         let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
-        println!("getting bearer token...");
+        debug!("getting bearer token...");
         let token: Result<GoogleApisOauthToken> =
             task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
         let token = format!("Bearer {}", token.unwrap().access_token);
-        println!("bearer token retrieved {}", token);
+        debug!("bearer token retrieved {}", token);
 
         let _ = task::block_on(DummyTranslate::execute_translation(
             &agent_path,
@@ -168,11 +201,11 @@ mod tests {
     fn test_execute_translation_google_v2() -> Result<()> {
         init_logging();
         let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
-        println!("getting bearer token...");
+        debug!("getting bearer token...");
         let token: Result<GoogleApisOauthToken> =
             task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
         let token = format!("Bearer {}", token.unwrap().access_token);
-        println!("bearer token retrieved {}", token);
+        debug!("bearer token retrieved {}", token);
         let _ = task::block_on(GoogleTranslateV2::execute_translation(
             &agent_path,
             "c:/tmp/out_translated",
