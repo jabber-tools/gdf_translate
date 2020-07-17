@@ -265,10 +265,16 @@ impl GoogleTranslateV3 {
             }
         }
 
+        // e.g. gs://gdf_translate_output_1594998623/gdf_translate_input_1594998623_translation_map_de_translations.tsv
+        let translated_object_name = format!(
+            "{}_translation_map_{}_translations.tsv",
+            storage_bucket_name_in, target_lang
+        );
+
         let bucket_download_result = storage_bucket_mgmt::download_object(
             token,
             &format!("gs://{}/", storage_bucket_name_out),
-            &format!("supercomplicated google name:("), // TBD: assemble this!
+            &translated_object_name,
         )
         .await?;
         debug!("bucket_download_result {:#?}", bucket_download_result);
@@ -283,7 +289,37 @@ impl GoogleTranslateV3 {
             }
         }
 
-        // TBD: delete created buckets and all objects within here!
+        let mut delete_object_result;
+
+        debug!("deleting index.csv");
+        delete_object_result =
+            storage_bucket_mgmt::delete_object(token, &storage_bucket_name_out, "index.csv")
+                .await?;
+        debug!("delete_object_result {:#?}", delete_object_result);
+
+        debug!("deleting {}", translated_object_name);
+        delete_object_result = storage_bucket_mgmt::delete_object(
+            token,
+            &storage_bucket_name_out,
+            &translated_object_name,
+        )
+        .await?;
+        debug!("delete_object_result {:#?}", delete_object_result);
+
+        debug!("deleting translation_map.tsv");
+        delete_object_result =
+            storage_bucket_mgmt::delete_object(token, &storage_bucket_name_in, "index.csv").await?;
+        debug!("delete_object_result {:#?}", delete_object_result);
+
+        debug!("deleting {}", &storage_bucket_name_in);
+        let delete_bucket_result_in =
+            storage_bucket_mgmt::delete_bucket(token, &storage_bucket_name_in).await?;
+        debug!("delete_bucket_result_in {:#?}", delete_bucket_result_in);
+
+        debug!("deleting {}", &storage_bucket_name_out);
+        let delete_bucket_result_out =
+            storage_bucket_mgmt::delete_bucket(token, &storage_bucket_name_out).await?;
+        debug!("delete_bucket_result_out {:#?}", delete_bucket_result_out);
 
         debug!("translation finished. updated translation map");
         debug!("{:#?}", &v3_map.map_to_translate);
@@ -293,7 +329,6 @@ impl GoogleTranslateV3 {
         debug!("serializing agent");
         agent.serialize(translated_gdf_agent_folder)?;
         debug!("agent serialized!");
-
 
         Ok(())
     }
@@ -368,6 +403,29 @@ mod tests {
             &token,
             "en",
             "de",
+        ));
+
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_execute_translation_google_v3
+    #[test]
+    //#[ignore]
+    fn test_execute_translation_google_v3() -> Result<()> {
+        init_logging();
+        let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
+        debug!("getting bearer token...");
+        let token: Result<GoogleApisOauthToken> =
+            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
+        let token = format!("Bearer {}", token.unwrap().access_token);
+        debug!("bearer token retrieved {}", token);
+        let _ = task::block_on(GoogleTranslateV3::execute_translation(
+            &agent_path,
+            "c:/tmp/out_translated",
+            &token,
+            "en",
+            "de",
+            "express-tracking",
         ));
 
         Ok(())
