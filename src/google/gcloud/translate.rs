@@ -1,7 +1,9 @@
-use crate::errors::{Error, Result};
+use crate::errors::Result;
 use crate::google::dialogflow::agent::parse_gdf_agent_zip;
+use async_std::task;
 use log::debug;
 use std::collections;
+use std::time::Duration;
 
 pub mod v2;
 pub mod v3;
@@ -57,7 +59,7 @@ impl GoogleTranslateV2 {
                 "translating value({}/{}): {}",
                 translated_item_idx, translation_count, *val
             );
-            let translation_response;
+            let mut translation_response;
             let mut translation_result = v2::translate(
                 token,
                 source_lang,
@@ -69,9 +71,10 @@ impl GoogleTranslateV2 {
 
             if let Err(translation_error) = translation_result {
                 debug!(
-                    "error while translating value {}/{}. Attempting one more time",
-                    translated_item_idx, translation_count
+                    "error while translating value {}/{}. Attempting one more time. Error detail: {:#?}",
+                    translated_item_idx, translation_count, translation_error
                 );
+                task::sleep(Duration::from_secs(2)).await; // wait with this task execution before next try!
                 translation_result = v2::translate(
                     token,
                     source_lang,
@@ -84,13 +87,13 @@ impl GoogleTranslateV2 {
 
             if let Err(translation_error) = translation_result {
                 debug!(
-                    "2nd error while translating value {}/{}. Skipping",
-                    translated_item_idx, translation_count
+                    "2nd error while translating value {}/{}. Skipping translating of this item. Error detail: {:#?}",
+                    translated_item_idx, translation_count, translation_error
                 );
                 continue;
             } else {
                 debug!(
-                    "2nd attempt to translate item {}/{} succeeded!",
+                    "call translation api for item {}/{} succeeded!",
                     translated_item_idx, translation_count
                 );
                 translation_response = translation_result.unwrap();
@@ -99,10 +102,45 @@ impl GoogleTranslateV2 {
             debug!("translation_response {:#?}", translation_response);
 
             if translation_response.status != "200" {
-                return Err(Error::new(format!(
+                /* return Err(Error::new(format!(
                     "GoogleTranslateV2.execute_translation error {:#?}",
                     translation_response
-                )));
+                ))); */
+                debug!(
+                    "error while translating value {}/{}. HTTP code is not 200. Attempting one more time. Error detail: {:#?}",
+                    translated_item_idx, translation_count, translation_response
+                );
+                task::sleep(Duration::from_secs(2)).await; // wait with this task execution before next try!
+                translation_result = v2::translate(
+                    token,
+                    source_lang,
+                    target_lang,
+                    val,
+                    v2::TranslateFormat::Plain,
+                )
+                .await;
+
+                if let Err(translation_error) = translation_result {
+                    debug!(
+                        "2nd error while translating value {}/{}. Skipping translating of this item. Error detail: {:#?}",
+                        translated_item_idx, translation_count, translation_error
+                    );
+                    continue;
+                }
+
+                if translation_response.status != "200" {
+                    debug!(
+                        "2nd error while translating value {}/{}. HTTP code is not 200. Skipping translating of this item. Error detail: {:#?}",
+                        translated_item_idx, translation_count, translation_response
+                    );
+                    continue;
+                }
+
+                debug!(
+                    "2nd attempt to translate item {}/{} succeeded!",
+                    translated_item_idx, translation_count
+                );
+                translation_response = translation_result.unwrap();
             }
 
             *val = translation_response
@@ -167,7 +205,6 @@ mod tests {
     use super::*;
     use crate::google::gcloud::auth::*;
     use crate::init_logging; // set RUST_LOG=gdf_translate::google::gcloud::translate=debug
-    use async_std::task;
 
     const SAMPLE_AGENTS_FOLDER: &str =
         "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/";
@@ -197,7 +234,7 @@ mod tests {
 
     // cargo test -- --show-output test_execute_translation_google_v2
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_execute_translation_google_v2() -> Result<()> {
         init_logging();
         let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
