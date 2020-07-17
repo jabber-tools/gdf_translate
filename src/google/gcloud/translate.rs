@@ -1,9 +1,11 @@
-use crate::errors::Result;
+use crate::errors::{Error, Result};
 use crate::google::dialogflow::agent::parse_gdf_agent_zip;
+use crate::google::gcloud::storage_bucket_mgmt;
 use async_std::task;
 use log::debug;
 use std::collections;
 use std::time::Duration;
+use std::time::SystemTime;
 
 pub mod v2;
 pub mod v3;
@@ -174,8 +176,125 @@ impl GoogleTranslateV3 {
         token: &str,
         source_lang: &str,
         target_lang: &str,
+        project_id: &str,
     ) -> Result<()> {
-        // TBD...
+        debug!("processing agent {}", gdf_agent_path);
+        let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
+
+        let mut v3_map =
+            v3::GoogleTranslateV3Map::new(agent.to_translation(source_lang, target_lang));
+
+        let ts_sec = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let storage_bucket_name_in = format!("gdf_translate_input_{}", ts_sec.to_string());
+        let storage_bucket_name_out = format!("gdf_translate_output_{}", ts_sec.to_string());
+
+        let bucket_creation_result_in = storage_bucket_mgmt::create_bucket(
+            token,
+            project_id,
+            &storage_bucket_name_in,
+            "EUROPE-WEST3",
+            "STANDARD",
+        )
+        .await?;
+        debug!("bucket_creation_result_in {:#?}", bucket_creation_result_in);
+
+        let bucket_creation_result_out = storage_bucket_mgmt::create_bucket(
+            token,
+            project_id,
+            &storage_bucket_name_out,
+            "EUROPE-WEST3",
+            "STANDARD",
+        )
+        .await?;
+        debug!(
+            "bucket_creation_result_out {:#?}",
+            bucket_creation_result_out
+        );
+
+        let bucket_upload_result = storage_bucket_mgmt::upload_object(
+            token,
+            &storage_bucket_name_in,
+            "translation_map.tsv",
+            &v3::GoogleTranslateV3Map::map_to_string(&v3_map.tsv_map),
+        )
+        .await?;
+        debug!("bucket_upload_result {:#?}", bucket_upload_result);
+
+        let translation_result = v3::batch_translate_text(
+            token,
+            project_id,
+            source_lang,
+            target_lang,
+            "text/plain", // TBD: parametrize externally or detect internally?
+            &format!("gs://{}/translation_map.tsv", storage_bucket_name_in),
+            &format!("gs://{}/", storage_bucket_name_out),
+        )
+        .await?;
+        debug!("translation_result {:#?}", translation_result);
+
+        loop {
+            let translation_operation_result =
+                v3::batch_translate_text_check_status(token, &translation_result.body.name).await?;
+
+            debug!(
+                "translation_operation_result {:#?}",
+                translation_operation_result
+            );
+
+            if let Some(done) = translation_operation_result.body.done {
+                if done == true && translation_operation_result.body.metadata.state == "SUCCEEDED" {
+                    debug!("batch translation completed!");
+                    break;
+                } else
+                /* FAILED*/
+                {
+                    if let Some(error) = translation_operation_result.body.error {
+                        debug!("batch translation failed! Error detail {:#?}", error);
+                        return Err(Error::new(format!(
+                            "GoogleTranslateV3.execute_translation failed {:#?}",
+                            error
+                        )));
+                    }
+                }
+            } else {
+                debug!("still running, checking the state again...")
+            }
+        }
+
+        let bucket_download_result = storage_bucket_mgmt::download_object(
+            token,
+            &format!("gs://{}/", storage_bucket_name_out),
+            &format!("supercomplicated google name:("), // TBD: assemble this!
+        )
+        .await?;
+        debug!("bucket_download_result {:#?}", bucket_download_result);
+
+        let mut translated_map =
+            v3::GoogleTranslateV3Map::string_to_map(bucket_download_result.body);
+
+        for (key, val) in translated_map.iter_mut() {
+            let target_key = v3_map.tran_map_to_tsv_map.get(key).unwrap(); // safe to unwrap, will be always here!
+            if let Some(target_value) = v3_map.map_to_translate.get_mut(target_key) {
+                *target_value = val.to_string();
+            }
+        }
+
+        // TBD: delete created buckets and all objects within here!
+
+        debug!("translation finished. updated translation map");
+        debug!("{:#?}", &v3_map.map_to_translate);
+
+        debug!("applying translated map to agent");
+        agent.from_translation(&v3_map.map_to_translate, target_lang);
+        debug!("serializing agent");
+        agent.serialize(translated_gdf_agent_folder)?;
+        debug!("agent serialized!");
+
+
         Ok(())
     }
 }

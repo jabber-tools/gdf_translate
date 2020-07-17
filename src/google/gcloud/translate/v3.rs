@@ -61,14 +61,14 @@ use std::collections;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoogleTranslateV3ResponseMetadata {
     #[serde(rename = "@type")]
-    type_attr: String,
-    state: String,
+    pub type_attr: String,
+    pub state: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoogleTranslateV3Response {
-    name: String,
-    metadata: GoogleTranslateV3ResponseMetadata,
+    pub name: String,
+    pub metadata: GoogleTranslateV3ResponseMetadata,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -80,42 +80,42 @@ pub struct GoogleTranslateV3ApiResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoogleTranslateV3WaitResponseMetadata {
     #[serde(rename = "@type")]
-    type_attr: String,
-    state: String,
+    pub type_attr: String,
+    pub state: String,
 
     #[serde(rename = "submitTime")]
-    submit_time: String,
+    pub submit_time: String,
 
     #[serde(rename = "endTime")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    end_time: Option<String>,
+    pub end_time: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoogleTranslateV3WaitResponseMeResponse {
     #[serde(rename = "@type")]
-    type_attr: String,
+    pub type_attr: String,
 
     #[serde(rename = "totalCharacters")]
-    total_characters: String,
+    pub total_characters: String,
 
     #[serde(rename = "translatedCharacters")]
-    translated_characters: String,
+    pub translated_characters: String,
 
     #[serde(rename = "submitTime")]
-    submit_time: String,
+    pub submit_time: String,
 
     #[serde(rename = "endTime")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    end_time: Option<String>,
+    pub end_time: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoogleTranslateV3WaitResponseErrorDetail {
     #[serde(rename = "@type")]
-    type_attr: String,
+    pub type_attr: String,
 
-    detail: String,
+    pub detail: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -129,17 +129,17 @@ pub struct GoogleTranslateV3WaitResponseError {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoogleTranslateV3WaitResponse {
-    name: String,
-    metadata: GoogleTranslateV3WaitResponseMetadata,
+    pub name: String,
+    pub metadata: GoogleTranslateV3WaitResponseMetadata,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    done: Option<bool>,
+    pub done: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<GoogleTranslateV3WaitResponseError>,
+    pub error: Option<GoogleTranslateV3WaitResponseError>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    response: Option<GoogleTranslateV3WaitResponseMeResponse>,
+    pub response: Option<GoogleTranslateV3WaitResponseMeResponse>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -151,21 +151,25 @@ pub struct GoogleTranslateV3WaitApiResponse {
 pub struct GoogleTranslateV3Map {
     pub map_to_translate: collections::HashMap<String, String>,
     pub tsv_map: collections::HashMap<String, String>,
+    pub tran_map_to_tsv_map: collections::HashMap<String, String>,
 }
 
 impl GoogleTranslateV3Map {
     pub fn new(map_to_translate: collections::HashMap<String, String>) -> Self {
         let mut tsv_map = collections::HashMap::new();
+        let mut tran_map_to_tsv_map = collections::HashMap::new();
         let mut idx = 0;
 
-        for (_, val) in map_to_translate.iter() {
+        for (key, val) in map_to_translate.iter() {
             idx = idx + 1;
             tsv_map.insert(idx.to_string(), val.to_string());
+            tran_map_to_tsv_map.insert(idx.to_string(), key.to_string());
         }
 
         GoogleTranslateV3Map {
             map_to_translate,
             tsv_map,
+            tran_map_to_tsv_map,
         }
     }
 
