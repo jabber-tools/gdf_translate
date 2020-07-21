@@ -164,18 +164,21 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
 ///
 /// Arguments:
 /// * `s`: String of translation map as produced by Google Translate V3 API. Example:
+/// ```ignore
 /// 0000000000	7f06092ac6d0 translate me	7f06092ac6d0 übersetze mich
 /// 0000000001	7f06092ac6d1 rust is great	7f06092ac6d1 Rost ist großartig
 /// 0000000002	7f06092ac6d2 let's have a weekend	7f06092ac6d2 Lass uns ein Wochenende haben
+/// ```
 ///
 /// Returns: input above should return following map:
+/// ```ignore
 /// KEY                 VAL
 /// -------------------------------------------------
 /// 7f06092ac6d0        übersetze mich
 /// 7f06092ac6d1        Rost ist großartig
 /// 7f06092ac6d2        Lass uns ein Wochenende haben
-///
-/// In this mao KEY represents address of rust structure field reference
+/// ```
+/// In this map KEY represents address of rust structure field reference
 /// and value represents translaetd text to be applied
 ///
 pub fn string_to_map(s: String) -> collections::HashMap<String, String> {
