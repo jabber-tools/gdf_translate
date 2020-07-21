@@ -181,8 +181,7 @@ impl GoogleTranslateV3 {
         debug!("processing agent {}", gdf_agent_path);
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
 
-        let mut v3_map =
-            v3::GoogleTranslateV3Map::new(agent.to_translation(source_lang, target_lang));
+        let translation_map = agent.to_translation(source_lang, target_lang);
 
         let ts_sec = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -219,7 +218,7 @@ impl GoogleTranslateV3 {
             token,
             &storage_bucket_name_in,
             "translation_map.tsv",
-            &v3::GoogleTranslateV3Map::map_to_string(&v3_map.tsv_map),
+            &v3::map_to_string(&translation_map),
         )
         .await?;
         debug!("bucket_upload_result {:#?}", bucket_upload_result);
@@ -271,23 +270,17 @@ impl GoogleTranslateV3 {
             storage_bucket_name_in, target_lang
         );
 
+        debug!("translated_object_name {}", translated_object_name);
+
         let bucket_download_result = storage_bucket_mgmt::download_object(
             token,
-            &format!("gs://{}/", storage_bucket_name_out),
+            &storage_bucket_name_out,
             &translated_object_name,
         )
         .await?;
         debug!("bucket_download_result {:#?}", bucket_download_result);
 
-        let mut translated_map =
-            v3::GoogleTranslateV3Map::string_to_map(bucket_download_result.body);
-
-        for (key, val) in translated_map.iter_mut() {
-            let target_key = v3_map.tran_map_to_tsv_map.get(key).unwrap(); // safe to unwrap, will be always here!
-            if let Some(target_value) = v3_map.map_to_translate.get_mut(target_key) {
-                *target_value = val.to_string();
-            }
-        }
+        let translated_map = v3::string_to_map(bucket_download_result.body);
 
         let mut delete_object_result;
 
@@ -322,10 +315,10 @@ impl GoogleTranslateV3 {
         debug!("delete_bucket_result_out {:#?}", delete_bucket_result_out);
 
         debug!("translation finished. updated translation map");
-        debug!("{:#?}", &v3_map.map_to_translate);
+        debug!("{:#?}", translated_map);
 
         debug!("applying translated map to agent");
-        agent.from_translation(&v3_map.map_to_translate, target_lang);
+        agent.from_translation(&translated_map, target_lang);
         debug!("serializing agent");
         agent.serialize(translated_gdf_agent_folder)?;
         debug!("agent serialized!");

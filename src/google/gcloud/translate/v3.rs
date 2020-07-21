@@ -148,57 +148,58 @@ pub struct GoogleTranslateV3WaitApiResponse {
     pub body: GoogleTranslateV3WaitResponse,
 }
 
-pub struct GoogleTranslateV3Map {
-    pub map_to_translate: collections::HashMap<String, String>,
-    pub tsv_map: collections::HashMap<String, String>,
-    pub tran_map_to_tsv_map: collections::HashMap<String, String>,
+pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> String {
+    let mut s = String::from("");
+
+    for (key, val) in translation_map.iter() {
+        s.push_str(&format!("{} {}\n", key, val));
+    }
+
+    s
 }
 
-impl GoogleTranslateV3Map {
-    pub fn new(map_to_translate: collections::HashMap<String, String>) -> Self {
-        let mut tsv_map = collections::HashMap::new();
-        let mut tran_map_to_tsv_map = collections::HashMap::new();
-        let mut idx = 0;
+/// Converts string produced by Google Translate V3 API back to translation map
+///
+///
+///
+/// Arguments:
+/// * `s`: String of translation map as produced by Google Translate V3 API. Example:
+/// 0000000000	7f06092ac6d0 translate me	7f06092ac6d0 übersetze mich
+/// 0000000001	7f06092ac6d1 rust is great	7f06092ac6d1 Rost ist großartig
+/// 0000000002	7f06092ac6d2 let's have a weekend	7f06092ac6d2 Lass uns ein Wochenende haben
+///
+/// Returns: input above should return following map:
+/// KEY                 VAL
+/// -------------------------------------------------
+/// 7f06092ac6d0        übersetze mich
+/// 7f06092ac6d1        Rost ist großartig
+/// 7f06092ac6d2        Lass uns ein Wochenende haben
+///
+/// In this mao KEY represents address of rust structure field reference
+/// and value represents translaetd text to be applied
+///
+pub fn string_to_map(s: String) -> collections::HashMap<String, String> {
+    let mut translation_map: collections::HashMap<String, String> = collections::HashMap::new();
+    let split = s.split("\n");
 
-        for (key, val) in map_to_translate.iter() {
-            idx = idx + 1;
-            tsv_map.insert(idx.to_string(), val.to_string());
-            tran_map_to_tsv_map.insert(idx.to_string(), key.to_string());
+    let vec: Vec<&str> = split.collect();
+
+    for item in vec.iter() {
+        if item.trim() == "" {
+            continue; // skip the last empty row
         }
 
-        GoogleTranslateV3Map {
-            map_to_translate,
-            tsv_map,
-            tran_map_to_tsv_map,
-        }
+        let mut white_space_iter = item.split_whitespace();
+        white_space_iter.next();
+        let address = white_space_iter.next().unwrap();
+
+        let idx = item.rfind(address);
+        
+        let idx = idx.unwrap() + address.len();
+        translation_map.insert(address.to_owned(), item[idx..].trim_start().to_string());
     }
 
-    pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> String {
-        let mut s = String::from("");
-
-        for (key, val) in translation_map.iter() {
-            s.push_str(&format!("{} {}\n", key, val));
-        }
-
-        s
-    }
-
-    pub fn string_to_map(s: String) -> collections::HashMap<String, String> {
-        let mut translation_map: collections::HashMap<String, String> = collections::HashMap::new();
-        let split = s.split("\n");
-
-        let vec: Vec<&str> = split.collect();
-
-        for item in vec.iter() {
-            if item.trim() == "" {
-                continue; // skip the last empty row
-            }
-            let idx = item.find(" ").unwrap(); // safe to unwrap, we will be using with translation map only ;)
-            translation_map.insert(item[0..idx].to_string(), item[idx + 1..].to_string());
-        }
-
-        translation_map
-    }
+    translation_map
 }
 
 /// Translates csv/tsv file using Google Translate V3 REST API
@@ -308,7 +309,7 @@ mod tests {
 
     // cargo test -- --show-output test_batch_translate_text
     #[test]
-    #[ignore]
+    //#[ignore]
     fn test_batch_translate_text() -> Result<()> {
         init_logging();
         let token: Result<GoogleApisOauthToken> =
@@ -448,4 +449,64 @@ mod tests {
 
         Ok(())
     }
+
+    // cargo test -- --show-output test_string_to_map_1
+    #[test]
+    fn test_string_to_map_1() -> Result<()> {
+        let translated_map_str = r#"
+        0000000000	7f06092ac6d0 translate me	7f06092ac6d0 übersetze mich
+        0000000001	7f06092ac6d1 rust is great	7f06092ac6d1 Rost ist großartig
+        0000000002	7f06092ac6d2 let's have a weekend	7f06092ac6d2 Lass uns ein Wochenende haben
+        "#;
+
+        let translated_map = string_to_map(translated_map_str.to_string());
+        assert_eq!(translated_map.len(), 3);
+
+        println!("translated_map: {:#?}", translated_map);
+
+        assert_eq!(translated_map.get("7f06092ac6d0").unwrap(), "übersetze mich");
+        assert_eq!(translated_map.get("7f06092ac6d1").unwrap(), "Rost ist großartig");
+        assert_eq!(translated_map.get("7f06092ac6d2").unwrap(), "Lass uns ein Wochenende haben");
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_string_to_map_2
+    #[test]
+    fn test_string_to_map_2() -> Result<()> {
+        let translated_map_str = r#"
+        0000000000	7f06092ac6d0 translate me	7f06092ac6d0 翻譯我
+        0000000001	7f06092ac6d1 rust is great	7f06092ac6d1 銹很棒
+        0000000002	7f06092ac6d2 let's have a weekend	7f06092ac6d2 讓我們週末
+        "#;
+
+        let translated_map = string_to_map(translated_map_str.to_string());
+        assert_eq!(translated_map.len(), 3);
+
+        println!("translated_map: {:#?}", translated_map);
+
+        assert_eq!(translated_map.get("7f06092ac6d0").unwrap(), "翻譯我");
+        assert_eq!(translated_map.get("7f06092ac6d1").unwrap(), "銹很棒");
+        assert_eq!(translated_map.get("7f06092ac6d2").unwrap(), "讓我們週末");
+        Ok(())
+    }    
+
+    // cargo test -- --show-output test_string_to_map_3
+    #[test]
+    fn test_string_to_map_3() -> Result<()> {
+        let translated_map_str = r#"
+        0000000000	7f06092ac6d0 переведите меня	7f06092ac6d0 ترجمة لي
+        0000000001	7f06092ac6d1 ржавчина это здорово	7f06092ac6d1 الصدأ رائع
+        0000000002	7f06092ac6d2 давай проведем выходные	7f06092ac6d2 لنحصل على عطلة نهاية أسبوع
+        "#;
+
+        let translated_map = string_to_map(translated_map_str.to_string());
+        assert_eq!(translated_map.len(), 3);
+
+        println!("translated_map: {:#?}", translated_map);
+
+        assert_eq!(translated_map.get("7f06092ac6d0").unwrap(), "ترجمة لي");
+        assert_eq!(translated_map.get("7f06092ac6d1").unwrap(), "الصدأ رائع");
+        assert_eq!(translated_map.get("7f06092ac6d2").unwrap(), "لنحصل على عطلة نهاية أسبوع");
+        Ok(())
+    }        
 }

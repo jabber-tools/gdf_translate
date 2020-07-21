@@ -126,7 +126,7 @@ pub async fn delete_bucket(token: &str, bucket_name: &str) -> Result<ApiResponse
 mod tests {
     use super::*;
     use crate::google::gcloud::auth::*;
-    use crate::google::gcloud::translate::v3::GoogleTranslateV3Map;
+    use crate::google::gcloud::translate::v3::{map_to_string, string_to_map};
     use crate::init_logging; // set RUST_LOG=gdf_translate::google::gcloud::storage_bucket_mgmt=debug
     use async_std::task;
     use std::collections;
@@ -187,7 +187,7 @@ mod tests {
             &token,
             "translate_v3_test",
             "translation_map.tsv",
-            &GoogleTranslateV3Map::map_to_string(&translation_map),
+            &map_to_string(&translation_map),
         ));
         println!("api_response {:#?}", api_response?);
         Ok(())
@@ -212,7 +212,7 @@ mod tests {
         println!("api_response {:#?}", api_response);
         println!(
             "api_response_map {:#?}",
-            GoogleTranslateV3Map::string_to_map(api_response.body)
+            string_to_map(api_response.body)
         );
         Ok(())
     }
