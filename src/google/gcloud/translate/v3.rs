@@ -194,7 +194,7 @@ pub fn string_to_map(s: String) -> collections::HashMap<String, String> {
         let address = white_space_iter.next().unwrap();
 
         let idx = item.rfind(address);
-        
+
         let idx = idx.unwrap() + address.len();
         translation_map.insert(address.to_owned(), item[idx..].trim_start().to_string());
     }
@@ -464,9 +464,18 @@ mod tests {
 
         println!("translated_map: {:#?}", translated_map);
 
-        assert_eq!(translated_map.get("7f06092ac6d0").unwrap(), "übersetze mich");
-        assert_eq!(translated_map.get("7f06092ac6d1").unwrap(), "Rost ist großartig");
-        assert_eq!(translated_map.get("7f06092ac6d2").unwrap(), "Lass uns ein Wochenende haben");
+        assert_eq!(
+            translated_map.get("7f06092ac6d0").unwrap(),
+            "übersetze mich"
+        );
+        assert_eq!(
+            translated_map.get("7f06092ac6d1").unwrap(),
+            "Rost ist großartig"
+        );
+        assert_eq!(
+            translated_map.get("7f06092ac6d2").unwrap(),
+            "Lass uns ein Wochenende haben"
+        );
         Ok(())
     }
 
@@ -488,7 +497,7 @@ mod tests {
         assert_eq!(translated_map.get("7f06092ac6d1").unwrap(), "銹很棒");
         assert_eq!(translated_map.get("7f06092ac6d2").unwrap(), "讓我們週末");
         Ok(())
-    }    
+    }
 
     // cargo test -- --show-output test_string_to_map_3
     #[test]
@@ -506,7 +515,10 @@ mod tests {
 
         assert_eq!(translated_map.get("7f06092ac6d0").unwrap(), "ترجمة لي");
         assert_eq!(translated_map.get("7f06092ac6d1").unwrap(), "الصدأ رائع");
-        assert_eq!(translated_map.get("7f06092ac6d2").unwrap(), "لنحصل على عطلة نهاية أسبوع");
+        assert_eq!(
+            translated_map.get("7f06092ac6d2").unwrap(),
+            "لنحصل على عطلة نهاية أسبوع"
+        );
         Ok(())
-    }        
+    }
 }

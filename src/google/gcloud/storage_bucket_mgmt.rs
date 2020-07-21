@@ -210,10 +210,7 @@ mod tests {
         ));
         let api_response = api_response.unwrap();
         println!("api_response {:#?}", api_response);
-        println!(
-            "api_response_map {:#?}",
-            string_to_map(api_response.body)
-        );
+        println!("api_response_map {:#?}", string_to_map(api_response.body));
         Ok(())
     }
 
