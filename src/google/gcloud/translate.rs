@@ -182,6 +182,7 @@ impl GoogleTranslateV3 {
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
 
         let translation_map = agent.to_translation(source_lang, target_lang);
+        debug!("translation_map {:#?}", translation_map);
 
         let ts_sec = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -214,11 +215,14 @@ impl GoogleTranslateV3 {
             bucket_creation_result_out
         );
 
+        let map_str = v3::map_to_string(&translation_map);
+        debug!("v3::map_to_string:\n {}", map_str);
+
         let bucket_upload_result = storage_bucket_mgmt::upload_object(
             token,
             &storage_bucket_name_in,
             "translation_map.tsv",
-            &v3::map_to_string(&translation_map),
+            &map_str,
         )
         .await?;
         debug!("bucket_upload_result {:#?}", bucket_upload_result);

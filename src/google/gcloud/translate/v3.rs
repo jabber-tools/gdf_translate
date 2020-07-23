@@ -53,10 +53,28 @@
 //! ```
 //!
 use crate::errors::Result;
+use lazy_static::lazy_static;
 use log::debug;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections;
+
+lazy_static! {
+    // represents any word with 0..n white characters at the end terminated by triple semicolon
+    // specific case is ' ;' i.e. jsut white spaces with colon without any leading letters/digits (hence \w* and not \w+)
+    pub static ref RE_WORD_WITH_SPACES: Regex = Regex::new(r"span\w*(\s*)span").unwrap();
+}
+
+fn get_trailing_spaces(s: &str) -> String {
+    let caps_opt = RE_WORD_WITH_SPACES.captures(s);
+    if let Some(caps) = caps_opt {
+        let trailing_spaces = caps[1].to_owned();
+        return trailing_spaces;
+    } else {
+        return "".to_owned();
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoogleTranslateV3ResponseMetadata {
@@ -152,7 +170,9 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
     let mut s = String::from("");
 
     for (key, val) in translation_map.iter() {
-        s.push_str(&format!("{} {}\n", key, val));
+        // ;;; is just delimiter that is highly unprobable to occur in real intent text (while ; can still be there)
+        // we are adding semicolon to preserve information about spaces at the end of oroginal string!
+        s.push_str(&format!("{} ;;;{};;;\n", key, val));
     }
 
     s
@@ -165,9 +185,9 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
 /// Arguments:
 /// * `s`: String of translation map as produced by Google Translate V3 API. Example:
 /// ```ignore
-/// 0000000000	7f06092ac6d0 translate me	7f06092ac6d0 übersetze mich
-/// 0000000001	7f06092ac6d1 rust is great	7f06092ac6d1 Rost ist großartig
-/// 0000000002	7f06092ac6d2 let's have a weekend	7f06092ac6d2 Lass uns ein Wochenende haben
+/// 0000000000	7f06092ac6d0 ;;;translate me;;;	7f06092ac6d0 ;;;übersetze mich;;;
+/// 0000000001	7f06092ac6d1 ;;;rust is great;;;	7f06092ac6d1 ;;;Rost ist großartig;;;
+/// 0000000002	7f06092ac6d2 ;;;let's have a weekend;;;	7f06092ac6d2 ;;;Lass uns ein Wochenende haben;;;
 /// ```
 ///
 /// Returns: input above should return following map:
@@ -193,13 +213,37 @@ pub fn string_to_map(s: String) -> collections::HashMap<String, String> {
         }
 
         let mut white_space_iter = item.split_whitespace();
-        white_space_iter.next();
-        let address = white_space_iter.next().unwrap();
+        white_space_iter.next(); // get 0000000000
+        let address = white_space_iter.next().unwrap(); // get 7f06092ac6d0
+
+        // this will capture original text between addresses i.e. From:
+        // 7f06092ac6d0 ;;;translate me;;;	7f06092ac6d0
+        // it will capture
+        //  ;;;translate me;;;
+        // using dynamically compiled regex is performance inefficient but there is no way how to avoid it here
+        // ;;; is just delimiter that is highly unprobable to occur in real intent text (while ; can still be there)
+        let regex_orig_text =
+            Regex::new(&format!(r"{}\s+(;;;.*;;;)\s+{}", address, address)).unwrap();
+        println!(">>>>processing item: {}", item);
+        let orig_text_captures = regex_orig_text.captures(item).unwrap();
+        let orig_text = orig_text_captures[1].to_owned();
+        let orig_text = orig_text.trim_end();
+        //  we want to capture trailing spaces so that we can add them to translated text!
+        // we need to do it since google v3 translate api will not preserve trailing spaces in tsv format!
+        let orig_text_trailing_spaces = get_trailing_spaces(&orig_text);
 
         let idx = item.rfind(address);
 
         let idx = idx.unwrap() + address.len();
-        translation_map.insert(address.to_owned(), item[idx..].trim_start().to_string());
+
+        let translation = item[idx..item.len()].trim().replace(";;;", "");
+        println!("translation1:{}<<orig_text_trailing_spaces:{}<<<",translation,orig_text_trailing_spaces);
+        let new_text = format!(
+            "{}{}",
+            translation,
+            orig_text_trailing_spaces
+        );
+        translation_map.insert(address.to_owned(), new_text);
     }
 
     translation_map
@@ -457,13 +501,14 @@ mod tests {
     #[test]
     fn test_string_to_map_1() -> Result<()> {
         let translated_map_str = r#"
-        0000000000	7f06092ac6d0 translate me	7f06092ac6d0 übersetze mich
-        0000000001	7f06092ac6d1 rust is great	7f06092ac6d1 Rost ist großartig
-        0000000002	7f06092ac6d2 let's have a weekend	7f06092ac6d2 Lass uns ein Wochenende haben
+        0000000000	7f06092ac6d0 ;;;translate me;;;	7f06092ac6d0 ;;;übersetze mich;;;
+        0000000001	7f06092ac6d1 ;;;rust is great ;;;	7f06092ac6d1 ;;;Rost ist großartig;;;
+        0000000002	7f06092ac6d2 ;;;let's have a weekend;;;	7f06092ac6d2 ;;;Lass uns ein Wochenende haben;;;
+        0000000003	7f06092ac6d3 ;;; ;;;	7f06092ac6d3  ;;; ;;;
         "#;
 
         let translated_map = string_to_map(translated_map_str.to_string());
-        assert_eq!(translated_map.len(), 3);
+        assert_eq!(translated_map.len(), 4);
 
         println!("translated_map: {:#?}", translated_map);
 
@@ -473,12 +518,13 @@ mod tests {
         );
         assert_eq!(
             translated_map.get("7f06092ac6d1").unwrap(),
-            "Rost ist großartig"
+            "Rost ist großartig "
         );
         assert_eq!(
             translated_map.get("7f06092ac6d2").unwrap(),
             "Lass uns ein Wochenende haben"
         );
+        assert_eq!(translated_map.get("7f06092ac6d3").unwrap(), " ");
         Ok(())
     }
 
@@ -486,9 +532,9 @@ mod tests {
     #[test]
     fn test_string_to_map_2() -> Result<()> {
         let translated_map_str = r#"
-        0000000000	7f06092ac6d0 translate me	7f06092ac6d0 翻譯我
-        0000000001	7f06092ac6d1 rust is great	7f06092ac6d1 銹很棒
-        0000000002	7f06092ac6d2 let's have a weekend	7f06092ac6d2 讓我們週末
+        0000000000	7f06092ac6d0 ;;;translate me;;;	7f06092ac6d0 ;;;翻譯我;;;
+        0000000001	7f06092ac6d1 ;;;rust is great;;;	7f06092ac6d1 ;;;銹很棒;;;
+        0000000002	7f06092ac6d2 ;;;let's have a weekend;;;	7f06092ac6d2 ;;;讓我們週末;;;
         "#;
 
         let translated_map = string_to_map(translated_map_str.to_string());
@@ -506,9 +552,9 @@ mod tests {
     #[test]
     fn test_string_to_map_3() -> Result<()> {
         let translated_map_str = r#"
-        0000000000	7f06092ac6d0 переведите меня	7f06092ac6d0 ترجمة لي
-        0000000001	7f06092ac6d1 ржавчина это здорово	7f06092ac6d1 الصدأ رائع
-        0000000002	7f06092ac6d2 давай проведем выходные	7f06092ac6d2 لنحصل على عطلة نهاية أسبوع
+        0000000000	7f06092ac6d0 ;;;переведите меня;;;	7f06092ac6d0 ;;;ترجمة لي;;;
+        0000000001	7f06092ac6d1 ;;;ржавчина это здорово;;;	7f06092ac6d1 ;;;الصدأ رائع;;;
+        0000000002	7f06092ac6d2 ;;;давай проведем выходные;;;	7f06092ac6d2 ;;;لنحصل على عطلة نهاية أسبوع;;;
         "#;
 
         let translated_map = string_to_map(translated_map_str.to_string());
@@ -523,5 +569,45 @@ mod tests {
             "لنحصل على عطلة نهاية أسبوع"
         );
         Ok(())
+    }
+
+    // cargo test -- --show-output test_get_trailing_spaces
+    #[test]
+    fn test_get_trailing_spaces() {
+        assert_eq!(get_trailing_spaces("spansome text   span"), "   ".to_owned());
+        assert_eq!(get_trailing_spaces("span1234span"), "".to_owned());
+    }
+
+    // cargo test -- --show-output test_capturing_orig_text_1
+    #[test]
+    fn test_capturing_orig_text_1() {
+        let item = "0000000000	7f06092ac6d0 ;;;translate me ;;;	7f06092ac6d0 ;;;übersetze mich;;;";
+        let address = "7f06092ac6d0";
+
+        let regex_orig_text =
+            Regex::new(&format!(r"{}\s+(;;;.*;;;)\s+{}", address, address)).unwrap();
+
+        let orig_text_captures = regex_orig_text.captures(item).unwrap();
+        let orig_text = orig_text_captures[1].to_owned();
+        let orig_text = orig_text.trim_end();
+        println!("orig_text:{}<<<<", orig_text);
+        assert_eq!(orig_text, ";;;translate me ;;;");
+    }
+
+    // cargo test -- --show-output test_capturing_orig_text_2
+    #[test]
+    fn test_capturing_orig_text_2() {
+        //let item = "0000000000	7f06092ac6d0 ;;; ;;;	7f06092ac6d0 ;;;übersetze mich;;;";
+        let item = "0000000003	7f06092ac6d0 ;;; ;;;	7f06092ac6d0  ;;;übersetze mich;;;";
+        let address = "7f06092ac6d0";
+
+        let regex_orig_text =
+            Regex::new(&format!(r"{}\s+(;;;.*;;;)\s+{}", address, address)).unwrap();
+
+        let orig_text_captures = regex_orig_text.captures(item).unwrap();
+        let orig_text = orig_text_captures[1].to_owned();
+        let orig_text = orig_text.trim_end();
+        println!("orig_text:{}<<<<", orig_text);
+        assert_eq!(orig_text, ";;; ;;;");
     }
 }
