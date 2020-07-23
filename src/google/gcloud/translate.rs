@@ -232,7 +232,7 @@ impl GoogleTranslateV3 {
             project_id,
             source_lang,
             target_lang,
-            "text/plain", // TBD: parametrize externally or detect internally?
+            "text/html", // alwats HTML, we are wrapping text to translate in <span> tag
             &format!("gs://{}/translation_map.tsv", storage_bucket_name_in),
             &format!("gs://{}/", storage_bucket_name_out),
         )
@@ -284,7 +284,7 @@ impl GoogleTranslateV3 {
         .await?;
         debug!("bucket_download_result {:#?}", bucket_download_result);
 
-        let translated_map = v3::string_to_map(bucket_download_result.body);
+        let translated_map = v3::string_to_map(bucket_download_result.body)?;
 
         let mut delete_object_result;
 
