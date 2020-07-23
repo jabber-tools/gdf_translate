@@ -61,21 +61,24 @@ use serde_json::json;
 use std::collections;
 
 lazy_static! {
-    pub static ref RE_SPAN_CONTENT: Regex = Regex::new(r"<span>(.*)</span>").unwrap();
+    pub static ref RE_TO_TRANSLATE_CONTENT: Regex = Regex::new(r"<to_translate>(.*)</to_translate>").unwrap();
 
     // represents any word with 0..n white characters at the end terminated by triple semicolon
     // specific case is ' ;' i.e. jsut white spaces with colon without any leading letters/digits (hence \w* and not \w+)
-    pub static ref RE_WORD_WITH_TRAILING_WHITE_CHARS: Regex = Regex::new(r"\w*(\s*)</span>").unwrap();    
+    pub static ref RE_WORD_WITH_TRAILING_WHITE_CHARS: Regex = Regex::new(r"\w*(\s*)</to_translate>").unwrap();    
 }
 
+#[allow(dead_code)]
 fn get_trailing_spaces(s: &str) -> String {
-    debug!("get_trailing_spaces checking :{}", s);
+    debug!("get_trailing_spaces checking:{}<<", s);
     let caps_opt = RE_WORD_WITH_TRAILING_WHITE_CHARS.captures(s);
     if let Some(caps) = caps_opt {
         debug!("caps:{:#?}", caps);
         let trailing_spaces = caps[1].to_owned();
+        debug!("returning >>{}<< trailing spaces", trailing_spaces);
         return trailing_spaces;
     } else {
+        debug!("returning zero trailing spaces");
         return "".to_owned();
     }
 }
@@ -172,7 +175,7 @@ pub struct GoogleTranslateV3WaitApiResponse {
 
 /// represents line fom output file of google translate v3 batch api
 /// Something like this:
-/// 0000000001	7f06092ac6d1 <span>rust is great</span>	7f06092ac6d1 <span>Rost ist großartig</span>
+/// 0000000001	7f06092ac6d1 <to_translate>rust is great</to_translate>	7f06092ac6d1 <to_translate>Rost ist großartig</to_translate>
 #[derive(Debug, PartialEq)]
 struct TsvLine {
     line_no: String,
@@ -185,9 +188,9 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
     let mut s = String::from("");
 
     for (key, val) in translation_map.iter() {
-        // value to translate will be wrapped in <span> tag to preserve
+        // value to translate will be wrapped in <to_translate> tag to preserve
         // all leading and trailing white characters from original value
-        s.push_str(&format!("{} <span>{}</span>\n", key, val));
+        s.push_str(&format!("{} <to_translate>{}</to_translate>\n", key, val));
     }
 
     s
@@ -200,9 +203,9 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
 /// Arguments:
 /// * `s`: String of translation map as produced by Google Translate V3 API. Example:
 /// ```ignore
-/// 0000000000	7f06092ac6d0 <span>translate me</span>	7f06092ac6d0 <span>übersetze mich</span>
-/// 0000000001	7f06092ac6d1 <span>rust is great</span>	7f06092ac6d1 <span>Rost ist großartig</span>
-/// 0000000002	7f06092ac6d2 <span>let's have a weekend</span>	7f06092ac6d2 <span>Lass uns ein Wochenende haben</span>
+/// 0000000000	7f06092ac6d0 <to_translate>translate me</to_translate>	7f06092ac6d0 <to_translate>übersetze mich</to_translate>
+/// 0000000001	7f06092ac6d1 <to_translate>rust is great</to_translate>	7f06092ac6d1 <to_translate>Rost ist großartig</to_translate>
+/// 0000000002	7f06092ac6d2 <to_translate>let's have a weekend</to_translate>	7f06092ac6d2 <to_translate>Lass uns ein Wochenende haben</to_translate>
 /// ```
 ///
 /// Returns: input above should return following map:
@@ -229,12 +232,26 @@ pub fn string_to_map(s: String) -> Result<collections::HashMap<String, String>> 
         debug!("string_to_map processing item:{}<<<", item);
 
         let parsed_line = parse_tsv_line(item)?;
-        let trailing_spaces = get_trailing_spaces(&parsed_line.orig_text);
+        // not working reliably, let's do it quick & dirty
+        // let trailing_spaces = get_trailing_spaces(&parsed_line.orig_text);
+        let mut leading_space = "";
+        let mut trailing_space = "";
+
+        if parsed_line.orig_text.starts_with(" ") == true {
+            debug!("adding leading space");
+            leading_space = " ";
+        }
+
+        if parsed_line.orig_text.ends_with(" ") == true && parsed_line.orig_text.len() > 1 {
+            debug!("adding trailing space");
+            trailing_space = " ";
+        }        
 
         let new_text = format!(
-            "{}{}",
+            "{}{}{}",
+            leading_space,
             parsed_line.translated_text,
-            trailing_spaces
+            trailing_space
         );        
 
         translation_map.insert(
@@ -265,7 +282,7 @@ fn parse_tsv_line(line: &str) -> Result<TsvLine> {
     }
 
     let regex_str = format!(
-        r"^\d\d\d\d\d\d\d\d\d\d\s+{}\s+(<span>.*</span>)\s+{}",
+        r"^\d\d\d\d\d\d\d\d\d\d\s+{}\s+(<to_translate>.*</to_translate>)\s+{}",
         address, address
     );
 
@@ -277,7 +294,7 @@ fn parse_tsv_line(line: &str) -> Result<TsvLine> {
     debug!("text_captures:{:#?}", text_captures);
 
     let orig_text = text_captures[1].to_owned();
-    let orig_text = RE_SPAN_CONTENT.captures(&orig_text).unwrap()[1].to_owned();
+    let orig_text = RE_TO_TRANSLATE_CONTENT.captures(&orig_text).unwrap()[1].to_owned();
     debug!("orig_text:{}<<<", orig_text);
 
     let idx = line.rfind(address);
@@ -286,7 +303,7 @@ fn parse_tsv_line(line: &str) -> Result<TsvLine> {
     debug!("translated_text:{}<<<", translated_text);
 
     // remote surrounding span tag from translated text
-    let translated_text = RE_SPAN_CONTENT.captures(&translated_text).unwrap()[1].to_owned();
+    let translated_text = RE_TO_TRANSLATE_CONTENT.captures(&translated_text).unwrap()[1].trim().to_owned();
     debug!("translated_text without span:{}<<<", translated_text);
 
     Ok(TsvLine {
@@ -549,10 +566,10 @@ mod tests {
     #[test]
     fn test_string_to_map_1() -> Result<()> {
         let translated_map_str = r#"
-        0000000000	7f06092ac6d0 <span>translate me</span>	7f06092ac6d0 <span>übersetze mich</span>
-        0000000001	7f06092ac6d1 <span>rust is great </span>	7f06092ac6d1 <span>Rost ist großartig </span>
-        0000000002	7f06092ac6d2 <span>let's have a weekend</span>	7f06092ac6d2 <span>Lass uns ein Wochenende haben</span>
-        0000000003	7f06092ac6d3 <span>   </span>	7f06092ac6d3  <span>   </span>
+        0000000000	7f06092ac6d0 <to_translate>translate me</to_translate>	7f06092ac6d0 <to_translate>übersetze mich</to_translate>
+        0000000001	7f06092ac6d1 <to_translate>rust is great </to_translate>	7f06092ac6d1 <to_translate>Rost ist großartig </to_translate>
+        0000000002	7f06092ac6d2 <to_translate>let's have a weekend</to_translate>	7f06092ac6d2 <to_translate>Lass uns ein Wochenende haben</to_translate>
+        0000000003	7f06092ac6d3 <to_translate>   </to_translate>	7f06092ac6d3  <to_translate>   </to_translate>
         "#;
 
         let translated_map = string_to_map(translated_map_str.to_string())?;
@@ -580,9 +597,9 @@ mod tests {
     #[test]
     fn test_string_to_map_2() -> Result<()> {
         let translated_map_str = r#"
-        0000000000	7f06092ac6d0 <span>translate me</span>	7f06092ac6d0 <span>翻譯我</span>
-        0000000001	7f06092ac6d1 <span>rust is great</span>	7f06092ac6d1 <span>銹很棒</span>
-        0000000002	7f06092ac6d2 <span>let's have a weekend</span>	7f06092ac6d2 <span>讓我們週末</span>
+        0000000000	7f06092ac6d0 <to_translate>translate me</to_translate>	7f06092ac6d0 <to_translate>翻譯我</to_translate>
+        0000000001	7f06092ac6d1 <to_translate>rust is great</to_translate>	7f06092ac6d1 <to_translate>銹很棒</to_translate>
+        0000000002	7f06092ac6d2 <to_translate>let's have a weekend</to_translate>	7f06092ac6d2 <to_translate>讓我們週末</to_translate>
         "#;
 
         let translated_map = string_to_map(translated_map_str.to_string())?;
@@ -600,9 +617,9 @@ mod tests {
     #[test]
     fn test_string_to_map_3() -> Result<()> {
         let translated_map_str = r#"
-        0000000000	7f06092ac6d0 <span>переведите меня</span>	7f06092ac6d0 <span>ترجمة لي</span>
-        0000000001	7f06092ac6d1 <span>ржавчина это здорово</span>	7f06092ac6d1 <span>الصدأ رائع</span>
-        0000000002	7f06092ac6d2 <span>давай проведем выходные</span>	7f06092ac6d2 <span>لنحصل على عطلة نهاية أسبوع</span>
+        0000000000	7f06092ac6d0 <to_translate>переведите меня</to_translate>	7f06092ac6d0 <to_translate>ترجمة لي</to_translate>
+        0000000001	7f06092ac6d1 <to_translate>ржавчина это здорово</to_translate>	7f06092ac6d1 <to_translate>الصدأ رائع</to_translate>
+        0000000002	7f06092ac6d2 <to_translate>давай проведем выходные</to_translate>	7f06092ac6d2 <to_translate>لنحصل على عطلة نهاية أسبوع</to_translate>
         "#;
 
         let translated_map = string_to_map(translated_map_str.to_string())?;
@@ -623,7 +640,7 @@ mod tests {
     #[test]
     fn test_parse_tsv_line() {
         init_logging();
-        assert_eq!(parse_tsv_line("0000000000      0x2253f4530b0 <span>convert it into inches</span>       0x2253f4530b0 <span>es in Zoll umwandeln</span>").unwrap(), TsvLine {
+        assert_eq!(parse_tsv_line("0000000000      0x2253f4530b0 <to_translate>convert it into inches</to_translate>       0x2253f4530b0 <to_translate>es in Zoll umwandeln</to_translate>").unwrap(), TsvLine {
             line_no: "0000000000".to_owned(),
             ref_addr: "0x2253f4530b0".to_owned(),
             orig_text: "convert it into inches".to_owned(),
@@ -631,7 +648,7 @@ mod tests {
         });
 
         // google translate api sometimes puts , in front of second span :(
-        assert_eq!(parse_tsv_line("0000000058      0x28c2af58fd0 <span>what's the currency exchange </span>        0x28c2af58fd0 , <span>was der Wechsel ist</span>").unwrap(), TsvLine {
+        assert_eq!(parse_tsv_line("0000000058      0x28c2af58fd0 <to_translate>what's the currency exchange </to_translate>        0x28c2af58fd0 , <to_translate>was der Wechsel ist</to_translate>").unwrap(), TsvLine {
             line_no: "0000000058".to_owned(),
             ref_addr: "0x28c2af58fd0".to_owned(),
             orig_text: "what's the currency exchange ".to_owned(),
@@ -643,8 +660,8 @@ mod tests {
     #[test]
     fn test_get_trailing_spaces() {
         init_logging();
-        assert_eq!(get_trailing_spaces("<span>some text   </span>"), "   ".to_owned());
-        assert_eq!(get_trailing_spaces("<span>1234</span>"), "".to_owned());
-        assert_eq!(get_trailing_spaces("<span>     </span>"), "     ".to_owned());
+        assert_eq!(get_trailing_spaces("<to_translate>some text   </to_translate>"), "   ".to_owned());
+        assert_eq!(get_trailing_spaces("<to_translate>1234</to_translate>"), "".to_owned());
+        assert_eq!(get_trailing_spaces("<to_translate>     </to_translate>"), "     ".to_owned());
     }    
 }
