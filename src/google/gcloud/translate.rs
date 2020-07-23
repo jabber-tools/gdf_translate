@@ -6,6 +6,9 @@ use log::debug;
 use std::collections;
 use std::time::Duration;
 use std::time::SystemTime;
+use std::fs::File;
+use std::io::prelude::*;
+
 
 pub mod v2;
 pub mod v3;
@@ -283,6 +286,10 @@ impl GoogleTranslateV3 {
         )
         .await?;
         debug!("bucket_download_result {:#?}", bucket_download_result);
+        
+        // just for debugging, disable then
+        let mut file_handle = File::create(format!("{}/bucket_download_result.txt", translated_gdf_agent_folder))?;
+        file_handle.write_all(bucket_download_result.body.as_bytes())?;
 
         let translated_map = v3::string_to_map(bucket_download_result.body)?;
 
