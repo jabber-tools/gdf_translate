@@ -287,9 +287,11 @@ impl GoogleTranslateV3 {
         .await?;
         debug!("bucket_download_result {:#?}", bucket_download_result);
         
+        //
         // just for debugging, disable then
-        let mut file_handle = File::create(format!("{}/bucket_download_result.txt", translated_gdf_agent_folder))?;
-        file_handle.write_all(bucket_download_result.body.as_bytes())?;
+        //
+        // let mut file_handle = File::create(format!("{}/bucket_download_result.txt", translated_gdf_agent_folder))?;
+        // file_handle.write_all(bucket_download_result.body.as_bytes())?;
 
         let translated_map = v3::string_to_map(bucket_download_result.body)?;
 
@@ -312,7 +314,7 @@ impl GoogleTranslateV3 {
 
         debug!("deleting translation_map.tsv");
         delete_object_result =
-            storage_bucket_mgmt::delete_object(token, &storage_bucket_name_in, "index.csv").await?;
+            storage_bucket_mgmt::delete_object(token, &storage_bucket_name_in, "translation_map.tsv").await?;
         debug!("delete_object_result {:#?}", delete_object_result);
 
         debug!("deleting {}", &storage_bucket_name_in);
