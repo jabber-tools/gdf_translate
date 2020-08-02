@@ -326,6 +326,10 @@ impl GoogleTranslateV3 {
 
         let translated_map = v3::string_to_map(bucket_download_result.body)?;
 
+        // for deletions we are not checking API call status code
+        // at this moment we have translation and do not want to interupt
+        // in case we are unable to delete temporary buckets etc. we prefer
+        // to leave some mess in google project and provide smooth experience for the end user
         let mut delete_object_result;
 
         debug!("deleting index.csv");
