@@ -6,9 +6,9 @@ use log::debug;
 use std::collections;
 use std::time::Duration;
 use std::time::SystemTime;
-use std::fs::File;
-use std::io::prelude::*;
-
+// uncoment when bucket result file for debuging is enabled again
+// use std::fs::File;
+// use std::io::prelude::*;
 
 pub mod v2;
 pub mod v3;
@@ -107,10 +107,6 @@ impl GoogleTranslateV2 {
             debug!("translation_response {:#?}", translation_response);
 
             if translation_response.status != "200" {
-                /* return Err(Error::new(format!(
-                    "GoogleTranslateV2.execute_translation error {:#?}",
-                    translation_response
-                ))); */
                 debug!(
                     "error while translating value {}/{}. HTTP code is not 200. Attempting one more time. Error detail: {:#?}",
                     translated_item_idx, translation_count, translation_response
@@ -218,6 +214,13 @@ impl GoogleTranslateV3 {
             bucket_creation_result_out
         );
 
+        if bucket_creation_result_out.status_code != "200" {
+            return Err(Error::new(format!(
+                "GoogleTranslateV3.execute_translation error when creating bucket {:#?}",
+                bucket_creation_result_out
+            )));
+        }
+
         let map_str = v3::map_to_string(&translation_map);
         debug!("v3::map_to_string:\n {}", map_str);
 
@@ -229,6 +232,13 @@ impl GoogleTranslateV3 {
         )
         .await?;
         debug!("bucket_upload_result {:#?}", bucket_upload_result);
+
+        if bucket_upload_result.status_code != "200" {
+            return Err(Error::new(format!(
+                "GoogleTranslateV3.execute_translation error when uploading bucket {:#?}",
+                bucket_upload_result
+            )));
+        }
 
         let translation_result = v3::batch_translate_text(
             token,
@@ -242,6 +252,13 @@ impl GoogleTranslateV3 {
         .await?;
         debug!("translation_result {:#?}", translation_result);
 
+        if translation_result.status_code != "200" {
+            return Err(Error::new(format!(
+                "GoogleTranslateV3.execute_translation error when starting batch translation {:#?}",
+                translation_result
+            )));
+        }
+
         loop {
             let translation_operation_result =
                 v3::batch_translate_text_check_status(token, &translation_result.body.name).await?;
@@ -250,6 +267,13 @@ impl GoogleTranslateV3 {
                 "translation_operation_result {:#?}",
                 translation_operation_result
             );
+
+            if translation_operation_result.status_code != "200" {
+                return Err(Error::new(format!(
+                    "GoogleTranslateV3.execute_translation error when checking long running operation {:#?}",
+                    translation_operation_result
+                )));
+            }
 
             if let Some(done) = translation_operation_result.body.done {
                 if done == true && translation_operation_result.body.metadata.state == "SUCCEEDED" {
@@ -286,7 +310,14 @@ impl GoogleTranslateV3 {
         )
         .await?;
         debug!("bucket_download_result {:#?}", bucket_download_result);
-        
+
+        if bucket_download_result.status_code != "200" {
+            return Err(Error::new(format!(
+                "GoogleTranslateV3.execute_translation error downloading translation results {:#?}",
+                bucket_download_result
+            )));
+        }
+
         //
         // just for debugging, disable then
         //
@@ -313,8 +344,12 @@ impl GoogleTranslateV3 {
         debug!("delete_object_result {:#?}", delete_object_result);
 
         debug!("deleting translation_map.tsv");
-        delete_object_result =
-            storage_bucket_mgmt::delete_object(token, &storage_bucket_name_in, "translation_map.tsv").await?;
+        delete_object_result = storage_bucket_mgmt::delete_object(
+            token,
+            &storage_bucket_name_in,
+            "translation_map.tsv",
+        )
+        .await?;
         debug!("delete_object_result {:#?}", delete_object_result);
 
         debug!("deleting {}", &storage_bucket_name_in);

@@ -65,7 +65,7 @@ lazy_static! {
 
     // represents any word with 0..n white characters at the end terminated by triple semicolon
     // specific case is ' ;' i.e. jsut white spaces with colon without any leading letters/digits (hence \w* and not \w+)
-    pub static ref RE_WORD_WITH_TRAILING_WHITE_CHARS: Regex = Regex::new(r"\w*(\s*)</to_translate>").unwrap();    
+    pub static ref RE_WORD_WITH_TRAILING_WHITE_CHARS: Regex = Regex::new(r"\w*(\s*)</to_translate>").unwrap();
 }
 
 #[allow(dead_code)]
@@ -245,19 +245,14 @@ pub fn string_to_map(s: String) -> Result<collections::HashMap<String, String>> 
         if parsed_line.orig_text.ends_with(" ") == true && parsed_line.orig_text.len() > 1 {
             debug!("adding trailing space");
             trailing_space = " ";
-        }        
+        }
 
         let new_text = format!(
             "{}{}{}",
-            leading_space,
-            parsed_line.translated_text,
-            trailing_space
-        );        
-
-        translation_map.insert(
-            parsed_line.ref_addr.to_owned(),
-            new_text,
+            leading_space, parsed_line.translated_text, trailing_space
         );
+
+        translation_map.insert(parsed_line.ref_addr.to_owned(), new_text);
     }
 
     Ok(translation_map)
@@ -303,7 +298,9 @@ fn parse_tsv_line(line: &str) -> Result<TsvLine> {
     debug!("translated_text:{}<<<", translated_text);
 
     // remote surrounding span tag from translated text
-    let translated_text = RE_TO_TRANSLATE_CONTENT.captures(&translated_text).unwrap()[1].trim().to_owned();
+    let translated_text = RE_TO_TRANSLATE_CONTENT.captures(&translated_text).unwrap()[1]
+        .trim()
+        .to_owned();
     debug!("translated_text without span:{}<<<", translated_text);
 
     Ok(TsvLine {
@@ -660,8 +657,17 @@ mod tests {
     #[test]
     fn test_get_trailing_spaces() {
         init_logging();
-        assert_eq!(get_trailing_spaces("<to_translate>some text   </to_translate>"), "   ".to_owned());
-        assert_eq!(get_trailing_spaces("<to_translate>1234</to_translate>"), "".to_owned());
-        assert_eq!(get_trailing_spaces("<to_translate>     </to_translate>"), "     ".to_owned());
-    }    
+        assert_eq!(
+            get_trailing_spaces("<to_translate>some text   </to_translate>"),
+            "   ".to_owned()
+        );
+        assert_eq!(
+            get_trailing_spaces("<to_translate>1234</to_translate>"),
+            "".to_owned()
+        );
+        assert_eq!(
+            get_trailing_spaces("<to_translate>     </to_translate>"),
+            "     ".to_owned()
+        );
+    }
 }
