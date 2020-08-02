@@ -223,6 +223,13 @@ impl GoogleDialogflowAgent {
         format!("{}{}", entity_file_name, ".json")
     }
 
+    pub fn add_supported_language(&mut self, lang: &str) {
+        let lang_to_add = lang.to_owned();
+        if !self.agent.supported_languages.contains(&lang_to_add) {
+            self.agent.supported_languages.push(lang_to_add);
+        }
+    }
+
     pub fn to_translation(
         &mut self,
         lang_from: &str,

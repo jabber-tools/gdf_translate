@@ -159,6 +159,7 @@ impl GoogleTranslateV2 {
 
         debug!("applying translated map to agent");
         agent.from_translation(&translation_map, target_lang);
+        agent.add_supported_language(target_lang);
         debug!("serializing agent");
         agent.serialize(translated_gdf_agent_folder)?;
         debug!("agent serialized!");
@@ -371,6 +372,7 @@ impl GoogleTranslateV3 {
 
         debug!("applying translated map to agent");
         agent.from_translation(&translated_map, target_lang);
+        agent.add_supported_language(target_lang);
         debug!("serializing agent");
         agent.serialize(translated_gdf_agent_folder)?;
         debug!("agent serialized!");
@@ -394,6 +396,7 @@ impl DummyTranslate {
         let mut translation_map = agent.to_translation(source_lang, target_lang);
         dummy_translate(&mut translation_map);
         agent.from_translation(&translation_map, target_lang);
+        agent.add_supported_language(target_lang);
         agent.serialize(translated_gdf_agent_folder)?;
         Ok(())
     }
