@@ -1374,6 +1374,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_parse_gdf_agent_zip() -> Result<()> {
+        init_logging();
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         println!("{:#?}", agent);
