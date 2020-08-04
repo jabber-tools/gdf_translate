@@ -111,8 +111,9 @@ pub struct IntentResponse {
 
     pub messages: Vec<MessageType>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "defaultResponsePlatforms")]
-    pub default_response_platforms: collections::HashMap<String, bool>,
+    pub default_response_platforms: Option<collections::HashMap<String, bool>>,
 
     pub speech: Vec<String>,
 }
