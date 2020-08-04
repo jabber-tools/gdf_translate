@@ -119,6 +119,12 @@ macro_rules! parse_gdf_agent_files {
                 );
 
                 if let Err(err_msg) = comparison_result {
+                    debug!(
+                        "parse_gdf_agent_files: assert_json_eq_no_panic did not pass {}",
+                        file_name
+                    );
+                    debug!("serialized_str {}", serialized_str);
+                    debug!("deserialized_struct {:#?}", deserialized_struct);
                     return Err(Error::new(err_msg));
                 }
                 debug!("parse_gdf_agent_files: processed file {}", file_name);
