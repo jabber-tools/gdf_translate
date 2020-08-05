@@ -64,6 +64,10 @@ impl IntentUtterancesFile {
             })
             .to_string();
 
+        for file_content in cloned.file_content.iter_mut() {
+            file_content.lang = Some(new_lang_code.to_owned());
+        }
+
         cloned
     }
 }
