@@ -109,7 +109,6 @@ macro_rules! parse_gdf_agent_files {
 
                 debug!("parse_gdf_agent_files: processing file {}", file_name);
                 let file_str = fs::read_to_string(file_name)?;
-
                 let deserialized_struct: $type_deserialized = serde_json::from_str(&file_str)?;
 
                 let serialized_str = serde_json::to_string(&deserialized_struct).unwrap();

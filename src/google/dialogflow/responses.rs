@@ -13,10 +13,8 @@ use generic_quick_replies::GenericQuickRepliesResponseType;
 mod generic_card;
 use generic_card::GenericCardResponseType;
 
-mod default_custom_payload;
 mod ga_custom_payload;
 mod generic_custom_payload;
-use default_custom_payload::DefaultCustomPayloadType;
 use ga_custom_payload::GACustomPayloadType;
 use generic_custom_payload::GenericCustomPayloadType;
 
@@ -28,7 +26,6 @@ mod ga_list;
 mod ga_media_content;
 mod ga_shared;
 mod ga_simple;
-mod ga_simple2;
 mod ga_suggestions_chips;
 mod ga_table;
 
@@ -39,7 +36,6 @@ use ga_link_out_suggestion::GALinkOutSuggestionType;
 use ga_list::GAListType;
 use ga_media_content::GAMediaContentType;
 use ga_simple::GASimpleResponseType;
-use ga_simple2::GASimpleResponseType2;
 use ga_suggestions_chips::GASuggestionChipsType;
 use ga_table::GATableCardType;
 
@@ -61,29 +57,52 @@ use ga_table::GATableCardType;
 // RCS Business Messaging (Standalone Rich Card + Carousel Rich Card + Simple Response)
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(untagged)]
+#[serde(tag = "type")]
 pub enum MessageType {
-    // In untagged serde enums more specific enum value must be listed before more generic values!
-    // Serde will always take first match and in thus it would ignore for platform parameter
-    // of facebook text response and confuse it with text response of defautl channel! We would
-    // effectively loose platform param during subsequent serialization!
-    GenericCustomPayload(GenericCustomPayloadType),
-    GenericQuickRepliesResponse(GenericQuickRepliesResponseType),
-    GenericCardResponse(GenericCardResponseType),
-    GenericImageResponse(GenericImageResponseType),
-    GATableCard(GATableCardType),
-    GACustomPayload(GACustomPayloadType),
-    GABasicCard(GABasicCardType),
-    GASuggestionChips(GASuggestionChipsType),
-    GAList(GAListType),
-    GALinkOutSuggestion(GALinkOutSuggestionType),
-    GACarouselCard(GACarouselCardType),
-    GABrowseCarouselCard(GABrowseCarouselCardType),
-    GAMediaContent(GAMediaContentType),
-    GASimpleResponse(GASimpleResponseType),
-    GASimpleResponse2(GASimpleResponseType2),
-    DefaultCustomPayload(DefaultCustomPayloadType),
+    #[serde(rename = "0")]
     GenericTextResponse(GenericTextResponseType),
+
+    #[serde(rename = "4")]
+    GenericCustomPayload(GenericCustomPayloadType),
+
+    #[serde(rename = "2")]
+    GenericQuickRepliesResponse(GenericQuickRepliesResponseType),
+
+    #[serde(rename = "1")]
+    GenericCardResponse(GenericCardResponseType),
+
+    #[serde(rename = "3")]
+    GenericImageResponse(GenericImageResponseType),
+
+    #[serde(rename = "table_card")]
+    GATableCard(GATableCardType),
+
+    #[serde(rename = "custom_payload")]
+    GACustomPayload(GACustomPayloadType),
+
+    #[serde(rename = "basic_card")]
+    GABasicCard(GABasicCardType),
+
+    #[serde(rename = "suggestion_chips")]
+    GASuggestionChips(GASuggestionChipsType),
+
+    #[serde(rename = "list_card")]
+    GAList(GAListType),
+
+    #[serde(rename = "link_out_chip")]
+    GALinkOutSuggestion(GALinkOutSuggestionType),
+
+    #[serde(rename = "carousel_card")]
+    GACarouselCard(GACarouselCardType),
+
+    #[serde(rename = "browse_carousel_card")]
+    GABrowseCarouselCard(GABrowseCarouselCardType),
+
+    #[serde(rename = "media_content")]
+    GAMediaContent(GAMediaContentType),
+
+    #[serde(rename = "simple_response")]
+    GASimpleResponse(GASimpleResponseType),
 }
 
 impl MessageType {
@@ -103,8 +122,6 @@ impl MessageType {
             MessageType::GABrowseCarouselCard(m) => &m.lang,
             MessageType::GAMediaContent(m) => &m.lang,
             MessageType::GASimpleResponse(m) => &m.lang,
-            MessageType::GASimpleResponse2(m) => &m.lang,
-            MessageType::DefaultCustomPayload(m) => &m.lang,
             MessageType::GenericTextResponse(m) => &m.lang,
         }
     }
@@ -126,8 +143,6 @@ impl MessageType {
             MessageType::GABrowseCarouselCard(m) => col.extend(m.to_translation()),
             MessageType::GAMediaContent(m) => col.extend(m.to_translation()),
             MessageType::GASimpleResponse(m) => col.extend(m.to_translation()),
-            MessageType::GASimpleResponse2(m) => col.extend(m.to_translation()),
-            MessageType::DefaultCustomPayload(_) => {}
             MessageType::GenericTextResponse(m) => col.extend(m.to_translation()),
         }
         col
@@ -149,8 +164,6 @@ impl MessageType {
             MessageType::GABrowseCarouselCard(m) => m.from_translation(translations_map),
             MessageType::GAMediaContent(m) => m.from_translation(translations_map),
             MessageType::GASimpleResponse(m) => m.from_translation(translations_map),
-            MessageType::GASimpleResponse2(m) => m.from_translation(translations_map),
-            MessageType::DefaultCustomPayload(_) => {}
             MessageType::GenericTextResponse(m) => m.from_translation(translations_map),
         }
     }
@@ -226,13 +239,6 @@ impl MessageType {
                 let outer_msg_clone = MessageType::GASimpleResponse(inner_msg_clone);
                 Some(outer_msg_clone)
             }
-            MessageType::GASimpleResponse2(m) => {
-                let mut inner_msg_clone = m.clone();
-                inner_msg_clone.lang = format!("{}", new_lang_code);
-                let outer_msg_clone = MessageType::GASimpleResponse2(inner_msg_clone);
-                Some(outer_msg_clone)
-            }
-            MessageType::DefaultCustomPayload(_) => None,
             MessageType::GenericTextResponse(m) => {
                 let mut inner_msg_clone = m.clone();
                 inner_msg_clone.lang = format!("{}", new_lang_code);
@@ -330,14 +336,6 @@ impl MessageType {
                 let outer_msg_clone = MessageType::GASimpleResponse(inner_msg_clone);
                 Some(outer_msg_clone)
             }
-            MessageType::GASimpleResponse2(m) => {
-                let mut inner_msg_clone = m.clone();
-                inner_msg_clone.lang = format!("{}", new_lang_code);
-                translations_map.extend(inner_msg_clone.to_translation());
-                let outer_msg_clone = MessageType::GASimpleResponse2(inner_msg_clone);
-                Some(outer_msg_clone)
-            }
-            MessageType::DefaultCustomPayload(_) => None,
             MessageType::GenericTextResponse(m) => {
                 let mut inner_msg_clone = m.clone();
                 inner_msg_clone.lang = format!("{}", new_lang_code);
@@ -395,7 +393,7 @@ mod tests {
     fn test_default_1() -> Result<()> {
         let default_text_response = r#"
         {
-            "type": 0,
+            "type": "0",
             "lang": "en",
             "condition": "",
             "speech": "Text response"
@@ -404,7 +402,7 @@ mod tests {
 
         let default_custom_payload = r#"
           {
-            "type": 4,
+            "type": "4",
             "lang": "en",
             "condition": "",
             "payload": {
@@ -979,7 +977,7 @@ mod tests {
     fn test_facebook() -> Result<()> {
         let default_text_response = r#"
         {
-            "type": 0,
+            "type": "0",
             "lang": "en",
             "condition": "",
             "speech": "Text response"
@@ -988,7 +986,7 @@ mod tests {
 
         let facebook_text_response = r#"
         {
-          "type": 0,
+          "type": "0",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -998,7 +996,7 @@ mod tests {
 
         let facebook_image_response = r#"
         {
-          "type": 3,
+          "type": "3",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -1008,7 +1006,7 @@ mod tests {
 
         let facebook_card_response = r#"
         {
-          "type": 1,
+          "type": "1",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -1030,7 +1028,7 @@ mod tests {
 
         let facebook_quick_replies_response = r#"
         {
-          "type": 2,
+          "type": "2",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -1044,7 +1042,7 @@ mod tests {
 
         let facebook_custom_payload_response = r#"
         {
-          "type": 2,
+          "type": "2",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -1099,7 +1097,7 @@ mod tests {
     fn test_slack() -> Result<()> {
         let slack_card_response = r#"
         {
-          "type": 1,
+          "type": "1",
           "platform": "slack",
           "lang": "en",
           "condition": "",
@@ -1144,7 +1142,7 @@ mod tests {
     fn test_skype() -> Result<()> {
         let default_text_response = r#"
         {
-            "type": 0,
+            "type": "0",
             "lang": "en",
             "condition": "",
             "speech": "Text response"
@@ -1153,7 +1151,7 @@ mod tests {
 
         let skype_text_response = r#"
         {
-          "type": 0,
+          "type": "0",
           "platform": "skype",
           "lang": "en",
           "condition": "",
@@ -1163,7 +1161,7 @@ mod tests {
 
         let skype_image_response = r#"
         {
-          "type": 3,
+          "type": "3",
           "platform": "skype",
           "lang": "en",
           "condition": "",
@@ -1173,7 +1171,7 @@ mod tests {
 
         let skype_card_response = r#"
         {
-          "type": 1,
+          "type": "1",
           "platform": "skype",
           "lang": "en",
           "condition": "",
@@ -1191,7 +1189,7 @@ mod tests {
 
         let skype_quick_replies_response = r#"
         {
-          "type": 2,
+          "type": "2",
           "platform": "skype",
           "lang": "en",
           "condition": "",
@@ -1205,7 +1203,7 @@ mod tests {
 
         let skype_custom_payload_response = r#"
         {
-          "type": 4,
+          "type": "4",
           "platform": "skype",
           "lang": "en",
           "condition": "",
@@ -1261,7 +1259,7 @@ mod tests {
     fn test_translate_generic_text_response_1() -> Result<()> {
         let str_before_translation = r#"
       {
-          "type": 0,
+          "type": "0",
           "lang": "en",
           "condition": "",
           "speech": "Text response"
@@ -1270,7 +1268,7 @@ mod tests {
 
         let str_after_translation_expected = r#"
         {
-          "type": 0,
+          "type": "0",
           "lang": "en",
           "condition": "",
           "speech": "Text response_translated"
@@ -1280,7 +1278,8 @@ mod tests {
         translation_tests_assertions!(
             GenericTextResponseType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -1290,7 +1289,7 @@ mod tests {
     fn test_translate_generic_text_response_2() -> Result<()> {
         let str_before_translation = r#"
       {
-          "type": 0,
+          "type": "0",
           "lang": "en",
           "condition": "",
           "speech": ["Text response", "Text response2"]
@@ -1299,7 +1298,7 @@ mod tests {
 
         let str_after_translation_expected = r#"
         {
-          "type": 0,
+          "type": "0",
           "lang": "en",
           "condition": "",
           "speech": ["Text response_translated", "Text response2_translated"]
@@ -1309,7 +1308,8 @@ mod tests {
         translation_tests_assertions!(
             GenericTextResponseType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -1319,7 +1319,7 @@ mod tests {
     fn test_translate_quick_reply() -> Result<()> {
         let str_before_translation = r#"
         {
-          "type": 2,
+          "type": "2",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -1333,7 +1333,7 @@ mod tests {
 
         let str_after_translation_expected = r#"
         {
-          "type": 2,
+          "type": "2",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -1348,7 +1348,8 @@ mod tests {
         translation_tests_assertions!(
             GenericQuickRepliesResponseType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -1358,7 +1359,7 @@ mod tests {
     fn test_translate_generic_card() -> Result<()> {
         let str_before_translation = r#"
         {
-          "type": 1,
+          "type": "1",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -1380,7 +1381,7 @@ mod tests {
 
         let str_after_translation_expected = r#"
         {
-          "type": 1,
+          "type": "1",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -1403,14 +1404,15 @@ mod tests {
         translation_tests_assertions!(
             GenericCardResponseType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
 
         // skip optional trasnlatable fields now, i.e. now substitle, no buttons
 
         let str_before_translation2 = r#"
         {
-          "type": 1,
+          "type": "1",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -1421,7 +1423,7 @@ mod tests {
 
         let str_after_translation_expected2 = r#"
         {
-          "type": 1,
+          "type": "1",
           "platform": "facebook",
           "lang": "en",
           "condition": "",
@@ -1433,7 +1435,8 @@ mod tests {
         translation_tests_assertions!(
             GenericCardResponseType,
             str_before_translation2,
-            str_after_translation_expected2
+            str_after_translation_expected2,
+            "no_string_comparison"
         );
 
         Ok(())
@@ -1487,7 +1490,8 @@ mod tests {
         translation_tests_assertions!(
             GASimpleResponseType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -1520,9 +1524,10 @@ mod tests {
         "#;
 
         translation_tests_assertions!(
-            GASimpleResponseType2,
+            GASimpleResponseType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -1583,7 +1588,8 @@ mod tests {
         translation_tests_assertions!(
             GABasicCardType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -1668,7 +1674,8 @@ mod tests {
         translation_tests_assertions!(
             GABrowseCarouselCardType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -1713,7 +1720,8 @@ mod tests {
         translation_tests_assertions!(
             GASuggestionChipsType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -1746,7 +1754,8 @@ mod tests {
         translation_tests_assertions!(
             GALinkOutSuggestionType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -1837,7 +1846,8 @@ mod tests {
         translation_tests_assertions!(
             GACarouselCardType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -1890,7 +1900,8 @@ mod tests {
         translation_tests_assertions!(
             GAMediaContentType,
             str_before_translation,
-            str_after_translation_expected
+            str_after_translation_expected,
+            "no_string_comparison"
         );
         Ok(())
     }
@@ -2060,6 +2071,91 @@ mod tests {
             str_after_translation_expected,
             "no_string_comparison"
         );
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_tagged_messages
+    #[test]
+    fn test_tagged_messages() -> Result<()> {
+        // https://serde.rs/enum-representations.html
+        // https://www.reddit.com/r/rust/comments/5rwe3w/new_in_serde_096_untagged_and_internally_tagged/ !!
+
+        #[derive(Debug, Serialize, Deserialize)]
+        struct Msg0 {
+            foo: String,
+        }
+
+        #[derive(Debug, Serialize, Deserialize)]
+        struct Msg1 {
+            foo: String,
+        }
+
+        let type0 = r#"
+      {
+        "type": "0",
+        "foo": "this is type 0"
+      }    
+      "#;
+
+        let type1 = r#"
+      {
+        "type": "1",
+        "foo": "this is type 1"
+      }    
+      "#;
+
+        #[derive(Debug, Serialize, Deserialize)]
+        #[serde(tag = "type")]
+        enum TaggedMessages {
+            #[serde(rename = "0")]
+            Type0(Msg0),
+            #[serde(rename = "1")]
+            Type1(Msg1),
+        }
+
+        let msg: TaggedMessages = serde_json::from_str(type0).unwrap();
+        println!("msg0: {:#?}", msg);
+
+        let msg: TaggedMessages = serde_json::from_str(type1).unwrap();
+        println!("msg1: {:#?}", msg);
+
+        Ok(())
+    }
+
+    //
+    // use this test for ad hoc troubleshooting if it is not clear
+    // at the first glance which message is causing the troubles
+    //
+    // cargo test -- --show-output test_messages_deser_adhoc
+    #[test]
+    fn test_messages_deser_adhoc() -> Result<()> {
+        let messages = r#"
+            {"messages": [
+                {
+                "type": "basic_card",
+                "platform": "google",
+                "title": "",
+                "textToSpeech": "",
+                "formattedText": "Empty image below was troublemaker!",
+                "image": {},
+                "lang": "en",
+                "condition": ""
+              }
+            ]}
+            "#;
+
+        println!("messages: {}", messages);
+
+        let messages_struct: Messages = serde_json::from_str(&messages)?;
+        println!("messages_struct {:#?}", messages_struct);
+
+        let back_to_str = serde_json::to_string(&messages_struct)?;
+
+        assert_json_eq!(
+            serde_json::from_str(&messages)?,
+            serde_json::from_str(&back_to_str)?
+        );
+
         Ok(())
     }
 }

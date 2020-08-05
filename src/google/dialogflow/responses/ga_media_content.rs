@@ -11,6 +11,11 @@ pub struct GAMediaObject {
     large_image: GAImage,
     #[serde(rename = "contentUrl")]
     content_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
 }
 
 impl Translate for GAMediaObject {
@@ -42,10 +47,9 @@ impl Translate for GAMediaObject {
     }
 }
 
+// type media_content
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GAMediaContentType {
-    #[serde(rename = "type")]
-    pub message_type: String,
     pub platform: String,
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]

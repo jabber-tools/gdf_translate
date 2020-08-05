@@ -27,10 +27,9 @@ impl Translate for GenericCardResponseButton {
     }
 }
 
+// type 1
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GenericCardResponseType {
-    #[serde(rename = "type")]
-    pub message_type: u8,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub platform: Option<String>,
     // see prebuilt agent Online Shopping, intent delivery.options
@@ -55,6 +54,10 @@ pub struct GenericCardResponseType {
     // and we lost speech during serialization
     #[serde(skip_serializing_if = "Option::is_none")]
     pub speech: Option<StringOrVecOfString>,
+
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
 }
 
 impl Translate for GenericCardResponseType {

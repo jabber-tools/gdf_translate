@@ -13,6 +13,9 @@ pub struct GAItemBrowseCarousel {
     pub description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<GAImage>,
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
 }
 
 impl Translate for GAItemBrowseCarousel {
@@ -55,10 +58,9 @@ impl Translate for GAItemBrowseCarousel {
     }
 }
 
+// type browse_carousel_card
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GABrowseCarouselCardType {
-    #[serde(rename = "type")]
-    pub message_type: String,
     pub platform: String,
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]

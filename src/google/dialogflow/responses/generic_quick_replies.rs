@@ -2,16 +2,18 @@ use crate::google::gcloud::translate::Translate;
 use serde::{Deserialize, Serialize};
 use std::collections;
 
+// type 2
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GenericQuickRepliesResponseType {
-    #[serde(rename = "type")]
-    pub message_type: u8,
     pub platform: String,
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub condition: Option<String>,
     pub title: String,
     pub replies: Vec<String>,
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
 }
 
 impl Translate for GenericQuickRepliesResponseType {

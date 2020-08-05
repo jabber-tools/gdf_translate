@@ -132,6 +132,10 @@ pub struct AgentManifest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_assistant_agents: Option<Vec<String>>,
 
+    #[serde(rename = "displayName")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+
     #[serde(rename = "linkToDocs")]
     pub link_to_docs: String,
 
@@ -152,8 +156,17 @@ pub struct AgentManifest {
     #[serde(rename = "isPrivate")]
     is_private: bool,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "secondaryKey")]
+    pub secondary_key: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "enableOnePlatformApi")]
+    pub enable_one_platform_api: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "customClassifierMode")]
-    pub custom_classifier_mode: String,
+    pub custom_classifier_mode: Option<String>,
 
     #[serde(rename = "mlMinConfidence")]
     pub ml_min_confidence: f64,
@@ -930,13 +943,13 @@ mod tests {
               ],
               "messages": [
                 {
-                    "type": 0,
+                    "type": "0",
                     "lang": "en",
                     "condition": "",
                     "speech": "You can contact our Technical Support team on 1-855-123-4567"
                   },
                   {
-                    "type": 0,
+                    "type": "0",
                     "lang": "en",
                     "condition": "",
                     "speech": ["You can contact our Technical Support team on 1-855-123-4567", "second response here"]
@@ -1041,7 +1054,7 @@ mod tests {
                 ],
                 "messages": [
                   {
-                    "type": 2,
+                    "type": "2",
                     "platform": "slack",
                     "lang": "en",
                     "condition": "",
@@ -1052,7 +1065,7 @@ mod tests {
                     ]
                   },
                   {
-                    "type": 2,
+                    "type": "2",
                     "platform": "facebook",
                     "lang": "en",
                     "condition": "",
@@ -1077,7 +1090,7 @@ mod tests {
                     ]
                   },
                   {
-                    "type": 0,
+                    "type": "0",
                     "lang": "en",
                     "condition": "",
                     "speech": "Are you planning to use a web service?"
@@ -1375,6 +1388,7 @@ mod tests {
     #[ignore]
     fn test_parse_gdf_agent_zip() -> Result<()> {
         init_logging();
+        // let path = format!("c:/tmp/Express_CS_AM_PRD.zip");
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         println!("{:#?}", agent);

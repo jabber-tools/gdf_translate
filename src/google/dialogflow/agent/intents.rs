@@ -11,7 +11,8 @@ pub struct IntentEvent {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntentResponseAffectedContext {
     pub name: String,
-    pub parameters: collections::HashMap<String, String>, // ??
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<collections::HashMap<String, String>>,
     pub lifespan: i8,
 }
 
@@ -39,12 +40,14 @@ impl Translate for IntentResponseParameterPrompt {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntentResponseParameter {
     id: String,
+
     required: bool,
 
     #[serde(rename = "dataType")]
     data_type: String,
 
     name: String,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     value: Option<String>,
 
@@ -121,14 +124,20 @@ pub struct IntentResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Intent {
     pub id: String,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "parentId")]
     pub parent_id: Option<String>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "rootParentId")]
     pub root_parent_id: Option<String>,
+
     pub name: String,
-    pub auto: bool,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auto: Option<bool>,
+
     pub contexts: Vec<String>,
 
     pub responses: Vec<IntentResponse>,
@@ -147,10 +156,13 @@ pub struct Intent {
     pub events: Vec<IntentEvent>,
 
     #[serde(rename = "conditionalResponses")]
-    pub conditional_responses: Vec<String>, // TBD: no idea what is in these attribute, we do not use it
+    pub conditional_responses: Vec<String>,
     pub condition: String,
     #[serde(rename = "conditionalFollowupEvents")]
     pub conditional_followup_events: Vec<String>,
+    #[serde(rename = "endInteraction")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_interaction: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -165,5 +177,90 @@ impl IntentFile {
             file_name,
             file_content,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::errors::Result;
+    use assert_json_diff::assert_json_eq;
+
+    //
+    // use this test for ad hoc troubleshooting if it is not clear
+    // at the first glance why intent file cannot be deserialized
+    //
+    // cargo test -- --show-output test_intents_deser_adhoc
+    #[test]
+    fn test_intents_deser_adhoc() -> Result<()> {
+        let intent_str = r#"
+        {
+            "id": "b7b8f695-9250-4831-8b7f-82948774d15b",
+            "name": "Test|BIT|0|Force change country|Gen",
+            "auto": true,
+            "contexts": [],
+            "responses": [
+              {
+                "resetContexts": false,
+                "action": "",
+                "affectedContexts": [
+                  {
+                    "name": "maybe_wrong_country_prompt",
+                    "lifespan": 5
+                  }
+                ],
+                "parameters": [
+                  {
+                    "id": "31e329dd-261d-44f1-998a-4dcc637e0c98",
+                    "name": "event",
+                    "required": false,
+                    "dataType": "",
+                    "value": "evtDiagnostics",
+                    "defaultValue": "",
+                    "isList": false,
+                    "prompts": [],
+                    "promptMessages": [],
+                    "noMatchPromptMessages": [],
+                    "noInputPromptMessages": [],
+                    "outputDialogContexts": []
+                  }
+                ],
+                "messages": [
+                  {
+                    "type": "0",
+                    "title": "",
+                    "textToSpeech": "",
+                    "lang": "en",
+                    "speech": [
+                      "Switch to which country please?"
+                    ],
+                    "condition": ""
+                  }
+                ],
+                "speech": []
+              }
+            ],
+            "priority": 500000,
+            "webhookUsed": false,
+            "webhookForSlotFilling": false,
+            "fallbackIntent": false,
+            "events": [],
+            "conditionalResponses": [],
+            "condition": "",
+            "conditionalFollowupEvents": []
+          }
+            "#;
+
+        let intent_struct: Intent = serde_json::from_str(&intent_str)?;
+        println!("intent_struct {:#?}", intent_struct);
+
+        let back_to_str = serde_json::to_string(&intent_struct)?;
+
+        assert_json_eq!(
+            serde_json::from_str(&intent_str)?,
+            serde_json::from_str(&back_to_str)?
+        );
+
+        Ok(())
     }
 }

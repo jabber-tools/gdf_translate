@@ -3,10 +3,9 @@ use crate::google::gcloud::translate::Translate;
 use serde::{Deserialize, Serialize};
 use std::collections;
 
+// type list_card
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GAListType {
-    #[serde(rename = "type")]
-    pub message_type: String,
     pub platform: String,
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -14,6 +13,9 @@ pub struct GAListType {
     pub title: String,
     pub subtitle: String,
     pub items: Vec<GAItem>,
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
 }
 
 impl Translate for GAListType {

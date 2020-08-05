@@ -50,10 +50,9 @@ impl Translate for GATableCardRow {
     }
 }
 
+// type table_card
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GATableCardType {
-    #[serde(rename = "type")]
-    pub message_type: String,
     pub platform: String,
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -64,6 +63,9 @@ pub struct GATableCardType {
     pub column_properties: Vec<std::collections::HashMap<String, String>>,
     pub rows: Vec<GATableCardRow>,
     pub buttons: Vec<GACardTypeButton>,
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
 }
 
 impl Translate for GATableCardType {

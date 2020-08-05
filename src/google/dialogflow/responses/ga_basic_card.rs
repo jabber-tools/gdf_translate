@@ -4,10 +4,9 @@ use crate::google::gcloud::translate::Translate;
 use serde::{Deserialize, Serialize};
 use std::collections;
 
+// type basic_card
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GABasicCardType {
-    #[serde(rename = "type")]
-    pub message_type: String,
     pub platform: String,
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -22,6 +21,9 @@ pub struct GABasicCardType {
     pub image: Option<GAImage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub buttons: Option<Vec<GACardTypeButton>>,
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
 }
 
 impl Translate for GABasicCardType {

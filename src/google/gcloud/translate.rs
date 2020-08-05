@@ -458,16 +458,17 @@ mod tests {
 
     // cargo test -- --show-output test_execute_translation_google_v3
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_execute_translation_google_v3() -> Result<()> {
         init_logging();
+        // let agent_path = format!("c:/tmp/Express_CS_AM_PRD.zip");
         let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
         debug!("getting bearer token...");
         let token: Result<GoogleApisOauthToken> =
             task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
         let token = format!("Bearer {}", token.unwrap().access_token);
         debug!("bearer token retrieved {}", token);
-        let _ = task::block_on(GoogleTranslateV3::execute_translation(
+        let translation_result = task::block_on(GoogleTranslateV3::execute_translation(
             &agent_path,
             "c:/tmp/out_translated",
             &token,
@@ -475,6 +476,8 @@ mod tests {
             "de",
             "express-tracking",
         ));
+
+        debug!("translation_result: {:#?}", translation_result);
 
         Ok(())
     }

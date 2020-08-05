@@ -2,10 +2,9 @@ use crate::google::gcloud::translate::Translate;
 use serde::{Deserialize, Serialize};
 use std::collections;
 
+// type link_out_chip
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GALinkOutSuggestionType {
-    #[serde(rename = "type")]
-    pub message_type: String,
     pub platform: String,
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -13,6 +12,11 @@ pub struct GALinkOutSuggestionType {
     #[serde(rename = "destinationName")]
     pub destination_name: String,
     pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
 }
 
 impl Translate for GALinkOutSuggestionType {

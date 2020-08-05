@@ -24,15 +24,19 @@ impl Translate for GASuggestionChipsTypeSuggestion {
     }
 }
 
+// type suggestion_chips
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GASuggestionChipsType {
-    #[serde(rename = "type")]
-    pub message_type: String,
     pub platform: String,
     pub lang: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub condition: Option<String>,
     pub suggestions: Vec<GASuggestionChipsTypeSuggestion>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(rename = "textToSpeech")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_to_speech: Option<String>,
 }
 
 impl Translate for GASuggestionChipsType {
