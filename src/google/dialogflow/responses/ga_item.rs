@@ -44,6 +44,18 @@ pub struct GAItem {
     pub title: String,
     pub description: String,
     pub image: GAImage,
+
+    // TBD: newly added by Google. Include into translation!
+    // for now adding only to be able serialize/deserialize without data loss!
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "displayText")]
+    pub display_text: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub footer: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssml: Option<String>,
 }
 
 impl Translate for GAItem {
