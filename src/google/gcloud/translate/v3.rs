@@ -190,7 +190,7 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
     for (key, val) in translation_map.iter() {
         // value to translate will be wrapped in <to_translate> tag to preserve
         // all leading and trailing white characters from original value
-        s.push_str(&format!("{} <to_translate>{}</to_translate>\n", key, val));
+        s.push_str(&format!("{} <to_translate>{}</to_translate>\n", key, val.replace("\n", " "))); // tsv format does not allow mutlilines! => \n -> " "
     }
 
     s
