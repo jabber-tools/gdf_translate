@@ -41,5 +41,15 @@ impl Translate for GenericQuickRepliesResponseType {
                 .unwrap()
                 .to_owned();
         }
+
+        // GDF allows only 20 chars per quick reply, translation must be truncated accordingly!
+        for reply in self.replies.iter_mut() {
+            *reply = substring(reply.to_string(), 0, 20);
+        }
     }
+}
+
+// to prevent errors like panicked at 'byte index 20 is out of bounds of ...
+fn substring(full_string: String, start: usize, len: usize) -> String {
+    full_string.chars().skip(start).take(len).collect()
 }
