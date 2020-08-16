@@ -1,14 +1,13 @@
 use crate::errors::{Error, Result};
-use crate::google::dialogflow::agent::parse_gdf_agent_zip;
+use crate::google::dialogflow::agent::{parse_gdf_agent_zip, GoogleDialogflowAgent};
 use crate::google::gcloud::storage_bucket_mgmt;
 use async_std::task;
 use log::debug;
 use std::collections;
+use std::fs::File;
+use std::io::prelude::*;
 use std::time::Duration;
 use std::time::SystemTime;
-// uncoment when bucket result file for debuging is enabled again
-// use std::fs::File;
-// use std::io::prelude::*;
 
 pub mod v2;
 pub mod v3;
@@ -181,9 +180,90 @@ impl GoogleTranslateV3 {
         debug!("processing agent {}", gdf_agent_path);
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
 
-        let translation_map = agent.to_translation(source_lang, target_lang);
+        let mut translation_map = agent.to_translation(source_lang, target_lang);
         debug!("translation_map {:#?}", translation_map);
 
+        // partitioning translation map into subsets due to limitation / quotas of Google Translate V3 API
+        let mut translation_maps: Vec<collections::HashMap<String, String>> = Vec::new();
+
+        // FIRST APPORACH: divide translation map by fixed row count. simple but inefficient
+        // large agent smight be devided into dozens of submaps with no reasons
+        // (each submap character count will be not reaching character limit)
+        //
+        /*let rows_per_map = 100;
+        let mut row_counter = 0;
+        for (k, v) in translation_map.drain() {
+            row_counter = row_counter + 1;
+            let mut maps_length = translation_maps.len();
+            if row_counter > (maps_length * rows_per_map) {
+                translation_maps.push(collections::HashMap::new());
+                maps_length = translation_maps.len();
+            }
+            translation_maps[maps_length - 1].insert(k, v);
+        } */
+
+        // SECOND APPROACH: if character count represented by single map is approx. 80000 let's create new submap
+        // should be fine for API quotas and this approach will result in by far smaller number of submaps
+        // hence much quicker translation time
+        //
+        let chars_per_map = 80_000;
+        let mut char_counter = 0;
+        translation_maps.push(collections::HashMap::new());
+        for (k, v) in translation_map.drain() {
+            char_counter = char_counter + v.len();
+            let mut maps_length = translation_maps.len();
+            if char_counter > chars_per_map {
+                translation_maps.push(collections::HashMap::new());
+                maps_length = translation_maps.len();
+                char_counter = 0;
+            }
+            translation_maps[maps_length - 1].insert(k, v);
+        } /* */
+
+        debug!("partitioned translation maps {:#?}", translation_maps);
+
+        for map in translation_maps.iter() {
+            let mut translated_submap = GoogleTranslateV3::execute_translation_impl(
+                gdf_agent_path,
+                translated_gdf_agent_folder,
+                token,
+                source_lang,
+                target_lang,
+                project_id,
+                &mut agent,
+                &map,
+                true, // TBD: parametrize from command line
+            )
+            .await?;
+
+            // merge translated submap into original map
+            for (k, v) in translated_submap.drain() {
+                translation_map.insert(k, v);
+            }
+        }
+
+        debug!("applying translated map to agent");
+        agent.from_translation(&translation_map, target_lang);
+        agent.add_supported_language(target_lang);
+        debug!("serializing agent");
+        agent.serialize(translated_gdf_agent_folder)?;
+        debug!("agent serialized!");
+
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    async fn execute_translation_impl(
+        gdf_agent_path: &str,
+        translated_gdf_agent_folder: &str,
+        token: &str,
+        source_lang: &str,
+        target_lang: &str,
+        project_id: &str,
+        agent: &mut GoogleDialogflowAgent,
+        translation_map: &collections::HashMap<String, String>,
+        create_output_tsv: bool,
+    ) -> Result<collections::HashMap<String, String>> {
         let ts_sec = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
@@ -222,7 +302,7 @@ impl GoogleTranslateV3 {
             )));
         }
 
-        let map_str = v3::map_to_string(&translation_map);
+        let map_str = v3::map_to_string(translation_map);
         debug!("v3::map_to_string:\n {}", map_str);
 
         let bucket_upload_result = storage_bucket_mgmt::upload_object(
@@ -319,11 +399,16 @@ impl GoogleTranslateV3 {
             )));
         }
 
-        //
-        // just for debugging, disable then
-        //
-        // let mut file_handle = File::create(format!("{}/bucket_download_result.txt", translated_gdf_agent_folder))?;
-        // file_handle.write_all(bucket_download_result.body.as_bytes())?;
+        // TBD: after  splitting translation map into submaps this will always contains only
+        // particular submap set of data and will be overwritten during next iteration
+        // solution is to merge all returned submaps into single file or index them
+        if create_output_tsv == true {
+            let mut file_handle = File::create(format!(
+                "{}/bucket_download_result.txt",
+                translated_gdf_agent_folder
+            ))?;
+            file_handle.write_all(bucket_download_result.body.as_bytes())?;
+        }
 
         let translated_map = v3::string_to_map(bucket_download_result.body)?;
 
@@ -370,14 +455,7 @@ impl GoogleTranslateV3 {
         debug!("translation finished. updated translation map");
         debug!("{:#?}", translated_map);
 
-        debug!("applying translated map to agent");
-        agent.from_translation(&translated_map, target_lang);
-        agent.add_supported_language(target_lang);
-        debug!("serializing agent");
-        agent.serialize(translated_gdf_agent_folder)?;
-        debug!("agent serialized!");
-
-        Ok(())
+        Ok(translated_map)
     }
 }
 
@@ -461,8 +539,9 @@ mod tests {
     #[ignore]
     fn test_execute_translation_google_v3() -> Result<()> {
         init_logging();
-        // let agent_path = format!("c:/tmp/Express_CS_AM_PRD.zip");
-        let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
+        let agent_path = format!("c:/tmp/Express_CS_AP_PRD.zip");
+        //let agent_path = format!("c:/tmp/Currency-Converter.zip");
+        //let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
         debug!("getting bearer token...");
         let token: Result<GoogleApisOauthToken> =
             task::block_on(get_google_api_token("./examples/testdata/credentials.json"));

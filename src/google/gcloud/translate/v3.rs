@@ -190,7 +190,15 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
     for (key, val) in translation_map.iter() {
         // value to translate will be wrapped in <to_translate> tag to preserve
         // all leading and trailing white characters from original value
-        s.push_str(&format!("{} <to_translate>{}</to_translate>\n", key, val.replace("\n", " "))); // tsv format does not allow mutlilines! => \n -> " "
+        s.push_str(&format!(
+            "{}{} <to_translate>{}</to_translate>{}\n",
+            "\"",
+            key,
+            val.replace("\r\n", " ")
+                .replace("\n", " ")
+                .replace("\"", "\"\""),
+            "\""
+        )); // tsv format does not allow mutlilines! => \n / \r\n -> " "
     }
 
     s
@@ -231,7 +239,7 @@ pub fn string_to_map(s: String) -> Result<collections::HashMap<String, String>> 
         }
         debug!("string_to_map processing item:{}<<<", item);
 
-        let parsed_line = parse_tsv_line(item)?;
+        let parsed_line = parse_tsv_line(&normalize_tsv_line(item))?;
         // not working reliably, let's do it quick & dirty
         // let trailing_spaces = get_trailing_spaces(&parsed_line.orig_text);
         let mut leading_space = "";
@@ -256,6 +264,16 @@ pub fn string_to_map(s: String) -> Result<collections::HashMap<String, String>> 
     }
 
     Ok(translation_map)
+}
+
+/// converts:
+/// 0000000025	"0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=""http://mycompany.com"">again</a>?</to_translate>"	"0x1bb39b97460 <to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=""http://mycompany.com"">wieder</a> ? </to_translate>"
+/// to:
+/// 0000000025	0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href="http://mycompany.com">again</a>?</to_translate>	0x1bb39b97460 <to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href="http://mycompany.com">wieder</a> ? </to_translate>
+fn normalize_tsv_line(line: &str) -> String {
+    line.replace("\"\"", "__DOUBLE_QUOTES__")
+        .replace("\"", "")
+        .replace("__DOUBLE_QUOTES__", "\"")
 }
 
 fn parse_tsv_line(line: &str) -> Result<TsvLine> {
@@ -678,5 +696,21 @@ mod tests {
             get_trailing_spaces("<to_translate>     </to_translate>"),
             "     ".to_owned()
         );
+    }
+
+    // cargo test -- --show-output test_normalize_tsv_line_1
+    #[test]
+    fn test_normalize_tsv_line_1() {
+        let input = "0000000000      0x2253f4530b0 <to_translate>convert it into inches</to_translate>       0x2253f4530b0 <to_translate>es in Zoll umwandeln</to_translate>";
+        let expected = "0000000000      0x2253f4530b0 <to_translate>convert it into inches</to_translate>       0x2253f4530b0 <to_translate>es in Zoll umwandeln</to_translate>";
+        assert_eq!(normalize_tsv_line(input), expected);
+    }
+
+    // cargo test -- --show-output test_normalize_tsv_line_2
+    #[test]
+    fn test_normalize_tsv_line_2() {
+        let input = "0000000025	\"0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=\"\"http://mycompany.com\"\">again</a>?</to_translate>\"	\"0x1bb39b97460 <to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=\"\"http://mycompany.com\"\">wieder</a> ? </to_translate>\"";
+        let expected = "0000000025	0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=\"http://mycompany.com\">again</a>?</to_translate>	0x1bb39b97460 <to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=\"http://mycompany.com\">wieder</a> ? </to_translate>";
+        assert_eq!(normalize_tsv_line(input), expected);
     }
 }
