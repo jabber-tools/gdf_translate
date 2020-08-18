@@ -30,6 +30,7 @@ pub fn dummy_translate(translation_map: &mut collections::HashMap<String, String
     }
 }
 
+#[derive(Debug)]
 pub enum TranslationProviders {
     GoogleTranslateV2,
     GoogleTranslateV3,

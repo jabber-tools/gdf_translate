@@ -5,6 +5,7 @@
 //! TBD...
 //!
 //!
+pub mod cli;
 pub mod errors;
 pub mod google;
 pub mod macros;
