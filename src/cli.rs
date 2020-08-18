@@ -2,6 +2,7 @@ use crate::google::gcloud::translate::TranslationProviders;
 use clap::{App, Arg, ArgMatches};
 use std::path::Path;
 
+// TBD: include flag for creation of file bucket_download_result.txt (for debugging only)
 #[derive(Debug)]
 pub struct CommandLine<'a> {
     pub gdf_agent_zip_path: &'a Path,

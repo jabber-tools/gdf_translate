@@ -1,5 +1,5 @@
 use crate::errors::{Error, Result};
-use crate::google::dialogflow::agent::{parse_gdf_agent_zip, GoogleDialogflowAgent};
+use crate::google::dialogflow::agent::parse_gdf_agent_zip;
 use crate::google::gcloud::storage_bucket_mgmt;
 use async_std::task;
 use log::debug;
@@ -41,10 +41,9 @@ pub struct GoogleTranslateV2;
 pub struct GoogleTranslateV3;
 pub struct DummyTranslate;
 
-#[allow(unused_variables)]
 impl GoogleTranslateV2 {
     #[allow(dead_code)]
-    async fn execute_translation(
+    pub async fn execute_translation(
         gdf_agent_path: &str,
         translated_gdf_agent_folder: &str,
         token: &str,
@@ -167,10 +166,9 @@ impl GoogleTranslateV2 {
     }
 }
 
-#[allow(unused_variables)]
 impl GoogleTranslateV3 {
     #[allow(dead_code)]
-    async fn execute_translation(
+    pub async fn execute_translation(
         gdf_agent_path: &str,
         translated_gdf_agent_folder: &str,
         token: &str,
@@ -225,13 +223,11 @@ impl GoogleTranslateV3 {
 
         for map in translation_maps.iter() {
             let mut translated_submap = GoogleTranslateV3::execute_translation_impl(
-                gdf_agent_path,
                 translated_gdf_agent_folder,
                 token,
                 source_lang,
                 target_lang,
                 project_id,
-                &mut agent,
                 &map,
                 true, // TBD: parametrize from command line
             )
@@ -253,15 +249,12 @@ impl GoogleTranslateV3 {
         Ok(())
     }
 
-    #[allow(dead_code)]
     async fn execute_translation_impl(
-        gdf_agent_path: &str,
         translated_gdf_agent_folder: &str,
         token: &str,
         source_lang: &str,
         target_lang: &str,
         project_id: &str,
-        agent: &mut GoogleDialogflowAgent,
         translation_map: &collections::HashMap<String, String>,
         create_output_tsv: bool,
     ) -> Result<collections::HashMap<String, String>> {
@@ -460,13 +453,11 @@ impl GoogleTranslateV3 {
     }
 }
 
-#[allow(unused_variables)]
 impl DummyTranslate {
     #[allow(dead_code)]
     async fn execute_translation(
         gdf_agent_path: &str,
         translated_gdf_agent_folder: &str,
-        token: &str,
         source_lang: &str,
         target_lang: &str,
     ) -> Result<()> {
@@ -496,16 +487,10 @@ mod tests {
     fn test_execute_translation_dummy() -> Result<()> {
         init_logging();
         let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
-        debug!("getting bearer token...");
-        let token: Result<GoogleApisOauthToken> =
-            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
-        let token = format!("Bearer {}", token.unwrap().access_token);
-        debug!("bearer token retrieved {}", token);
 
         let _ = task::block_on(DummyTranslate::execute_translation(
             &agent_path,
             "c:/tmp/out_translated",
-            "token n/a",
             "en",
             "de",
         ));
