@@ -6,9 +6,11 @@ use gdf_translate::google::gcloud::translate::{
     GoogleTranslateV2, GoogleTranslateV3, TranslationProviders,
 };
 use std::process;
+use std::sync::mpsc::channel;
 
 // cargo run -- --agent-file c:/a/b/c.zip --output-folder c:/a/b/c/d --source-lang en --target-lang de --cred-file c:/x/y/z.json --api-version v2
 // cargo run -- --agent-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/testdata/credentials.json
+// cargo run -- --agent-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/testdata/credentials.json --api-version v2
 fn main() {
     env_logger::init();
     let cmd_line_matches = get_cmd_line_parser().get_matches();
@@ -32,31 +34,43 @@ fn main() {
         process::exit(1);
     }
     let gdf_credentials = gdf_credentials.unwrap();
-    println!("gdf_credentials.project_id: {:#?}", gdf_credentials.project_id);
+    println!(
+        "gdf_credentials.project_id: {:#?}",
+        gdf_credentials.project_id
+    );
 
-    let translation_result;
+    let (tx, rx) = channel::<String>();
+    std::thread::spawn(move || loop {
+        let msg = rx.recv().unwrap();
+        if msg == "__EXIT__" {
+            break;
+        } else {
+            println!("{}", msg);
+        }
+    });
+
     match cmd_line_opts.translation_mode {
         TranslationProviders::GoogleTranslateV2 => {
-            translation_result = task::block_on(GoogleTranslateV2::execute_translation(
+            let _ = task::block_on(GoogleTranslateV2::execute_translation(
                 cmd_line_opts.gdf_agent_zip_path.to_str().unwrap(),
                 cmd_line_opts.output_folder.to_str().unwrap(),
                 &token,
                 &cmd_line_opts.from_lang,
                 &cmd_line_opts.to_lang,
+                tx,
             ));
         }
         TranslationProviders::GoogleTranslateV3 => {
-            translation_result = task::block_on(GoogleTranslateV3::execute_translation(
+            let _ = task::block_on(GoogleTranslateV3::execute_translation(
                 cmd_line_opts.gdf_agent_zip_path.to_str().unwrap(),
                 cmd_line_opts.output_folder.to_str().unwrap(),
                 &token,
                 &cmd_line_opts.from_lang,
                 &cmd_line_opts.to_lang,
                 &gdf_credentials.project_id,
+                tx,
             ));
         }
         _ => unreachable!(),
     }
-
-    println!("translation_result: {:#?}", translation_result);
 }
