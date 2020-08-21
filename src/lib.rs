@@ -9,6 +9,7 @@ pub mod cli;
 pub mod errors;
 pub mod google;
 pub mod macros;
+pub mod ui;
 pub mod zip;
 
 /// Utility function to enable log::debug logging in unit tests

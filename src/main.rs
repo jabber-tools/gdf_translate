@@ -5,6 +5,7 @@ use gdf_translate::google::gcloud::auth::*;
 use gdf_translate::google::gcloud::translate::{
     GoogleTranslateV2, GoogleTranslateV3, TranslationProviders,
 };
+use gdf_translate::ui::{get_progress_bar, progress_update_handler, ProgressMessageType};
 use std::process;
 use std::sync::mpsc::channel;
 
@@ -15,7 +16,7 @@ fn main() {
     env_logger::init();
     let cmd_line_matches = get_cmd_line_parser().get_matches();
     let cmd_line_opts = get_cmdl_options(&cmd_line_matches);
-    println!("cmd_line_opts: {:#?}", cmd_line_opts);
+    // println!("cmd_line_opts: {:#?}", cmd_line_opts);
 
     let token: Result<GoogleApisOauthToken> = task::block_on(get_google_api_token(
         cmd_line_opts.gcloud_svc_acc_cred.to_str().unwrap(), // TBD: do not unwrap and provide proper err msg in case if None value!
@@ -34,23 +35,26 @@ fn main() {
         process::exit(1);
     }
     let gdf_credentials = gdf_credentials.unwrap();
-    println!(
+    /* println!(
         "gdf_credentials.project_id: {:#?}",
         gdf_credentials.project_id
-    );
+    ); */
 
-    let (tx, rx) = channel::<String>();
-    std::thread::spawn(move || loop {
-        let msg = rx.recv().unwrap();
-        if msg == "__EXIT__" {
-            break;
-        } else {
-            println!("{}", msg);
-        }
+    let (tx, rx) = channel::<ProgressMessageType>();
+    let pb = get_progress_bar(100); // set arbitrary len here
+    let api_ver = match cmd_line_opts.translation_mode {
+        TranslationProviders::GoogleTranslateV2 => TranslationProviders::GoogleTranslateV2,
+        TranslationProviders::GoogleTranslateV3 => TranslationProviders::GoogleTranslateV3,
+        _ => unreachable!(),
+    };
+
+    std::thread::spawn(move || {
+        progress_update_handler(rx, pb, api_ver);
     });
 
     match cmd_line_opts.translation_mode {
         TranslationProviders::GoogleTranslateV2 => {
+            println!("Starting V2 translation...");
             let _ = task::block_on(GoogleTranslateV2::execute_translation(
                 cmd_line_opts.gdf_agent_zip_path.to_str().unwrap(),
                 cmd_line_opts.output_folder.to_str().unwrap(),
@@ -61,6 +65,7 @@ fn main() {
             ));
         }
         TranslationProviders::GoogleTranslateV3 => {
+            println!("Starting V3 translation...");
             let _ = task::block_on(GoogleTranslateV3::execute_translation(
                 cmd_line_opts.gdf_agent_zip_path.to_str().unwrap(),
                 cmd_line_opts.output_folder.to_str().unwrap(),
