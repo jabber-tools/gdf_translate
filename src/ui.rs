@@ -3,7 +3,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::sync::mpsc;
 
 pub enum ProgressMessageType {
-    V2CountSpecified(u64),
+    CountSpecified(u64),
     ItemProcessed,
     TextMessage(String),
     Exit,
@@ -39,8 +39,14 @@ impl UserInterface {
         loop {
             let msg = self.mpsc_receiver.recv().unwrap();
             match msg {
-                ProgressMessageType::TextMessage(msg) => println!("{}", msg),
-                ProgressMessageType::V2CountSpecified(translation_count) => {
+                ProgressMessageType::TextMessage(msg) => {
+                    if let Some(pb) = &self.progress_bar {
+                        pb.println(format!("{}", msg));
+                    } else {
+                        println!("{}", msg);
+                    }
+                }
+                ProgressMessageType::CountSpecified(translation_count) => {
                     if let None = self.progress_bar {
                         self.add_progress_bar(translation_count);
                     }
@@ -51,20 +57,15 @@ impl UserInterface {
                     }
                 }
                 ProgressMessageType::Exit => break,
-                _ => unreachable!(),
             }
         }
     }
 
-    fn progress_update_handler_v3(&self) {
-        loop {
-            let msg = self.mpsc_receiver.recv().unwrap();
-            match msg {
-                ProgressMessageType::TextMessage(msg) => println!("{}", msg),
-                ProgressMessageType::Exit => break,
-                _ => unreachable!(),
-            }
-        }
+    fn progress_update_handler_v3(&mut self) {
+        // for now we have same implementation as for v2
+        // but this separation/placeholder gives us flexibility
+        // to differentiate UI for V2 vs V3 translations
+        self.progress_update_handler_v2();
     }
 
     pub fn progress_update_handler(&mut self) {

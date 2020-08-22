@@ -62,7 +62,7 @@ impl GoogleTranslateV2 {
 
         let translation_count = translation_map.len();
         send_progress(
-            ProgressMessageType::V2CountSpecified(translation_count as u64),
+            ProgressMessageType::CountSpecified(translation_count as u64),
             &mpsc_sender,
         );
         let mut translated_item_idx = 0;
@@ -197,6 +197,7 @@ impl GoogleTranslateV3 {
         target_lang: &str,
         project_id: &str,
         mpsc_sender: Sender<ProgressMessageType>,
+        create_output_tsv: bool,
     ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
         send_progress(
@@ -258,12 +259,16 @@ impl GoogleTranslateV3 {
             ProgressMessageType::TextMessage("starting translation".to_owned()),
             &mpsc_sender,
         );
+        send_progress(
+            ProgressMessageType::CountSpecified(translation_maps.len() as u64),
+            &mpsc_sender,
+        );
         let mut iter_idx = 0;
         for map in translation_maps.iter() {
             iter_idx = iter_idx + 1;
             send_progress(
                 ProgressMessageType::TextMessage(format!(
-                    "running translation subbatch {}/{}",
+                    "running translation sub-batch {}/{}",
                     iter_idx,
                     translation_maps.len()
                 )),
@@ -276,8 +281,9 @@ impl GoogleTranslateV3 {
                 target_lang,
                 project_id,
                 &map,
-                true, // TBD: parametrize from command line
+                create_output_tsv,
                 &mpsc_sender,
+                iter_idx,
             )
             .await?;
 
@@ -285,6 +291,8 @@ impl GoogleTranslateV3 {
             for (k, v) in translated_submap.drain() {
                 translation_map.insert(k, v);
             }
+
+            send_progress(ProgressMessageType::ItemProcessed, &mpsc_sender);
         }
         send_progress(
             ProgressMessageType::TextMessage(
@@ -322,6 +330,7 @@ impl GoogleTranslateV3 {
         translation_map: &collections::HashMap<String, String>,
         create_output_tsv: bool,
         mpsc_sender: &Sender<ProgressMessageType>,
+        iter_idx: usize,
     ) -> Result<collections::HashMap<String, String>> {
         let ts_sec = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -490,13 +499,10 @@ impl GoogleTranslateV3 {
             )));
         }
 
-        // TBD: after  splitting translation map into submaps this will always contains only
-        // particular submap set of data and will be overwritten during next iteration
-        // solution is to merge all returned submaps into single file or index them
         if create_output_tsv == true {
             let mut file_handle = File::create(format!(
-                "{}/bucket_download_result.txt",
-                translated_gdf_agent_folder
+                "{}/bucket_download_result_{}.txt",
+                translated_gdf_agent_folder, iter_idx
             ))?;
             file_handle.write_all(bucket_download_result.body.as_bytes())?;
         }
@@ -650,6 +656,7 @@ mod tests {
             "de",
             "express-tracking",
             tx,
+            false,
         ));
 
         debug!("translation_result: {:#?}", translation_result);

@@ -2,7 +2,6 @@ use crate::google::gcloud::translate::TranslationProviders;
 use clap::{App, Arg, ArgMatches};
 use std::path::Path;
 
-// TBD: include flag for creation of file bucket_download_result.txt (for debugging only)
 #[derive(Debug)]
 pub struct CommandLine<'a> {
     pub gdf_agent_zip_path: &'a Path,
@@ -11,6 +10,7 @@ pub struct CommandLine<'a> {
     pub to_lang: String,
     pub gcloud_svc_acc_cred: &'a Path,
     pub translation_mode: TranslationProviders,
+    pub create_output_tsv: bool,
 }
 
 impl<'a> CommandLine<'a> {
@@ -21,6 +21,7 @@ impl<'a> CommandLine<'a> {
         to_lang: String,
         gcloud_svc_acc_cred: &'a Path,
         translation_mode: TranslationProviders,
+        create_output_tsv: bool,
     ) -> Self {
         CommandLine {
             gdf_agent_zip_path,
@@ -29,6 +30,7 @@ impl<'a> CommandLine<'a> {
             to_lang,
             gcloud_svc_acc_cred,
             translation_mode,
+            create_output_tsv,
         }
     }
 }
@@ -87,11 +89,18 @@ pub fn get_cmd_line_parser<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("translation_mode")
                 .short("a")
                 .long("api-version")
-                .value_name("V2/V3")
+                .value_name("v2/v3")
                 .help("Version of API used to translate. Can be v2/v3. If not specified defaults to v3.")
                 .takes_value(true)
-                .possible_values(&["v2", "v3"])
+                .possible_values(&["v2", "v3","V2", "V3"])
                 .default_value("v3")
+        )
+        .arg(
+            Arg::with_name("create_output_tsv")
+                .short("d")
+                .long("create-output-tsv")
+                .help("If this flag is specified it will preserve for V3 API downloaded output buckets. This is primarily intented for debugging, no need to specify by ordinary users. For V2 API this flag is ignored.")
+                .takes_value(false)
         )
 }
 
@@ -104,6 +113,7 @@ pub fn get_cmdl_options<'a>(matches: &'a ArgMatches) -> CommandLine<'a> {
     let from_lang = matches.value_of("from_lang").unwrap();
     let to_lang = matches.value_of("to_lang").unwrap();
     let gcloud_svc_acc_cred = Path::new(matches.value_of("gcloud_svc_acc_cred").unwrap());
+    let create_output_tsv = matches.is_present("create_output_tsv");
 
     if let Some(val) = matches.value_of("translation_mode") {
         match val {
@@ -122,5 +132,6 @@ pub fn get_cmdl_options<'a>(matches: &'a ArgMatches) -> CommandLine<'a> {
         to_lang.to_owned(),
         gcloud_svc_acc_cred,
         translation_mode,
+        create_output_tsv,
     )
 }

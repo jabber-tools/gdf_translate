@@ -10,9 +10,9 @@ use std::process;
 use std::sync::mpsc::channel;
 use std::time::Instant;
 
-// cargo run -- --agent-file c:/a/b/c.zip --output-folder c:/a/b/c/d --source-lang en --target-lang de --cred-file c:/x/y/z.json --api-version v2
 // cargo run -- --agent-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/testdata/credentials.json
 // cargo run -- --agent-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/testdata/credentials.json --api-version v2
+// cargo run -- --agent-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/testdata/credentials.json --api-version v3 --create-output-tsv
 fn main() {
     env_logger::init();
     let cmd_line_matches = get_cmd_line_parser().get_matches();
@@ -74,6 +74,7 @@ fn main() {
         }
         TranslationProviders::GoogleTranslateV3 => {
             println!("Starting V3 translation...");
+            let start = Instant::now();
             let _ = task::block_on(GoogleTranslateV3::execute_translation(
                 cmd_line_opts.gdf_agent_zip_path.to_str().unwrap(),
                 cmd_line_opts.output_folder.to_str().unwrap(),
@@ -82,7 +83,10 @@ fn main() {
                 &cmd_line_opts.to_lang,
                 &gdf_credentials.project_id,
                 tx,
+                cmd_line_opts.create_output_tsv,
             ));
+            let duration = start.elapsed();
+            println!("Translation done! Total duration: {:?}", duration);
         }
         _ => unreachable!(),
     }
