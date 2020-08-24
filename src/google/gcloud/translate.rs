@@ -469,7 +469,7 @@ impl GoogleTranslateV3 {
             project_id,
             source_lang,
             target_lang,
-            "text/html", // alwats HTML, we are wrapping text to translate in <span> tag
+            "text/html", // always HTML, we are wrapping text to translate in <span> tag
             &format!("gs://{}/translation_map.tsv", storage_bucket_name_in),
             &format!("gs://{}/", storage_bucket_name_out),
         )
@@ -699,9 +699,9 @@ mod tests {
     #[ignore]
     fn test_execute_translation_google_v3() -> Result<()> {
         init_logging();
-        let agent_path = format!("c:/tmp/Express_CS_AP_PRD.zip");
-        //let agent_path = format!("c:/tmp/Currency-Converter.zip");
-        //let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
+        // let agent_path = format!("c:/tmp/Express_CS_AP_PRD.zip");
+        // let agent_path = format!("c:/tmp/Currency-Converter.zip");
+        let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
         debug!("getting bearer token...");
         let token: Result<GoogleApisOauthToken> =
             task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
