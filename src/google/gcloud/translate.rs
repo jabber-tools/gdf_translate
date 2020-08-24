@@ -3,6 +3,9 @@ use crate::google::dialogflow::agent::parse_gdf_agent_zip;
 use crate::google::gcloud::storage_bucket_mgmt;
 use crate::ui::ProgressMessageType;
 use async_std::task;
+// while StreamExt is not used directly without it this line will not compile:
+// while let Some(future_value) = futures.next().await
+use futures::stream::{FuturesUnordered, StreamExt};
 use log::debug;
 use std::collections;
 use std::fs::File;
@@ -48,13 +51,14 @@ pub struct GoogleTranslateV3;
 pub struct DummyTranslate;
 
 impl GoogleTranslateV2 {
-    pub async fn execute_translation(
+    pub fn execute_translation(
         gdf_agent_path: &str,
         translated_gdf_agent_folder: &str,
         token: &str,
         source_lang: &str,
         target_lang: &str,
         mpsc_sender: Sender<ProgressMessageType>,
+        task_count: usize,
     ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
@@ -65,112 +69,57 @@ impl GoogleTranslateV2 {
             ProgressMessageType::CountSpecified(translation_count as u64),
             &mpsc_sender,
         );
-        let mut translated_item_idx = 0;
 
-        for val in translation_map.values_mut() {
-            translated_item_idx = translated_item_idx + 1;
-            debug!(
-                "translating value({}/{}): {}",
-                translated_item_idx, translation_count, *val
-            );
-            /*send_progress(
-                ProgressMessageType::TextMessage(format!(
-                    "translating value({}/{})",
-                    translated_item_idx, translation_count
-                )),
-                &mpsc_sender,
-            );*/
-            send_progress(ProgressMessageType::ItemProcessed, &mpsc_sender);
+        let mut translation_maps: Vec<collections::HashMap<String, String>> = Vec::new();
+        send_progress(
+            ProgressMessageType::TextMessage("partitioning translation map".to_owned()),
+            &mpsc_sender,
+        );
 
-            let mut translation_response;
-            let mut translation_result = v2::translate(
+        let submap_item_count = translation_count / task_count;
+        let mut item_counter = 0;
+        translation_maps.push(collections::HashMap::new());
+        for (k, v) in translation_map.drain() {
+            item_counter = item_counter + 1;
+            let mut maps_length = translation_maps.len();
+            if item_counter > submap_item_count {
+                translation_maps.push(collections::HashMap::new());
+                maps_length = translation_maps.len();
+                item_counter = 0;
+            }
+            translation_maps[maps_length - 1].insert(k, v);
+        }
+
+        let mut futures = FuturesUnordered::new();
+
+        let mut iter_idx = 0;
+        while let Some(map) = translation_maps.pop() {
+            iter_idx = iter_idx + 1;
+            let future = GoogleTranslateV2::execute_translation_impl(
                 token,
                 source_lang,
                 target_lang,
-                val,
-                v2::TranslateFormat::Plain,
-            )
-            .await;
-
-            if let Err(translation_error) = translation_result {
-                debug!(
-                    "error while translating value {}/{}. Attempting one more time. Error detail: {:#?}",
-                    translated_item_idx, translation_count, translation_error
-                );
-                task::sleep(Duration::from_secs(2)).await; // wait with this task execution before next try!
-                translation_result = v2::translate(
-                    token,
-                    source_lang,
-                    target_lang,
-                    val,
-                    v2::TranslateFormat::Plain,
-                )
-                .await;
-            }
-
-            if let Err(translation_error) = translation_result {
-                debug!(
-                    "2nd error while translating value {}/{}. Skipping translating of this item. Error detail: {:#?}",
-                    translated_item_idx, translation_count, translation_error
-                );
-                continue;
-            } else {
-                debug!(
-                    "call translation api for item {}/{} succeeded!",
-                    translated_item_idx, translation_count
-                );
-                translation_response = translation_result.unwrap();
-            }
-
-            debug!("translation_response {:#?}", translation_response);
-
-            if translation_response.status != "200" {
-                debug!(
-                    "error while translating value {}/{}. HTTP code is not 200. Attempting one more time. Error detail: {:#?}",
-                    translated_item_idx, translation_count, translation_response
-                );
-                task::sleep(Duration::from_secs(2)).await; // wait with this task execution before next try!
-                translation_result = v2::translate(
-                    token,
-                    source_lang,
-                    target_lang,
-                    val,
-                    v2::TranslateFormat::Plain,
-                )
-                .await;
-
-                if let Err(translation_error) = translation_result {
-                    debug!(
-                        "2nd error while translating value {}/{}. Skipping translating of this item. Error detail: {:#?}",
-                        translated_item_idx, translation_count, translation_error
-                    );
-                    continue;
-                }
-
-                if translation_response.status != "200" {
-                    debug!(
-                        "2nd error while translating value {}/{}. HTTP code is not 200. Skipping translating of this item. Error detail: {:#?}",
-                        translated_item_idx, translation_count, translation_response
-                    );
-                    continue;
-                }
-
-                debug!(
-                    "2nd attempt to translate item {}/{} succeeded!",
-                    translated_item_idx, translation_count
-                );
-                translation_response = translation_result.unwrap();
-            }
-
-            *val = translation_response
-                .body
-                .data
-                .translations
-                .iter()
-                .map(|x| x.translated_text.to_owned())
-                .collect::<Vec<String>>()
-                .join("");
+                map,
+                mpsc_sender.clone(),
+                iter_idx,
+            );
+            futures.push(future);
         }
+
+        // inspired by https://www.philipdaniels.com/blog/2019/async-std-demo1/
+        // https://users.rust-lang.org/t/futuresunordered/39461/4
+        // uses asynchronous streams (see next() method), unfortunatelly this is still not described in async-std documentation (see https://book.async.rs/concepts/streams.html)
+        // so it required little bit of investigation, not sure whether this is optimal way, probably tokio has better (and better documented) capabilities when it comes to joining the futures
+        task::block_on(async {
+            while let Some(future_value) = futures.next().await {
+                // for this to compile StreamExt must be used, see use futures::stream::{FuturesUnordered, StreamExt}; !
+                match future_value {
+                    Ok(translated_submap) => translation_map.extend(translated_submap),
+                    Err(e) => debug!(" Error when resolving future returned by GoogleTranslateV2::execute_translation_impl : {:#?}", e),
+                    // TBD: emit some text to CLI, maybe terminate the processing?
+                }
+            }
+        });
 
         debug!("translation finished. updated translation map");
         debug!("{:#?}", translation_map);
@@ -185,6 +134,116 @@ impl GoogleTranslateV2 {
         send_progress(ProgressMessageType::Exit, &mpsc_sender);
 
         Ok(())
+    }
+
+    async fn execute_translation_impl(
+        token: &str,
+        source_lang: &str,
+        target_lang: &str,
+        mut translation_map: collections::HashMap<String, String>,
+        mpsc_sender: Sender<ProgressMessageType>,
+        iter_idx: usize,
+    ) -> Result<collections::HashMap<String, String>> {
+        let translation_count = translation_map.len();
+        let mut translated_item_idx = 0;
+        for val in translation_map.values_mut() {
+            translated_item_idx = translated_item_idx + 1;
+            debug!(
+                "translating value({}/{} for sub-batch: {}): {}",
+                translated_item_idx, translation_count, *val, iter_idx
+            );
+            send_progress(ProgressMessageType::ItemProcessed, &mpsc_sender);
+
+            let mut translation_response;
+            let mut translation_result = v2::translate(
+                token,
+                source_lang,
+                target_lang,
+                val,
+                v2::TranslateFormat::Plain,
+            )
+            .await;
+
+            if let Err(translation_error) = translation_result {
+                debug!(
+                    "error while translating value {}/{} for sub-batch: {}. Attempting one more time. Error detail: {:#?}",
+                    translated_item_idx, translation_count, iter_idx, translation_error
+                );
+                task::sleep(Duration::from_secs(2)).await; // wait with this task execution before next try!
+                translation_result = v2::translate(
+                    token,
+                    source_lang,
+                    target_lang,
+                    val,
+                    v2::TranslateFormat::Plain,
+                )
+                .await;
+            }
+
+            if let Err(translation_error) = translation_result {
+                debug!(
+                    "2nd error while translating value {}/{} for sub-batch: {}. Skipping translating of this item. Error detail: {:#?}",
+                    translated_item_idx, translation_count, iter_idx, translation_error
+                );
+                continue;
+            } else {
+                debug!(
+                    "call translation api for item {}/{} for sub-batch: {} succeeded!",
+                    translated_item_idx, translation_count, iter_idx
+                );
+                translation_response = translation_result.unwrap();
+            }
+
+            debug!("translation_response {:#?}", translation_response);
+
+            if translation_response.status != "200" {
+                debug!(
+                    "error while translating value {}/{} for sub-batch {}. HTTP code is not 200. Attempting one more time. Error detail: {:#?}",
+                    translated_item_idx, translation_count, iter_idx, translation_response
+                );
+                task::sleep(Duration::from_secs(2)).await; // wait with this task execution before next try!
+                translation_result = v2::translate(
+                    token,
+                    source_lang,
+                    target_lang,
+                    val,
+                    v2::TranslateFormat::Plain,
+                )
+                .await;
+
+                if let Err(translation_error) = translation_result {
+                    debug!(
+                        "2nd error while translating value {}/{} for sub-batch {}. Skipping translating of this item. Error detail: {:#?}",
+                        translated_item_idx, translation_count, iter_idx, translation_error
+                    );
+                    continue;
+                }
+
+                if translation_response.status != "200" {
+                    debug!(
+                        "2nd error while translating value {}/{} for sub-batch {}. HTTP code is not 200. Skipping translating of this item. Error detail: {:#?}",
+                        translated_item_idx, translation_count, iter_idx, translation_response
+                    );
+                    continue;
+                }
+
+                debug!(
+                    "2nd attempt to translate item {}/{} for sub-batch {} succeeded!",
+                    translated_item_idx, translation_count, iter_idx
+                );
+                translation_response = translation_result.unwrap();
+            }
+
+            *val = translation_response
+                .body
+                .data
+                .translations
+                .iter()
+                .map(|x| x.translated_text.to_owned())
+                .collect::<Vec<String>>()
+                .join("");
+        }
+        Ok(translation_map)
     }
 }
 
@@ -622,14 +681,15 @@ mod tests {
         let token = format!("Bearer {}", token.unwrap().access_token);
         debug!("bearer token retrieved {}", token);
         let (tx, _) = channel::<ProgressMessageType>();
-        let _ = task::block_on(GoogleTranslateV2::execute_translation(
+        let _ = GoogleTranslateV2::execute_translation(
             &agent_path,
             "c:/tmp/out_translated",
             &token,
             "en",
             "de",
             tx,
-        ));
+            1,
+        );
 
         Ok(())
     }

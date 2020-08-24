@@ -61,14 +61,15 @@ fn main() {
         TranslationProviders::GoogleTranslateV2 => {
             println!("Starting V2 translation...");
             let start = Instant::now();
-            let _ = task::block_on(GoogleTranslateV2::execute_translation(
+            let _ = GoogleTranslateV2::execute_translation(
                 cmd_line_opts.gdf_agent_zip_path.to_str().unwrap(),
                 cmd_line_opts.output_folder.to_str().unwrap(),
                 &token,
                 &cmd_line_opts.from_lang,
                 &cmd_line_opts.to_lang,
                 tx,
-            ));
+                cmd_line_opts.v2_task_count,
+            );
             let duration = start.elapsed();
             println!("Translation done! Total duration: {:?}", duration);
         }

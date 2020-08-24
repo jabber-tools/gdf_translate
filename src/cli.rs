@@ -11,6 +11,7 @@ pub struct CommandLine<'a> {
     pub gcloud_svc_acc_cred: &'a Path,
     pub translation_mode: TranslationProviders,
     pub create_output_tsv: bool,
+    pub v2_task_count: usize,
 }
 
 impl<'a> CommandLine<'a> {
@@ -22,6 +23,7 @@ impl<'a> CommandLine<'a> {
         gcloud_svc_acc_cred: &'a Path,
         translation_mode: TranslationProviders,
         create_output_tsv: bool,
+        v2_task_count: usize,
     ) -> Self {
         CommandLine {
             gdf_agent_zip_path,
@@ -31,6 +33,7 @@ impl<'a> CommandLine<'a> {
             gcloud_svc_acc_cred,
             translation_mode,
             create_output_tsv,
+            v2_task_count,
         }
     }
 }
@@ -96,6 +99,15 @@ pub fn get_cmd_line_parser<'a, 'b>() -> App<'a, 'b> {
                 .default_value("v3")
         )
         .arg(
+            Arg::with_name("v2_task_count")
+                .short("p")
+                .long("task-count")
+                .value_name("INTEGER")
+                .help("Number of asynchronous and parallel tasks that will be used to call Google V2 translation API. If not specified defaults to 10. Ignored when using V3 API.")
+                .takes_value(true)
+                .default_value("10")
+        )
+        .arg(
             Arg::with_name("create_output_tsv")
                 .short("d")
                 .long("create-output-tsv")
@@ -115,6 +127,13 @@ pub fn get_cmdl_options<'a>(matches: &'a ArgMatches) -> CommandLine<'a> {
     let gcloud_svc_acc_cred = Path::new(matches.value_of("gcloud_svc_acc_cred").unwrap());
     let create_output_tsv = matches.is_present("create_output_tsv");
 
+    let v2_task_count = matches
+        .value_of("v2_task_count")
+        .unwrap()
+        .to_owned()
+        .parse::<usize>()
+        .unwrap();
+
     if let Some(val) = matches.value_of("translation_mode") {
         match val {
             "v2" | "V2" => translation_mode = TranslationProviders::GoogleTranslateV2,
@@ -133,5 +152,6 @@ pub fn get_cmdl_options<'a>(matches: &'a ArgMatches) -> CommandLine<'a> {
         gcloud_svc_acc_cred,
         translation_mode,
         create_output_tsv,
+        v2_task_count,
     )
 }
