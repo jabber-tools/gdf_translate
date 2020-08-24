@@ -10,9 +10,9 @@ use std::process;
 use std::sync::mpsc::channel;
 use std::time::Instant;
 
-// cargo run -- --agent-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/testdata/credentials.json
-// cargo run -- --agent-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/testdata/credentials.json --api-version v2
-// cargo run -- --agent-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/adamb/adam/_DEV/rust/projects/gdf_translate/examples/testdata/credentials.json --api-version v3 --create-output-tsv
+// cargo run -- --agent-file C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/testdata/credentials.json
+// cargo run -- --agent-file C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/testdata/credentials.json --api-version v2
+// cargo run -- --agent-file C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/Currency-Converter.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/testdata/credentials.json --api-version v3 --create-output-tsv
 fn main() {
     env_logger::init();
     let cmd_line_matches = get_cmd_line_parser().get_matches();
