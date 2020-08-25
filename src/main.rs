@@ -61,7 +61,7 @@ fn main() {
         TranslationProviders::GoogleTranslateV2 => {
             println!("Starting V2 translation...");
             let start = Instant::now();
-            let _ = GoogleTranslateV2::execute_translation(
+            let result = GoogleTranslateV2::execute_translation(
                 cmd_line_opts.gdf_agent_zip_path.to_str().unwrap(),
                 cmd_line_opts.output_folder.to_str().unwrap(),
                 &token,
@@ -71,12 +71,15 @@ fn main() {
                 cmd_line_opts.v2_task_count,
             );
             let duration = start.elapsed();
-            println!("Translation done! Total duration: {:?}", duration);
+            match result {
+                Err(err) => println!("Translation ended with following error: {:#?}", err),
+                _ => println!("Translation done! Total duration: {:?}", duration),
+            }
         }
         TranslationProviders::GoogleTranslateV3 => {
             println!("Starting V3 translation...");
             let start = Instant::now();
-            let _ = task::block_on(GoogleTranslateV3::execute_translation(
+            let result = task::block_on(GoogleTranslateV3::execute_translation(
                 cmd_line_opts.gdf_agent_zip_path.to_str().unwrap(),
                 cmd_line_opts.output_folder.to_str().unwrap(),
                 &token,
@@ -87,7 +90,10 @@ fn main() {
                 cmd_line_opts.create_output_tsv,
             ));
             let duration = start.elapsed();
-            println!("Translation done! Total duration: {:?}", duration);
+            match result {
+                Err(err) => println!("Translation ended with following error: {:#?}", err),
+                _ => println!("Translation done! Total duration: {:?}", duration),
+            }
         }
         _ => unreachable!(),
     }

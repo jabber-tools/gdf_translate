@@ -703,8 +703,9 @@ mod tests {
         // let agent_path = format!("c:/tmp/Currency-Converter.zip");
         let agent_path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "Currency-Converter.zip");
         debug!("getting bearer token...");
-        let token: Result<GoogleApisOauthToken> =
-            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
+        let token: Result<GoogleApisOauthToken> = task::block_on(get_google_api_token(
+            "./examples/testdata/credentials_v3.json",
+        ));
         let token = format!("Bearer {}", token.unwrap().access_token);
         debug!("bearer token retrieved {}", token);
         let (tx, _) = channel::<ProgressMessageType>();

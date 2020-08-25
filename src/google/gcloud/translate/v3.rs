@@ -380,8 +380,12 @@ pub async fn batch_translate_text(
         .body_json(&body)?
         .await?;
 
-    let response_body: GoogleTranslateV3Response =
-        serde_json::from_str(&resp.body_string().await?)?;
+    let body_str = resp.body_string().await?;
+    debug!("batch_translate_text.body_str: {}", body_str);
+
+    let response_body: GoogleTranslateV3Response = serde_json::from_str(&body_str)?;
+
+    debug!("batch_translate_text.response_body: {:#?}", response_body);
 
     Ok(GoogleTranslateV3ApiResponse {
         status_code: resp.status().as_str().to_string(),
