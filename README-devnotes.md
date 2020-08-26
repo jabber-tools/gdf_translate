@@ -37,13 +37,22 @@ Command line tool for automated translation of Google DialogFlow agents
 
 ## How does it work?
 
-First Google Dialogflow agent is exported into ZIP file and this file is provided to translation utility.</br>
+First Google Dialogflow agent is exported into ZIP file and this file is provided to translation utility. Translation utility parses the file and deserialises its content into internal structures stored in memory.</br>
 <img src="./examples/docs/img/zip-to-struct.png" /></br>
-![GitHub Logo](/img/zip-to-struct.png)
 
-Translation utility parses the file and deserialises its content into internal structures stored in memory.</br>
 In fact structures themselves are stored on stack whereas its content is stored on heap. Each entry on heap has its address (referred from stack) and data/content (e.g. string that needs to be translated!)</br>
+<img src="./examples/docs/img/stack-and-heap.png" /></br>
+
 Translation utility traverses all structures created in deserialization step and creates table to be translated. This table (hashmap) has original heap address as a key and data/content as a value.</br>
+
+| Address      |      Data      |
+|--------------|:--------------:|
+| 7f06092ac6d4 |  Germany       |
+| 7f06092ac6d1 |    Hello       |
+| 7f06092ac6d2 | Feels Rusty    |
+|7f06092ac6d0  |This is response|
+
+
 Table (i.e. data column) is translated. Two approaches are used:
 *	Google V2 translation API
   *	Each row is translated as separate HTTP transaction
@@ -59,12 +68,6 @@ Table (i.e. data column) is translated. Two approaches are used:
 
 
 
-| Address      |      Data      |
-|--------------|:--------------:|
-| 7f06092ac6d4 |  Germany       |
-| 7f06092ac6d1 |    Hello       |
-| 7f06092ac6d2 | Feels Rusty    |
-|7f06092ac6d0  |This is response|
 
 
 | Address      |      Data            |
