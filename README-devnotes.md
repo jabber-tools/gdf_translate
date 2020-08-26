@@ -57,7 +57,7 @@ Table (i.e. data column) is translated. Two approaches are used:
 <ul>
   <li>Google V2 translation API
     <ul>
-      <li>Each row is translated as separate HTTP transaction</li>
+      <li>Each row is translated as separate HTTP transaction. We are running translation in parallel (4-10 translations executed at the same time) but still this approach is slow and error prone. TYpical agent can have thousands of translation to be executed. Running such a huge number of HTTP transactions will face the networking issues and possibly also Google API quotas issues (i.e. rate limiting by API due to too many concurrent invocations).</li>
     </ul>
   </li>
   <li>Google V3 translation API
@@ -101,13 +101,19 @@ Table (i.e. data column) is translated. Two approaches are used:
   </li>
 </ul>
  
+## Serialization/deserialization process
+For deserialization of zip file and subsequent serialization of translated agent back into zip file we are using [Serde](https://serde.rs/) framework. Google DialogFlow ZIP file consists of may different JSON files. These files are all translated into corresponding Rust [structures](https://doc.rust-lang.org/book/ch05-00-structs.html). There is always risk underlying format of ZIP file might change and we will not be able to serialize or deserialize the data correctly. Especially it might happen that zip file structures will be extended and corresponding rust structures will not contain new attributes. To detect such a situation we are doing following sanity check: every file every file is deserialized and then without change serialized back to JSON. JSON’s (original JSON and new one after serialization) are structurally compared. If they are not equal exception is raised and translation process is aborted. Code then needs to be extended accordingly so that it matches to latest zip file structure. 
 
+## How to enable debug logging?
+In case of troubleshooting it might be handy to enable debug log messages. This can be done by setting following environment variables:
 
+* set RUST_LOG=gdf_translate::main=debug
+* set RUST_LOG=gdf_translate::google::gcloud::translate=debug
+* set RUST_LOG=gdf_translate::google::gcloud::translate::v2=debug
+* set RUST_LOG=gdf_translate::google::gcloud::translate::v3=debug
+* set RUST_LOG=gdf_translate::google::gcloud::storage_bucket_mgmt.rs=debug
+* set RUST_LOG=gdf_translate::google::dialogflow::agent=debug
 
-
-
-
-
-
+Also it might be handy to enable stacktrace printing via followin environment variable: <i>set RUST_BACKTRACE = 1</i>
 
 
