@@ -40,7 +40,7 @@ Command line tool for automated translation of Google DialogFlow agents
 
 [Command Line Interface](#command-line-interface)
 
-[Examples](#advanced-examples)
+[Examples](#examples)
 
 
 ## Introduction
