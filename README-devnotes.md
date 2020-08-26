@@ -55,13 +55,16 @@ Translation utility traverses all structures created in deserialization step and
 
 Table (i.e. data column) is translated. Two approaches are used:
 <ul>
-  <li>Google V2 translation API
-  <li>
+  <li>Coffee</li>
+  <li>Tea
     <ul>
-      <li>Each row is translated as separate HTTP transaction</li>
+      <li>Black tea</li>
+      <li>Green tea</li>
     </ul>
   </li>
-</ul>  
+  <li>Milk</li>
+</ul>
+ 
 
 
 *	Google V2 translation API
