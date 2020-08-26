@@ -54,7 +54,13 @@ Google Translate is command line utility used for translation of Google DialogFl
 Binaries are published under [Releases](https://github.com/jabber-tools/gdf_translate/releases) section of this github repository. Make sure to always use the latest release in order to have latest fixes and features amendments.
 
 ## Service Account Requirements
-TBD
+We are using service accounts while interacting with Google Translation APIs. 
+
+[IAM](https://cloud.google.com/translate/docs/intro-to-v3#iam)
+
+[SVC ACC](https://cloud.google.com/iam/docs/creating-managing-service-accounts)
+
+[SVC ACC KEYS](https://cloud.google.com/iam/docs/creating-managing-service-account-keys)
 
 ## Command Line Interface
 Simply ask for help:
