@@ -63,8 +63,8 @@ Table (i.e. data column) is translated. Two approaches are used:
 <table>
   <tbody>
     <tr>
-      <th>Tables</th>
-      <th align="center">Are</th>
+      <th align="center">Address</th>
+      <th align="center">Data</th>
     </tr>
     <tr>
       <td>7f06092ac6d4</td>
