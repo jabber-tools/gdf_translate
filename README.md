@@ -40,7 +40,7 @@ Command line tool for automated translation of Google DialogFlow agents
 
 
 ## Introduction
-Google Translate is command line utility used for translation of Google DialogFlow agents. Ambition of this tool is to replace original Agent Toolkit that can (among other things translate GDF agents). The advantages of this new tool (over agent toolkit) are following:
+Google Translate is command line utility used for translation of Google DialogFlow agents. Ambition of this tool is to replace original Agent Toolkit that can (among other things) translate GDF agents. The advantages of this new tool (over agent toolkit) are following:
 
 *	We are doing translation only, nothing else. Tool is more because of that more intuitive, lightweight and easier to use.
 *	Tool was written in technology that requires no underlying runtime. Original agent toolkit requires Node.JS to be installed, together with windows-build-tools package. Making this to work on corporate laptop with lot of restrictions is usually very challenging, especially for non-IT users. New tool is single executable (by default exe file for windows) which is not requiring anything else. Just download and use!
