@@ -94,16 +94,13 @@ Table (i.e. data column) is translated. Two approaches are used:
       </li>
       <li>Agent structure is traversed again (same as when creating original translation table/hashmap). For every address we are doing lookup (by address) into translated hashmap and replacing the value accordingly</li>
       <li>Agent is then serialized and packed into ZIP file.</li>
+      <li>So in a nutshell:
+        <img src="./examples/docs/img/v3-translation.png" />
+      </li>
     </ul>
   </li>
 </ul>
  
-| Address      |      Data            |
-|--------------|:--------------------:|
-| 7f06092ac6d4 |  Deutschland         |
-| 7f06092ac6d1 |    Hallo             |
-| 7f06092ac6d2 | Fühlt sich rostig an |
-|7f06092ac6d0  | Dies ist eine Antwort|       
 
 
 
