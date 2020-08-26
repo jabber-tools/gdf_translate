@@ -34,6 +34,28 @@ Command line tool for automated translation of Google DialogFlow agents
 
 <br/>
 
+
+How does it work?
+
+First Google Dialogflow agent is exported into ZIP file and this file is provided to translation utility.
+Translation utility parses the file and deserialises its content into internal structures stored in memory.
+In fact structures themselves are stored on stack whereas its content is stored on heap. Each entry on heap has its address (referred from stack) and data/content (e.g. string that needs to be translated!)
+Translation utility traverses all structures created in deserialization step and creates table to be translated. This table (hashmap) has original heap address as a key and data/content as a value.
+Table (i.e. data column) is translated. Two approaches are used:
+*	Google V2 translation API
+  *	Each row is translated as separate HTTP transaction
+*	Google V3 translation API
+  *	Hashmap is converted to CSV file
+  *	CSV file is uploaded into Google Cloud Storage Bucket
+  *	Batch translation is started
+  *	Batch translation status is checked regularly up to the point where result is produced again as CSV file in Google Cloud Storage Bucket
+  *	Output Google Cloud Storage Bucket content is downloaded and transformed from CVS file into hashmap again
+  *	Agent structure is traversed again (same as when creating original translation table/hashmap). For every address we are doing lookup (by address) into translated hashmap and replacing the value accordingly
+  *	Agent is then serialized and packed into ZIP file. 
+
+
+
+
 | Address      |      Data      |
 |--------------|:--------------:|
 | 7f06092ac6d4 |  Germany       |
