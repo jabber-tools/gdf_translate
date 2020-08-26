@@ -21,7 +21,6 @@ Command line tool for automated translation of Google DialogFlow agents
     <a href="https://github.com/async-rs/async-std/releases">
       Releases
     </a>
-    <span> | </span>
   </h3>
 </div>
 
