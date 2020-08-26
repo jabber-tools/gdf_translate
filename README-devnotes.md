@@ -57,42 +57,43 @@ Table (i.e. data column) is translated. Two approaches are used:
 <ul>
   <li>Google V2 translation API
     <ul>
-      <li>Black tea</li>
+      <li>Each row is translated as separate HTTP transaction</li>
     </ul>
   </li>
   <li>Google V3 translation API
     <ul>
-      <li>Black tea</li>
-      <li>Green tea
-        
-<table>
-  <tbody>
-    <tr>
-      <th align="center">Address</th>
-      <th align="center">Data</th>
-    </tr>
-    <tr>
-      <td>7f06092ac6d4</td>
-      <td align="center">Deutschland</td>
-    </tr>
-    <tr>
-      <td>7f06092ac6d1</td>
-      <td align="center">Hallo</td>
-    </tr>
-    <tr>
-      <td>7f06092ac6d2</td>
-      <td align="center">Fühlt sich rostig an</td>
-    </tr>
-    <tr>
-      <td>7f06092ac6d0</td>
-      <td align="center">Dies ist eine Antwort</td>
-    </tr>
-  </tbody>
-</table>        
+      <li>Hashmap is converted to CSV file</li>
+      <li>CSV file is uploaded into Google Cloud Storage Bucket</li>
+      <li>Batch translation is started</li>
+      <li>Batch translation status is checked regularly up to the point where result is produced again as CSV file in Google Cloud Storage Bucket</li>
+      <li>Output Google Cloud Storage Bucket content is downloaded and transformed from CVS file into hashmap again. Something like:
+                <table>
+                  <tbody>
+                    <tr>
+                      <th align="center">Address</th>
+                      <th align="center">Data</th>
+                    </tr>
+                    <tr>
+                      <td>7f06092ac6d4</td>
+                      <td align="center">Deutschland</td>
+                    </tr>
+                    <tr>
+                      <td>7f06092ac6d1</td>
+                      <td align="center">Hallo</td>
+                    </tr>
+                    <tr>
+                      <td>7f06092ac6d2</td>
+                      <td align="center">Fühlt sich rostig an</td>
+                    </tr>
+                    <tr>
+                      <td>7f06092ac6d0</td>
+                      <td align="center">Dies ist eine Antwort</td>
+                    </tr>
+                  </tbody>
+                </table>        
       </li>
-      
-      
-      <li>Green tea</li>
+      <li>Agent structure is traversed again (same as when creating original translation table/hashmap). For every address we are doing lookup (by address) into translated hashmap and replacing the value accordingly</li>
+      <li>Agent is then serialized and packed into ZIP file.</li>
     </ul>
   </li>
 </ul>
