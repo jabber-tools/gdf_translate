@@ -66,7 +66,7 @@ Table (i.e. data column) is translated. Two approaches are used:
       <li>CSV file is uploaded into Google Cloud Storage Bucket</li>
       <li>Batch translation is started</li>
       <li>Batch translation status is checked regularly up to the point where result is produced again as CSV file in Google Cloud Storage Bucket</li>
-      <li>Output Google Cloud Storage Bucket content is downloaded and transformed from CVS file into hashmap again. Something like:
+      <li>Output Google Cloud Storage Bucket content is downloaded and transformed from CVS file into hashmap again. Something like:</br>
                 <table>
                   <tbody>
                     <tr>
@@ -106,16 +106,7 @@ Table (i.e. data column) is translated. Two approaches are used:
 |7f06092ac6d0  | Dies ist eine Antwort|       
 
 
-*	Google V2 translation API
-  *	Each row is translated as separate HTTP transaction
-*	Google V3 translation API
-    *	Hashmap is converted to CSV file
-    *	CSV file is uploaded into Google Cloud Storage Bucket
-    *	Batch translation is started
-    *	Batch translation status is checked regularly up to the point where result is produced again as CSV file in Google Cloud Storage Bucket
-    *	Output Google Cloud Storage Bucket content is downloaded and transformed from CVS file into hashmap again. Something like:
-    *	Agent structure is traversed again (same as when creating original translation table/hashmap). For every address we are doing lookup (by address) into translated hashmap and replacing the value accordingly
-    *	Agent is then serialized and packed into ZIP file. 
+
 
 
 
