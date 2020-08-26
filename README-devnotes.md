@@ -40,3 +40,11 @@ Command line tool for automated translation of Google DialogFlow agents
 | 7f06092ac6d1 |    Hello       |
 | 7f06092ac6d2 | Feels Rusty    |
 |7f06092ac6d0  |This is response|
+
+
+| Address      |      Data            |
+|--------------|:--------------------:|
+| 7f06092ac6d4 |  Deutschland         |
+| 7f06092ac6d1 |    Hallo             |
+| 7f06092ac6d2 | Fühlt sich rostig an |
+|7f06092ac6d0  | Dies ist eine Antwort|
