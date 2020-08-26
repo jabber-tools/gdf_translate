@@ -10,7 +10,7 @@ Command line tool for automated translation of Google DialogFlow agents
 
 <div align="center">
   <h3>
-    <a href="https://docs.rs/async-std">
+    <a target="_blank" href="https://docs.rs/async-std">
       API Docs
     </a>
     <span> | </span>
