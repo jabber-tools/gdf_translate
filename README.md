@@ -18,7 +18,7 @@ Command line tool for automated translation of Google DialogFlow agents
       Development notes
     </a>
     <span> | </span>
-    <a href="https://github.com/async-rs/async-std/releases">
+    <a href="https://github.com/jabber-tools/gdf_translate/releases">
       Releases
     </a>
   </h3>
