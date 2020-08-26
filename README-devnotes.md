@@ -58,6 +58,11 @@ Table (i.e. data column) is translated. Two approaches are used:
   <li>Google V2 translation API
     <ul>
       <li>Black tea</li>
+    </ul>
+  </li>
+  <li>Google V3 translation API
+    <ul>
+      <li>Black tea</li>
       <li>Green tea
         
 <table>
@@ -85,12 +90,8 @@ Table (i.e. data column) is translated. Two approaches are used:
   </tbody>
 </table>        
       </li>
-      <li>Yellow tea</li>
-    </ul>
-  </li>
-  <li>Google V3 translation API
-    <ul>
-      <li>Black tea</li>
+      
+      
       <li>Green tea</li>
     </ul>
   </li>
