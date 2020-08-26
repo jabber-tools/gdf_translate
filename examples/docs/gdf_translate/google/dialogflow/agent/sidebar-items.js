@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["parse_gdf_agent_zip",""]],"struct":[["AgentManifest",""],["AgentManifestGoogleAssistant",""],["AgentManifestGoogleAssistantOauthLinking",""],["AgentManifestWebhook",""],["GoogleDialogflowAgent",""],["Package",""],["RE_COMPOSITE_ENTITY",""],["RE_COMPOSITE_ENTITY_NO_ALIAS",""],["RE_ENTITY_ENTRY_FILE",""],["RE_INTENT_UTTERANCE_FILE",""]]});
