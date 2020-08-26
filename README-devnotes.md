@@ -38,7 +38,7 @@ Command line tool for automated translation of Google DialogFlow agents
 ## How does it work?
 
 First Google Dialogflow agent is exported into ZIP file and this file is provided to translation utility.</br>
-<img src="./examples/docs/img/zip-to-struct.png" align="right" />
+<img src="./examples/docs/img/zip-to-struct.png" align="right" /></br>
 
 Translation utility parses the file and deserialises its content into internal structures stored in memory.</br>
 In fact structures themselves are stored on stack whereas its content is stored on heap. Each entry on heap has its address (referred from stack) and data/content (e.g. string that needs to be translated!)</br>
