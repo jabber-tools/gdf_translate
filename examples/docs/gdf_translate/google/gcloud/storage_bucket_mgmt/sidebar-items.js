@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["create_bucket",""],["delete_bucket",""],["delete_object",""],["download_object",""],["upload_object",""]]});

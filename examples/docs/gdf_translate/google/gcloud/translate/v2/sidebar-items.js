@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["TranslateFormat",""]],"fn":[["translate",""]],"struct":[["TranslateQuery",""],["TranslateResponse",""],["TranslateResponseBody",""],["TranslateResponseBodyData",""],["TranslateResponseBodyTranslationItem",""]]});
