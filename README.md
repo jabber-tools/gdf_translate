@@ -52,7 +52,41 @@ Google Translate is command line utility used for translation of Google DialogFl
 Binaries are published under [Releases](https://github.com/jabber-tools/gdf_translate/releases) section of this github repository. Make sure to always use the latest release in order to have latest fixes and features amendments.
 
 ## Command Line Interface
-TBD
+Simply ask for help:
+```
+C:\tmp>gdf_translate.exe -h
+Google DialogFlow Translate 0.1.0
+Adam Bezecny
+Tool for automated translation of Google DialogFlow agents.
+
+USAGE:
+    gdf_translate.exe [FLAGS] [OPTIONS] --source-lang <lang ISO code> --cred-file <FILE> --agent-file <FILE> --output-folder <FOLDER> --target-lang <lang ISO code>
+
+FLAGS:
+    -d, --create-output-tsv    If this flag is specified it will preserve for V3 API downloaded output buckets. This is
+                               primarily intented for debugging, no need to specify by ordinary users. For V2 API this
+                               flag is ignored.
+    -h, --help                 Prints help information
+    -V, --version              Prints version information
+
+OPTIONS:
+    -s, --source-lang <lang ISO code>    ISO code of source language.E.g.: en
+    -c, --cred-file <FILE>               Path to Google Cloud service account credentials used to run translation via
+                                         Google Translate V2/V3 API. Must have respective priviledges: TBD...
+    -f, --agent-file <FILE>              ZIP file with exported GDF agent
+    -o, --output-folder <FOLDER>         Path to folder where translated agent will be stored. Must be exiting (ideally
+                                         empty) folder.
+    -t, --target-lang <lang ISO code>    ISO code of destination/target language to which agent will be translated
+                                         .E.g.: de
+    -a, --api-version <v2/v3>            Version of API used to translate. Can be v2/v3. If not specified defaults to
+                                         v3. [default: v3]  [possible values: v2, v3, V2, V3]
+    -p, --task-count <INTEGER>           Number of asynchronous and parallel tasks that will be used to call Google V2
+                                         translation API. If not specified defaults to 10. Ignored when using V3 API.
+                                         [default: 10]
+
+C:\tmp>
+
+```
 
 ## Examples
 TBD
