@@ -55,7 +55,7 @@ Translation utility traverses all structures created in deserialization step and
 
 Table (i.e. data column) is translated. Two approaches are used:
 <ul>
-  <li>Tea
+  <li>Google V2 translation API
     <ul>
       <li>Black tea</li>
       <li>Green tea
@@ -88,7 +88,7 @@ Table (i.e. data column) is translated. Two approaches are used:
       <li>Yellow tea</li>
     </ul>
   </li>
-  <li>Milk
+  <li>Google V3 translation API
     <ul>
       <li>Black tea</li>
       <li>Green tea</li>
