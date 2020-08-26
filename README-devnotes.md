@@ -65,32 +65,22 @@ Table (i.e. data column) is translated. Two approaches are used:
     <tr>
       <th>Tables</th>
       <th align="center">Are</th>
-      <th align="right">Cool</th>
     </tr>
     <tr>
-      <td>col 3 is</td>
-      <td align="center">right-aligned</td>
-      <td align="right">$1600</td>
+      <td>7f06092ac6d4</td>
+      <td align="center">Deutschland</td>
     </tr>
     <tr>
-      <td>col 2 is</td>
-      <td align="center">centered</td>
-      <td align="right">$12</td>
+      <td>7f06092ac6d1</td>
+      <td align="center">Hallo</td>
     </tr>
     <tr>
-      <td>zebra stripes</td>
-      <td align="center">are neat</td>
-      <td align="right">$1</td>
+      <td>7f06092ac6d2</td>
+      <td align="center">Fühlt sich rostig an</td>
     </tr>
     <tr>
-      <td>
-        <ul>
-          <li>item1</li>
-          <li>item2</li>
-        </ul>
-      </td>
-      <td align="center">See the list</td>
-      <td align="right">from the first column</td>
+      <td>7f06092ac6d0</td>
+      <td align="center">Dies ist eine Antwort</td>
     </tr>
   </tbody>
 </table>        
