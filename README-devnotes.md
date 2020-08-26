@@ -55,14 +55,18 @@ Translation utility traverses all structures created in deserialization step and
 
 Table (i.e. data column) is translated. Two approaches are used:
 <ul>
-  <li>Coffee</li>
   <li>Tea
     <ul>
       <li>Black tea</li>
       <li>Green tea</li>
     </ul>
   </li>
-  <li>Milk</li>
+  <li>Milk
+    <ul>
+      <li>Black tea</li>
+      <li>Green tea</li>
+    </ul>
+  </li>
 </ul>
  
 
