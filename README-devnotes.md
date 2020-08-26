@@ -41,7 +41,7 @@ First Google Dialogflow agent is exported into ZIP file and this file is provide
 <img width="600" height="200" src="./examples/docs/img/zip-to-struct.png" /></br>
 
 In fact structures themselves are stored on stack whereas its content is stored on heap. Each entry on heap has its address (referred from stack) and data/content (e.g. string that needs to be translated!)</br>
-<img src="./examples/docs/img/stack-and-heap.png" /></br>
+<img width="200" height="600" src="./examples/docs/img/stack-and-heap.png" /></br>
 
 Translation utility traverses all structures created in deserialization step and creates table to be translated. This table (hashmap) has original heap address as a key and data/content as a value.</br>
 
