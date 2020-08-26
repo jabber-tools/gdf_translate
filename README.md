@@ -22,7 +22,7 @@ Command line tool for automated translation of Google DialogFlow agents
       Developer guide
     </a>
     <span> | </span>
-    <a target="_blank" href="https://github.com/jabber-tools/gdf_translate/releases">
+    <a target="_blank" href="https://github.com/jabber-tools/gdf_translate/blob/readme/examples/docs/gdf_translate/index.html">
       API Docs
     </a>
     <span> | </span>
