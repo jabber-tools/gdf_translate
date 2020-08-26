@@ -35,7 +35,7 @@ Command line tool for automated translation of Google DialogFlow agents
 <br/>
 
 
-How does it work?
+## How does it work?
 
 First Google Dialogflow agent is exported into ZIP file and this file is provided to translation utility.</br>
 Translation utility parses the file and deserialises its content into internal structures stored in memory.</br>
