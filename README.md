@@ -7,6 +7,7 @@
 Command line tool for automated translation of Google DialogFlow agents
 
 ---
+[![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg)](https://www.rust-lang.org/)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)
 
 <div align="center">
