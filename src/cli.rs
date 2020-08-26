@@ -1,3 +1,4 @@
+//! # Implementation of command line interface utilizing Rust clap library
 use crate::google::gcloud::translate::TranslationProviders;
 use clap::{App, Arg, ArgMatches};
 use std::path::Path;
