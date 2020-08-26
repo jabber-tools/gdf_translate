@@ -10,12 +10,16 @@ Command line tool for automated translation of Google DialogFlow agents
 
 <div align="center">
   <h3>
-    <a target="_blank" href="https://docs.rs/async-std">
-      API Docs
+    <a href="https://github.com/jabber-tools/gdf_translate/blob/readme/README.md">
+      User guide
     </a>
     <span> | </span>
-    <a href="https://book.async.rs">
-      Development notes
+    <a href="https://github.com/jabber-tools/gdf_translate/blob/readme/README-devnotes.md">
+      <i>Developer guide</i>
+    </a>
+    <span> | </span>
+    <a target="_blank" href="https://github.com/jabber-tools/gdf_translate/releases">
+      API Docs
     </a>
     <span> | </span>
     <a href="https://github.com/jabber-tools/gdf_translate/releases">
