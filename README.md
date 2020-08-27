@@ -38,6 +38,8 @@ Command line tool for automated translation of Google DialogFlow agents
 
 [Command Line Interface](#command-line-interface)
 
+[Issues](#issues)
+
 [Examples](#examples)
 
 
@@ -98,6 +100,9 @@ OPTIONS:
 C:\tmp>
 
 ```
+
+## Issues
+TBD
 
 ## Examples
 TBD
