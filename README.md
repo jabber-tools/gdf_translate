@@ -82,6 +82,9 @@ FLAGS:
                                primarily intented for debugging, no need to specify by ordinary users. For V2 API this
                                flag is ignored.
     -h, --help                 Prints help information
+    -e, --skip-entities        If present entities are not translated
+    -r, --skip-responses       If present responses are not translated
+    -u, --skip-utterances      If present utterances are not translated
     -V, --version              Prints version information
 
 OPTIONS:
