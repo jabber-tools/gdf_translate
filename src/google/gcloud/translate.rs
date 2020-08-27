@@ -277,16 +277,18 @@ impl GoogleTranslateV3 {
         skip_responses_translation: bool,
     ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
-        send_progress(
-            ProgressMessageType::TextMessage("parsing zip file".to_owned()),
-            &mpsc_sender,
-        );
+
+        let progress = |msg: &str| {
+            send_progress(
+                ProgressMessageType::TextMessage(msg.to_owned()),
+                &mpsc_sender,
+            );
+        };
+
+        progress("parsing zip file");
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
 
-        send_progress(
-            ProgressMessageType::TextMessage("preparing translation map".to_owned()),
-            &mpsc_sender,
-        );
+        progress("preparing translation map");
         let mut translation_map = agent.to_translation(
             source_lang,
             target_lang,
@@ -298,10 +300,7 @@ impl GoogleTranslateV3 {
 
         // partitioning translation map into subsets due to limitation / quotas of Google Translate V3 API
         let mut translation_maps: Vec<collections::HashMap<String, String>> = Vec::new();
-        send_progress(
-            ProgressMessageType::TextMessage("partitioning translation map".to_owned()),
-            &mpsc_sender,
-        );
+        progress("partitioning translation map");
 
         // FIRST APPORACH: divide translation map by fixed row count. simple but inefficient
         // large agent smight be devided into dozens of submaps with no reasons
@@ -338,25 +337,20 @@ impl GoogleTranslateV3 {
         } /* */
 
         debug!("partitioned translation maps {:#?}", translation_maps);
-        send_progress(
-            ProgressMessageType::TextMessage("starting translation".to_owned()),
-            &mpsc_sender,
-        );
+        progress("starting translation");
         send_progress(
             ProgressMessageType::CountSpecified(translation_maps.len() as u64),
             &mpsc_sender,
         );
+
         let mut iter_idx = 0;
         for map in translation_maps.iter() {
             iter_idx = iter_idx + 1;
-            send_progress(
-                ProgressMessageType::TextMessage(format!(
-                    "running translation sub-batch {}/{}",
-                    iter_idx,
-                    translation_maps.len()
-                )),
-                &mpsc_sender,
-            );
+            progress(&format!(
+                "running translation sub-batch {}/{}",
+                iter_idx,
+                translation_maps.len()
+            ));
             let mut translated_submap = GoogleTranslateV3::execute_translation_impl(
                 translated_gdf_agent_folder,
                 token,
@@ -377,12 +371,7 @@ impl GoogleTranslateV3 {
 
             send_progress(ProgressMessageType::ItemProcessed, &mpsc_sender);
         }
-        send_progress(
-            ProgressMessageType::TextMessage(
-                "translation finished, updating DialogFlow agent".to_owned(),
-            ),
-            &mpsc_sender,
-        );
+        progress("translation finished, updating DialogFlow agent");
 
         debug!("applying translated map to agent");
         agent.from_translation(
@@ -394,16 +383,10 @@ impl GoogleTranslateV3 {
         );
         agent.add_supported_language(target_lang);
         debug!("serializing agent");
-        send_progress(
-            ProgressMessageType::TextMessage("storing agent to file system".to_owned()),
-            &mpsc_sender,
-        );
+        progress("storing agent to file system");
         agent.serialize(translated_gdf_agent_folder)?;
         debug!("agent serialized!");
-        send_progress(
-            ProgressMessageType::TextMessage("all good! exiting.".to_owned()),
-            &mpsc_sender,
-        );
+        progress("all good! exiting.");
 
         send_progress(ProgressMessageType::Exit, &mpsc_sender);
 
@@ -421,6 +404,13 @@ impl GoogleTranslateV3 {
         mpsc_sender: &Sender<ProgressMessageType>,
         iter_idx: usize,
     ) -> Result<collections::HashMap<String, String>> {
+        let progress = |msg: &str| {
+            send_progress(
+                ProgressMessageType::TextMessage(msg.to_owned()),
+                &mpsc_sender,
+            );
+        };
+
         let ts_sec = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
@@ -429,10 +419,7 @@ impl GoogleTranslateV3 {
         let storage_bucket_name_in = format!("gdf_translate_input_{}", ts_sec.to_string());
         let storage_bucket_name_out = format!("gdf_translate_output_{}", ts_sec.to_string());
 
-        send_progress(
-            ProgressMessageType::TextMessage("creating input bucket".to_owned()),
-            &mpsc_sender,
-        );
+        progress("creating input bucket");
         let bucket_creation_result_in = storage_bucket_mgmt::create_bucket(
             token,
             project_id,
@@ -443,10 +430,7 @@ impl GoogleTranslateV3 {
         .await?;
         debug!("bucket_creation_result_in {:#?}", bucket_creation_result_in);
 
-        send_progress(
-            ProgressMessageType::TextMessage("creating output bucket".to_owned()),
-            &mpsc_sender,
-        );
+        progress("creating output bucket");
         let bucket_creation_result_out = storage_bucket_mgmt::create_bucket(
             token,
             project_id,
@@ -470,10 +454,7 @@ impl GoogleTranslateV3 {
         let map_str = v3::map_to_string(translation_map);
         debug!("v3::map_to_string:\n {}", map_str);
 
-        send_progress(
-            ProgressMessageType::TextMessage("uploading translation map".to_owned()),
-            &mpsc_sender,
-        );
+        progress("uploading translation map");
         let bucket_upload_result = storage_bucket_mgmt::upload_object(
             token,
             &storage_bucket_name_in,
@@ -490,10 +471,7 @@ impl GoogleTranslateV3 {
             )));
         }
 
-        send_progress(
-            ProgressMessageType::TextMessage("triggering batch translation request".to_owned()),
-            &mpsc_sender,
-        );
+        progress("triggering batch translation request");
         let translation_result = v3::batch_translate_text(
             token,
             project_id,
@@ -514,10 +492,7 @@ impl GoogleTranslateV3 {
         }
 
         loop {
-            send_progress(
-                ProgressMessageType::TextMessage("checking for translation result".to_owned()),
-                &mpsc_sender,
-            );
+            progress("checking for translation result");
             let translation_operation_result =
                 v3::batch_translate_text_check_status(token, &translation_result.body.name).await?;
 
@@ -536,10 +511,7 @@ impl GoogleTranslateV3 {
             if let Some(done) = translation_operation_result.body.done {
                 if done == true && translation_operation_result.body.metadata.state == "SUCCEEDED" {
                     debug!("batch translation completed!");
-                    send_progress(
-                        ProgressMessageType::TextMessage("batch translation completed!".to_owned()),
-                        &mpsc_sender,
-                    );
+                    progress("batch translation completed!");
                     break;
                 } else
                 /* FAILED*/
@@ -553,10 +525,7 @@ impl GoogleTranslateV3 {
                     }
                 }
             } else {
-                send_progress(
-                    ProgressMessageType::TextMessage("batch translation still running".to_owned()),
-                    &mpsc_sender,
-                );
+                progress("batch translation still running");
                 debug!("still running, checking the state again...")
             }
         }
@@ -569,10 +538,7 @@ impl GoogleTranslateV3 {
 
         debug!("translated_object_name {}", translated_object_name);
 
-        send_progress(
-            ProgressMessageType::TextMessage("downloading translation result".to_owned()),
-            &mpsc_sender,
-        );
+        progress("downloading translation result");
         let bucket_download_result = storage_bucket_mgmt::download_object(
             token,
             &storage_bucket_name_out,
@@ -604,10 +570,7 @@ impl GoogleTranslateV3 {
         // to leave some mess in google project and provide smooth experience for the end user
         let mut delete_object_result;
 
-        send_progress(
-            ProgressMessageType::TextMessage("deleting google cloud temporary buckets".to_owned()),
-            &mpsc_sender,
-        );
+        progress("deleting google cloud temporary buckets");
         debug!("deleting index.csv");
         delete_object_result =
             storage_bucket_mgmt::delete_object(token, &storage_bucket_name_out, "index.csv")
@@ -642,10 +605,7 @@ impl GoogleTranslateV3 {
             storage_bucket_mgmt::delete_bucket(token, &storage_bucket_name_out).await?;
         debug!("delete_bucket_result_out {:#?}", delete_bucket_result_out);
 
-        send_progress(
-            ProgressMessageType::TextMessage("returning translation map".to_owned()),
-            &mpsc_sender,
-        );
+        progress("returning translation map");
         debug!("translation finished. updated translation map");
         debug!("{:#?}", translated_map);
 
