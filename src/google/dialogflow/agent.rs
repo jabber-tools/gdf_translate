@@ -247,118 +247,128 @@ impl GoogleDialogflowAgent {
         &mut self,
         lang_from: &str,
         lang_to: &str,
+        skip_entities_translation: bool,
+        skip_utterances_translation: bool,
+        skip_responses_translation: bool,
     ) -> collections::HashMap<String, String> {
         let mut translations_map: collections::HashMap<String, String> =
             collections::HashMap::new();
 
-        // create new entity entry files and add their content to map to translate
-        let mut new_entity_entry_files = vec![];
-        for entity_entry_file in self.entity_entries.iter() {
-            let caps = RE_ENTITY_ENTRY_FILE
-                .captures(&entity_entry_file.file_name)
-                .unwrap();
+        if skip_entities_translation == false {
+            // create new entity entry files and add their content to map to translate
+            let mut new_entity_entry_files = vec![];
+            for entity_entry_file in self.entity_entries.iter() {
+                let caps = RE_ENTITY_ENTRY_FILE
+                    .captures(&entity_entry_file.file_name)
+                    .unwrap();
 
-            let entity_file_name = GoogleDialogflowAgent::entity_entry_file_name_to_entity_filename(
-                &entity_entry_file.file_name,
-            );
+                let entity_file_name =
+                    GoogleDialogflowAgent::entity_entry_file_name_to_entity_filename(
+                        &entity_entry_file.file_name,
+                    );
 
-            let entity_files: Vec<EntityFile> = self
-                .entities
-                .iter()
-                .filter(|entity| entity.file_name == entity_file_name)
-                .cloned()
-                .collect();
-            if entity_files[0].file_content.is_regexp == true {
-                // we are skipping regex entities
-                continue;
-            }
+                let entity_files: Vec<EntityFile> = self
+                    .entities
+                    .iter()
+                    .filter(|entity| entity.file_name == entity_file_name)
+                    .cloned()
+                    .collect();
+                if entity_files[0].file_content.is_regexp == true {
+                    // we are skipping regex entities
+                    continue;
+                }
 
-            if &caps[2] == lang_from {
-                new_entity_entry_files.push(entity_entry_file.to_new_language(lang_to));
-            }
-        }
-
-        for new_entity_entry_file in new_entity_entry_files.iter() {
-            for new_entity_entry in new_entity_entry_file.file_content.iter() {
-                if RE_COMPOSITE_ENTITY.is_match(&new_entity_entry.value) == false
-                    && RE_COMPOSITE_ENTITY_NO_ALIAS.is_match(&new_entity_entry.value) == false
-                /* skip composite entities*/
-                {
-                    translations_map.extend(new_entity_entry.to_translation());
+                if &caps[2] == lang_from {
+                    new_entity_entry_files.push(entity_entry_file.to_new_language(lang_to));
                 }
             }
-        }
 
-        self.entity_entries.extend(new_entity_entry_files);
-
-        // create new intent utterance files and add their content to map to translate
-        let mut new_utterance_files = vec![];
-        for utterance_file in self.utterances.iter() {
-            let caps = RE_INTENT_UTTERANCE_FILE
-                .captures(&utterance_file.file_name)
-                .unwrap();
-
-            if &caps[2] == lang_from {
-                new_utterance_files.push(utterance_file.to_new_language(lang_to));
-            }
-        }
-
-        for new_utterance_file in new_utterance_files.iter() {
-            for utterance in new_utterance_file.file_content.iter() {
-                for utterance_data in utterance.data.iter() {
-                    translations_map.extend(utterance_data.to_translation());
-                }
-            }
-        }
-
-        self.utterances.extend(new_utterance_files);
-
-        // first find intents that should not be translated
-        let mut intents_not_to_translate = vec![];
-        'intent_loop: for intent_file in self.intents.iter() {
-            let intent = &intent_file.file_content;
-            for intent_response in intent.responses.iter() {
-                for intent_response_message in intent_response.messages.iter() {
-                    if intent_response_message.get_message_lang() == lang_to {
-                        // if intent has already messages in target language just skip it
-                        // DialogFlow will translate some intent sby default when new lang is added
-                        // e.g. Default Welcome Intent, Fallback
-                        intents_not_to_translate.push(intent.name.to_string());
-                        continue 'intent_loop;
+            for new_entity_entry_file in new_entity_entry_files.iter() {
+                for new_entity_entry in new_entity_entry_file.file_content.iter() {
+                    if RE_COMPOSITE_ENTITY.is_match(&new_entity_entry.value) == false
+                        && RE_COMPOSITE_ENTITY_NO_ALIAS.is_match(&new_entity_entry.value) == false
+                    /* skip composite entities*/
+                    {
+                        translations_map.extend(new_entity_entry.to_translation());
                     }
                 }
             }
+
+            self.entity_entries.extend(new_entity_entry_files);
         }
 
-        // now iterate intent file again this time already skipping the intents
-        // which are already translated...
-        for intent_file in self.intents.iter_mut() {
-            let intent = &mut intent_file.file_content;
-            if intents_not_to_translate.contains(&intent.name) {
-                continue;
+        if skip_utterances_translation == false {
+            // create new intent utterance files and add their content to map to translate
+            let mut new_utterance_files = vec![];
+            for utterance_file in self.utterances.iter() {
+                let caps = RE_INTENT_UTTERANCE_FILE
+                    .captures(&utterance_file.file_name)
+                    .unwrap();
+
+                if &caps[2] == lang_from {
+                    new_utterance_files.push(utterance_file.to_new_language(lang_to));
+                }
             }
 
-            //... for those taht still needs to be translated iterate all responses in source language
-            // clone them (while changing the target language) + add the references' addresses into translation map
-            for intent_response in intent.responses.iter_mut() {
-                let mut new_messages = vec![];
-                for intent_response_message in intent_response.messages.iter() {
-                    if intent_response_message.get_message_lang() == lang_from {
-                        let new_message = intent_response_message.new_message(lang_to);
-                        if let Some(message) = new_message {
-                            new_messages.push(message);
+            for new_utterance_file in new_utterance_files.iter() {
+                for utterance in new_utterance_file.file_content.iter() {
+                    for utterance_data in utterance.data.iter() {
+                        translations_map.extend(utterance_data.to_translation());
+                    }
+                }
+            }
+
+            self.utterances.extend(new_utterance_files);
+        }
+
+        if skip_responses_translation == false {
+            // first find intents that should not be translated
+            let mut intents_not_to_translate = vec![];
+            'intent_loop: for intent_file in self.intents.iter() {
+                let intent = &intent_file.file_content;
+                for intent_response in intent.responses.iter() {
+                    for intent_response_message in intent_response.messages.iter() {
+                        if intent_response_message.get_message_lang() == lang_to {
+                            // if intent has already messages in target language just skip it
+                            // DialogFlow will translate some intent sby default when new lang is added
+                            // e.g. Default Welcome Intent, Fallback
+                            intents_not_to_translate.push(intent.name.to_string());
+                            continue 'intent_loop;
                         }
                     }
                 }
-                intent_response.messages.extend(new_messages);
             }
-        }
 
-        for intent_file in self.intents.iter() {
-            for intent_response in intent_file.file_content.responses.iter() {
-                for message in intent_response.messages.iter() {
-                    if message.get_message_lang() == lang_to {
-                        translations_map.extend(message.to_translation());
+            // now iterate intent file again this time already skipping the intents
+            // which are already translated...
+            for intent_file in self.intents.iter_mut() {
+                let intent = &mut intent_file.file_content;
+                if intents_not_to_translate.contains(&intent.name) {
+                    continue;
+                }
+
+                //... for those that still needs to be translated iterate all responses in source language
+                // clone them (while changing the target language) + add the references' addresses into translation map
+                for intent_response in intent.responses.iter_mut() {
+                    let mut new_messages = vec![];
+                    for intent_response_message in intent_response.messages.iter() {
+                        if intent_response_message.get_message_lang() == lang_from {
+                            let new_message = intent_response_message.new_message(lang_to);
+                            if let Some(message) = new_message {
+                                new_messages.push(message);
+                            }
+                        }
+                    }
+                    intent_response.messages.extend(new_messages);
+                }
+            }
+
+            for intent_file in self.intents.iter() {
+                for intent_response in intent_file.file_content.responses.iter() {
+                    for message in intent_response.messages.iter() {
+                        if message.get_message_lang() == lang_to {
+                            translations_map.extend(message.to_translation());
+                        }
                     }
                 }
             }
@@ -371,26 +381,35 @@ impl GoogleDialogflowAgent {
         &mut self,
         translations_map: &collections::HashMap<String, String>,
         lang_to: &str,
+        skip_entities_translation: bool,
+        skip_utterances_translation: bool,
+        skip_responses_translation: bool,
     ) {
-        for entity_entry_file in self.entity_entries.iter_mut() {
-            for entity_entry in entity_entry_file.file_content.iter_mut() {
-                entity_entry.from_translation(translations_map);
-            }
-        }
-
-        for utterances_file in self.utterances.iter_mut() {
-            for utterance_file in utterances_file.file_content.iter_mut() {
-                for utterance_data in utterance_file.data.iter_mut() {
-                    utterance_data.from_translation(translations_map);
+        if skip_entities_translation == false {
+            for entity_entry_file in self.entity_entries.iter_mut() {
+                for entity_entry in entity_entry_file.file_content.iter_mut() {
+                    entity_entry.from_translation(translations_map);
                 }
             }
         }
 
-        for intent_file in self.intents.iter_mut() {
-            for intent_response in intent_file.file_content.responses.iter_mut() {
-                for message in intent_response.messages.iter_mut() {
-                    if message.get_message_lang() == lang_to {
-                        message.from_translation(translations_map);
+        if skip_utterances_translation == false {
+            for utterances_file in self.utterances.iter_mut() {
+                for utterance_file in utterances_file.file_content.iter_mut() {
+                    for utterance_data in utterance_file.data.iter_mut() {
+                        utterance_data.from_translation(translations_map);
+                    }
+                }
+            }
+        }
+
+        if skip_responses_translation == false {
+            for intent_file in self.intents.iter_mut() {
+                for intent_response in intent_file.file_content.responses.iter_mut() {
+                    for message in intent_response.messages.iter_mut() {
+                        if message.get_message_lang() == lang_to {
+                            message.from_translation(translations_map);
+                        }
                     }
                 }
             }
@@ -1392,7 +1411,7 @@ mod tests {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         println!("{:#?}", agent);
-        let map = agent.to_translation("en", "de");
+        let map = agent.to_translation("en", "de", false, false, false);
         println!("{:#?}", map);
         Ok(())
     }
@@ -1404,12 +1423,12 @@ mod tests {
         let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, "FAQ.zip");
         let mut agent = parse_gdf_agent_zip(&path)?;
         println!("agent before{:#?}", agent);
-        let mut translation_map = agent.to_translation("en", "de");
+        let mut translation_map = agent.to_translation("en", "de", false, false, false);
         println!("translation_map before{:#?}", translation_map);
         dummy_translate(&mut translation_map);
         println!("translation_map after{:#?}", translation_map);
 
-        agent.from_translation(&translation_map, "de");
+        agent.from_translation(&translation_map, "de", false, false, false);
         println!("agent after{:#?}", agent);
         Ok(())
     }
@@ -1498,11 +1517,11 @@ mod tests {
             let path = format!("{}{}", SAMPLE_AGENTS_FOLDER, agent_zip);
             debug!("processing agent {}", agent_zip);
             let mut agent = parse_gdf_agent_zip(&path)?;
-            let mut translation_map = agent.to_translation("en", "de");
+            let mut translation_map = agent.to_translation("en", "de", false, false, false);
             // println!("translation_map before{:#?}", translation_map);
             dummy_translate(&mut translation_map);
             // println!("translation_map after{:#?}", translation_map);
-            agent.from_translation(&translation_map, "de");
+            agent.from_translation(&translation_map, "de", false, false, false);
             // println!("agent after{:#?}", agent);
             agent.serialize(agent_output)?;
         }
@@ -1532,11 +1551,11 @@ mod tests {
             let path = format!("{}{}", SAMPLE_SENSITIVE_AGENTS_FOLDER, agent_zip);
             debug!("processing agent {}", agent_zip);
             let mut agent = parse_gdf_agent_zip(&path)?;
-            let mut translation_map = agent.to_translation("en", "de");
+            let mut translation_map = agent.to_translation("en", "de", false, false, false);
             // println!("translation_map before{:#?}", translation_map);
             dummy_translate(&mut translation_map);
             // println!("translation_map after{:#?}", translation_map);
-            agent.from_translation(&translation_map, "de");
+            agent.from_translation(&translation_map, "de", false, false, false);
             // println!("agent after{:#?}", agent);
             agent.serialize(agent_output)?;
         }

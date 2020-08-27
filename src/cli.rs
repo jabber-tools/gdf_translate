@@ -13,6 +13,9 @@ pub struct CommandLine<'a> {
     pub translation_mode: TranslationProviders,
     pub create_output_tsv: bool,
     pub v2_task_count: usize,
+    pub skip_entities_translation: bool,
+    pub skip_utterances_translation: bool,
+    pub skip_responses_translation: bool,
 }
 
 impl<'a> CommandLine<'a> {
@@ -25,6 +28,9 @@ impl<'a> CommandLine<'a> {
         translation_mode: TranslationProviders,
         create_output_tsv: bool,
         v2_task_count: usize,
+        skip_entities_translation: bool,
+        skip_utterances_translation: bool,
+        skip_responses_translation: bool,
     ) -> Self {
         CommandLine {
             gdf_agent_zip_path,
@@ -35,6 +41,9 @@ impl<'a> CommandLine<'a> {
             translation_mode,
             create_output_tsv,
             v2_task_count,
+            skip_entities_translation,
+            skip_utterances_translation,
+            skip_responses_translation,
         }
     }
 }
@@ -115,6 +124,27 @@ pub fn get_cmd_line_parser<'a, 'b>() -> App<'a, 'b> {
                 .help("If this flag is specified it will preserve for V3 API downloaded output buckets. This is primarily intented for debugging, no need to specify by ordinary users. For V2 API this flag is ignored.")
                 .takes_value(false)
         )
+        .arg(
+            Arg::with_name("skip_entities_translation")
+                .short("e")
+                .long("skip-entities")
+                .help("If present entities are not translated")
+                .takes_value(false)
+        )
+        .arg(
+            Arg::with_name("skip_utterances_translation")
+                .short("u")
+                .long("skip-utterances")
+                .help("If present utterances are not translated")
+                .takes_value(false)
+        )
+        .arg(
+            Arg::with_name("skip_responses_translation")
+                .short("r")
+                .long("skip-responses")
+                .help("If present responses are not translated")
+                .takes_value(false)
+        )
 }
 
 pub fn get_cmdl_options<'a>(matches: &'a ArgMatches) -> CommandLine<'a> {
@@ -127,6 +157,9 @@ pub fn get_cmdl_options<'a>(matches: &'a ArgMatches) -> CommandLine<'a> {
     let to_lang = matches.value_of("to_lang").unwrap();
     let gcloud_svc_acc_cred = Path::new(matches.value_of("gcloud_svc_acc_cred").unwrap());
     let create_output_tsv = matches.is_present("create_output_tsv");
+    let skip_entities_translation = matches.is_present("skip_entities_translation");
+    let skip_utterances_translation = matches.is_present("skip_utterances_translation");
+    let skip_responses_translation = matches.is_present("skip_responses_translation");
 
     let v2_task_count = matches
         .value_of("v2_task_count")
@@ -154,5 +187,8 @@ pub fn get_cmdl_options<'a>(matches: &'a ArgMatches) -> CommandLine<'a> {
         translation_mode,
         create_output_tsv,
         v2_task_count,
+        skip_entities_translation,
+        skip_utterances_translation,
+        skip_responses_translation,
     )
 }

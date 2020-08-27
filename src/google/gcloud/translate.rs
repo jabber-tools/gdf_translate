@@ -59,10 +59,19 @@ impl GoogleTranslateV2 {
         target_lang: &str,
         mpsc_sender: Sender<ProgressMessageType>,
         task_count: usize,
+        skip_entities_translation: bool,
+        skip_utterances_translation: bool,
+        skip_responses_translation: bool,
     ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
-        let mut translation_map = agent.to_translation(source_lang, target_lang);
+        let mut translation_map = agent.to_translation(
+            source_lang,
+            target_lang,
+            skip_entities_translation,
+            skip_utterances_translation,
+            skip_responses_translation,
+        );
 
         let translation_count = translation_map.len();
         send_progress(
@@ -125,7 +134,13 @@ impl GoogleTranslateV2 {
         debug!("{:#?}", translation_map);
 
         debug!("applying translated map to agent");
-        agent.from_translation(&translation_map, target_lang);
+        agent.from_translation(
+            &translation_map,
+            target_lang,
+            skip_entities_translation,
+            skip_utterances_translation,
+            skip_responses_translation,
+        );
         agent.add_supported_language(target_lang);
         debug!("serializing agent");
         agent.serialize(translated_gdf_agent_folder)?;
@@ -257,6 +272,9 @@ impl GoogleTranslateV3 {
         project_id: &str,
         mpsc_sender: Sender<ProgressMessageType>,
         create_output_tsv: bool,
+        skip_entities_translation: bool,
+        skip_utterances_translation: bool,
+        skip_responses_translation: bool,
     ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
         send_progress(
@@ -269,7 +287,13 @@ impl GoogleTranslateV3 {
             ProgressMessageType::TextMessage("preparing translation map".to_owned()),
             &mpsc_sender,
         );
-        let mut translation_map = agent.to_translation(source_lang, target_lang);
+        let mut translation_map = agent.to_translation(
+            source_lang,
+            target_lang,
+            skip_entities_translation,
+            skip_utterances_translation,
+            skip_responses_translation,
+        );
         debug!("translation_map {:#?}", translation_map);
 
         // partitioning translation map into subsets due to limitation / quotas of Google Translate V3 API
@@ -361,7 +385,13 @@ impl GoogleTranslateV3 {
         );
 
         debug!("applying translated map to agent");
-        agent.from_translation(&translation_map, target_lang);
+        agent.from_translation(
+            &translation_map,
+            target_lang,
+            skip_entities_translation,
+            skip_utterances_translation,
+            skip_responses_translation,
+        );
         agent.add_supported_language(target_lang);
         debug!("serializing agent");
         send_progress(
@@ -633,9 +663,10 @@ impl DummyTranslate {
     ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
-        let mut translation_map = agent.to_translation(source_lang, target_lang);
+        let mut translation_map =
+            agent.to_translation(source_lang, target_lang, false, false, false);
         dummy_translate(&mut translation_map);
-        agent.from_translation(&translation_map, target_lang);
+        agent.from_translation(&translation_map, target_lang, false, false, false);
         agent.add_supported_language(target_lang);
         agent.serialize(translated_gdf_agent_folder)?;
         Ok(())
@@ -689,6 +720,9 @@ mod tests {
             "de",
             tx,
             1,
+            false,
+            false,
+            false,
         );
 
         Ok(())
@@ -717,6 +751,9 @@ mod tests {
             "de",
             "express-tracking",
             tx,
+            false,
+            false,
+            false,
             false,
         ));
 

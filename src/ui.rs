@@ -1,5 +1,5 @@
 //! # User interface related logic like progress bar styling updating progress bar status etc.
-//! 
+//!
 use crate::google::gcloud::translate::TranslationProviders;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::sync::mpsc;

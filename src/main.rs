@@ -69,6 +69,9 @@ fn main() {
                 &cmd_line_opts.to_lang,
                 tx,
                 cmd_line_opts.v2_task_count,
+                cmd_line_opts.skip_entities_translation,
+                cmd_line_opts.skip_utterances_translation,
+                cmd_line_opts.skip_responses_translation,
             );
             let duration = start.elapsed();
             match result {
@@ -88,6 +91,9 @@ fn main() {
                 &gdf_credentials.project_id,
                 tx,
                 cmd_line_opts.create_output_tsv,
+                cmd_line_opts.skip_entities_translation,
+                cmd_line_opts.skip_utterances_translation,
+                cmd_line_opts.skip_responses_translation,
             ));
             let duration = start.elapsed();
             match result {
