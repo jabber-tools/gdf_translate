@@ -11,6 +11,7 @@ Command line tool for automated translation of Google DialogFlow agents
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/jabber-tools/gdf_translate/graphs/commit-activity)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/jabber-tools/gdf_translate/blob/master/LICENSE-APACHE)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/jabber-tools/gdf_translate/blob/master/LICENSE-MIT)
+[![Build Status](https://travis-ci.org/jabber-tools/gdf_translate.svg?branch=master)](https://travis-ci.org/jabber-tools/gdf_translate)
 
 <div align="center">
   <h3>
