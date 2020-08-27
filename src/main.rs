@@ -82,7 +82,7 @@ fn main() {
         TranslationProviders::GoogleTranslateV3 => {
             println!("Starting V3 translation...");
             let start = Instant::now();
-            let result = task::block_on(GoogleTranslateV3::execute_translation(
+            let result = GoogleTranslateV3::execute_translation(
                 cmd_line_opts.gdf_agent_zip_path.to_str().unwrap(),
                 cmd_line_opts.output_folder.to_str().unwrap(),
                 &token,
@@ -94,7 +94,7 @@ fn main() {
                 cmd_line_opts.skip_entities_translation,
                 cmd_line_opts.skip_utterances_translation,
                 cmd_line_opts.skip_responses_translation,
-            ));
+            );
             let duration = start.elapsed();
             match result {
                 Err(err) => println!("Translation ended with following error: {:#?}", err),

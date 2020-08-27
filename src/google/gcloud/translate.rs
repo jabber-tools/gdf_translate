@@ -5,6 +5,7 @@ use crate::ui::ProgressMessageType;
 use async_std::task;
 // while StreamExt is not used directly without it this line will not compile:
 // while let Some(future_value) = futures.next().await
+use crate::google::gcloud::ApiResponse;
 use futures::stream::{FuturesUnordered, StreamExt};
 use log::debug;
 use std::collections;
@@ -13,6 +14,7 @@ use std::io::prelude::*;
 use std::sync::mpsc::Sender;
 use std::time::Duration;
 use std::time::SystemTime;
+use std::{thread, time};
 
 pub mod v2;
 pub mod v3;
@@ -263,7 +265,7 @@ impl GoogleTranslateV2 {
 }
 
 impl GoogleTranslateV3 {
-    pub async fn execute_translation(
+    pub fn execute_translation(
         gdf_agent_path: &str,
         translated_gdf_agent_folder: &str,
         token: &str,
@@ -343,34 +345,89 @@ impl GoogleTranslateV3 {
             &mpsc_sender,
         );
 
+        let mut futures = FuturesUnordered::new();
+
         let mut iter_idx = 0;
-        for map in translation_maps.iter() {
+        while let Some(map) = translation_maps.pop() {
             iter_idx = iter_idx + 1;
-            progress(&format!(
-                "running translation sub-batch {}/{}",
-                iter_idx,
-                translation_maps.len()
+
+            let ts_millis = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_millis();
+
+            // wait 2s to ensure:
+            // - next iteration will get uniqueue bucket names!
+            // - buckets will be created OK. It seems Google Cloud API is very sensitive when creating buckets rapidly in sequence
+            thread::sleep(time::Duration::from_millis(20_000));
+
+            let storage_bucket_name_in = format!("gdf_translate_input_{}", ts_millis.to_string());
+            let storage_bucket_name_out = format!("gdf_translate_output_{}", ts_millis.to_string());
+
+            progress(&format!("creating bucket {}", storage_bucket_name_in));
+            progress(&format!("creating bucket {}", storage_bucket_name_out));
+            let (bucket_creation_result_in, bucket_creation_result_out) =
+                task::block_on(GoogleTranslateV3::create_translation_buckets(
+                    &storage_bucket_name_in,
+                    &storage_bucket_name_out,
+                    token,
+                    project_id,
+                ))?;
+            debug!(
+                "bucket {} result {:?}",
+                storage_bucket_name_in, bucket_creation_result_in
+            );
+            debug!(
+                "bucket {} result {:?}",
+                storage_bucket_name_out, bucket_creation_result_out
+            );
+            progress(&format!("bucket {} created", storage_bucket_name_in));
+            progress(&format!("bucket {} created", storage_bucket_name_out));
+
+            // keeping here if needed for debugging
+            /* progress(&format!(
+                "bucket {} result {:?}",
+                storage_bucket_name_in, bucket_creation_result_in
             ));
-            let mut translated_submap = GoogleTranslateV3::execute_translation_impl(
+            progress(&format!(
+                "bucket {} result {:?}",
+                storage_bucket_name_out, bucket_creation_result_out
+            )); */
+
+            let future = GoogleTranslateV3::execute_translation_impl(
                 translated_gdf_agent_folder,
                 token,
                 source_lang,
                 target_lang,
                 project_id,
-                &map,
+                map,
                 create_output_tsv,
                 &mpsc_sender,
                 iter_idx,
-            )
-            .await?;
-
-            // merge translated submap into original map
-            for (k, v) in translated_submap.drain() {
-                translation_map.insert(k, v);
-            }
-
-            send_progress(ProgressMessageType::ItemProcessed, &mpsc_sender);
+                storage_bucket_name_in.to_owned(),
+                storage_bucket_name_out.to_owned(),
+            );
+            futures.push(future);
         }
+
+        // inspired by https://www.philipdaniels.com/blog/2019/async-std-demo1/
+        // https://users.rust-lang.org/t/futuresunordered/39461/4
+        // uses asynchronous streams (see next() method), unfortunatelly this is still not described in async-std documentation (see https://book.async.rs/concepts/streams.html)
+        // so it required little bit of investigation, not sure whether this is optimal way, probably tokio has better (and better documented) capabilities when it comes to joining the futures
+        task::block_on(async {
+            while let Some(future_value) = futures.next().await {
+                // for this to compile StreamExt must be used, see use futures::stream::{FuturesUnordered, StreamExt}; !
+                match future_value {
+                    Ok(translated_submap) => translation_map.extend(translated_submap),
+                    Err(e) => debug!(" Error when resolving future returned by GoogleTranslateV3::execute_translation_impl : {:#?}", e),
+                    // TBD: emit some text to CLI, maybe terminate the processing?
+                }
+            }
+        });
+
+        debug!("translation finished. updated translation map");
+        debug!("{:#?}", translation_map);
+
         progress("translation finished, updating DialogFlow agent");
 
         debug!("applying translated map to agent");
@@ -393,33 +450,12 @@ impl GoogleTranslateV3 {
         Ok(())
     }
 
-    async fn execute_translation_impl(
-        translated_gdf_agent_folder: &str,
+    async fn create_translation_buckets(
+        storage_bucket_name_in: &str,
+        storage_bucket_name_out: &str,
         token: &str,
-        source_lang: &str,
-        target_lang: &str,
         project_id: &str,
-        translation_map: &collections::HashMap<String, String>,
-        create_output_tsv: bool,
-        mpsc_sender: &Sender<ProgressMessageType>,
-        iter_idx: usize,
-    ) -> Result<collections::HashMap<String, String>> {
-        let progress = |msg: &str| {
-            send_progress(
-                ProgressMessageType::TextMessage(msg.to_owned()),
-                &mpsc_sender,
-            );
-        };
-
-        let ts_sec = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        let storage_bucket_name_in = format!("gdf_translate_input_{}", ts_sec.to_string());
-        let storage_bucket_name_out = format!("gdf_translate_output_{}", ts_sec.to_string());
-
-        progress("creating input bucket");
+    ) -> Result<(ApiResponse, ApiResponse)> {
         let bucket_creation_result_in = storage_bucket_mgmt::create_bucket(
             token,
             project_id,
@@ -430,7 +466,13 @@ impl GoogleTranslateV3 {
         .await?;
         debug!("bucket_creation_result_in {:#?}", bucket_creation_result_in);
 
-        progress("creating output bucket");
+        if bucket_creation_result_in.status_code != "200" {
+            return Err(Error::new(format!(
+                "GoogleTranslateV3.execute_translation error when creating bucket {:#?}",
+                bucket_creation_result_in
+            )));
+        }
+
         let bucket_creation_result_out = storage_bucket_mgmt::create_bucket(
             token,
             project_id,
@@ -451,10 +493,30 @@ impl GoogleTranslateV3 {
             )));
         }
 
-        let map_str = v3::map_to_string(translation_map);
+        Ok((bucket_creation_result_in, bucket_creation_result_out))
+    }
+
+    async fn execute_translation_impl(
+        translated_gdf_agent_folder: &str,
+        token: &str,
+        source_lang: &str,
+        target_lang: &str,
+        project_id: &str,
+        translation_map: collections::HashMap<String, String>,
+        create_output_tsv: bool,
+        mpsc_sender: &Sender<ProgressMessageType>,
+        iter_idx: usize,
+        storage_bucket_name_in: String,
+        storage_bucket_name_out: String,
+    ) -> Result<collections::HashMap<String, String>> {
+        let progress = |msg: String| {
+            send_progress(ProgressMessageType::TextMessage(msg), &mpsc_sender);
+        };
+
+        let map_str = v3::map_to_string(&translation_map);
         debug!("v3::map_to_string:\n {}", map_str);
 
-        progress("uploading translation map");
+        progress(format!("uploading translation map {}", iter_idx));
         let bucket_upload_result = storage_bucket_mgmt::upload_object(
             token,
             &storage_bucket_name_in,
@@ -471,7 +533,7 @@ impl GoogleTranslateV3 {
             )));
         }
 
-        progress("triggering batch translation request");
+        progress(format!("triggering batch translation request {}", iter_idx));
         let translation_result = v3::batch_translate_text(
             token,
             project_id,
@@ -492,7 +554,7 @@ impl GoogleTranslateV3 {
         }
 
         loop {
-            progress("checking for translation result");
+            // progress("checking for translation result");
             let translation_operation_result =
                 v3::batch_translate_text_check_status(token, &translation_result.body.name).await?;
 
@@ -511,7 +573,7 @@ impl GoogleTranslateV3 {
             if let Some(done) = translation_operation_result.body.done {
                 if done == true && translation_operation_result.body.metadata.state == "SUCCEEDED" {
                     debug!("batch translation completed!");
-                    progress("batch translation completed!");
+                    progress(format!("batch translation completed {}", iter_idx));
                     break;
                 } else
                 /* FAILED*/
@@ -525,7 +587,7 @@ impl GoogleTranslateV3 {
                     }
                 }
             } else {
-                progress("batch translation still running");
+                progress(format!("batch translation still running {}", iter_idx));
                 debug!("still running, checking the state again...")
             }
         }
@@ -538,7 +600,7 @@ impl GoogleTranslateV3 {
 
         debug!("translated_object_name {}", translated_object_name);
 
-        progress("downloading translation result");
+        progress(format!("downloading translation result {}", iter_idx));
         let bucket_download_result = storage_bucket_mgmt::download_object(
             token,
             &storage_bucket_name_out,
@@ -564,13 +626,20 @@ impl GoogleTranslateV3 {
 
         let translated_map = v3::string_to_map(bucket_download_result.body)?;
 
+        // keep user updated asap, deletion is not that important.
+        // if api returns non-200 sattus code we are ignoring it anyway
+        send_progress(ProgressMessageType::ItemProcessed, &mpsc_sender);
+
         // for deletions we are not checking API call status code
         // at this moment we have translation and do not want to interupt
         // in case we are unable to delete temporary buckets etc. we prefer
         // to leave some mess in google project and provide smooth experience for the end user
         let mut delete_object_result;
 
-        progress("deleting google cloud temporary buckets");
+        progress(format!(
+            "deleting google cloud temporary buckets {}",
+            iter_idx
+        ));
         debug!("deleting index.csv");
         delete_object_result =
             storage_bucket_mgmt::delete_object(token, &storage_bucket_name_out, "index.csv")
@@ -605,7 +674,7 @@ impl GoogleTranslateV3 {
             storage_bucket_mgmt::delete_bucket(token, &storage_bucket_name_out).await?;
         debug!("delete_bucket_result_out {:#?}", delete_bucket_result_out);
 
-        progress("returning translation map");
+        // progress(format!("returning translation map {}", iter_idx));
         debug!("translation finished. updated translation map");
         debug!("{:#?}", translated_map);
 
@@ -703,7 +772,7 @@ mod tests {
         let token = format!("Bearer {}", token.unwrap().access_token);
         debug!("bearer token retrieved {}", token);
         let (tx, _) = channel::<ProgressMessageType>();
-        let translation_result = task::block_on(GoogleTranslateV3::execute_translation(
+        let translation_result = GoogleTranslateV3::execute_translation(
             &agent_path,
             "c:/tmp/out_translated",
             &token,
@@ -715,7 +784,7 @@ mod tests {
             false,
             false,
             false,
-        ));
+        );
 
         debug!("translation_result: {:#?}", translation_result);
 
