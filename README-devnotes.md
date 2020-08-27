@@ -117,4 +117,17 @@ In case of troubleshooting it might be handy to enable debug log messages. This 
 
 Also it might be handy to enable stacktrace printing via followin environment variable: <i>set RUST_BACKTRACE = 1</i>
 
+## How to build?
+
+Development (optimized for compile time) build:
+```
+cargo build
+```
+
+Production (optimized for execution speed) build:
+```
+cargo build --release
+```
+
+
 
