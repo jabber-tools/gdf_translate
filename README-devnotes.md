@@ -59,9 +59,9 @@ Table (i.e. data column) is translated. Two approaches are used:
   <li>Google V3 translation API
     <ul>
       <li>Hashmap is converted to CSV file</li>
-      <li>CSV file is uploaded into Google Cloud Storage Bucket</li>
+      <li>CSV file is uploaded into Google Cloud Storage Bucket (input bucket)</li>
       <li>Batch translation is started</li>
-      <li>Batch translation status is checked regularly up to the point where result is produced again as CSV file in Google Cloud Storage Bucket</li>
+      <li>Batch translation status is checked regularly up to the point where result is produced and stored as a CSV file in in Google Cloud Storage Bucket (output bucket)</li>
       <li>Output Google Cloud Storage Bucket content is downloaded and transformed from CVS file into hashmap again. Something like:</br>
                 <table>
                   <tbody>
