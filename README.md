@@ -9,16 +9,16 @@ Command line tool for automated translation of Google DialogFlow agents
 ---
 [![made-with-Rust](https://img.shields.io/badge/Made%20with-Rust-1f425f.svg)](https://www.rust-lang.org/)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/jabber-tools/gdf_translate/graphs/commit-activity)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/jabber-tools/gdf_translate/blob/readme/LICENSE-APACHE)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/jabber-tools/gdf_translate/blob/readme/LICENSE-MIT)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/jabber-tools/gdf_translate/blob/master/LICENSE-APACHE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/jabber-tools/gdf_translate/blob/master/LICENSE-MIT)
 
 <div align="center">
   <h3>
-    <a href="https://github.com/jabber-tools/gdf_translate/blob/readme/README.md">
+    <a href="https://github.com/jabber-tools/gdf_translate/blob/master/README.md">
       <i>User guide</i>
     </a>
     <span> | </span>
-    <a href="https://github.com/jabber-tools/gdf_translate/blob/readme/README-devnotes.md">
+    <a href="https://github.com/jabber-tools/gdf_translate/blob/master/README-devnotes.md">
       Developer guide
     </a>
     <span> | </span>
@@ -51,7 +51,7 @@ Google Translate is command line utility used for translation of Google DialogFl
 *	Translation of intent training phrases is done piece by piece and it does not require manual annotation of entities once translated. This greatly simplifies overall translation process. If original way of translating training phrases will be needed it can be implanted as well with possibility to specify which one to use during translation.
 * Original Agent Toolkit does support only following Google DialogFlow message types: <i>0, 1, 2, 3, 4</i>. We do support much more currently: <i>0, 4, 2, 1, 3, table_card, custom_payload, basic_card, suggestion_chips, list_card, link_out_chip, carousel_card, browse_carousel_card, media_content, simple_response</i>. Additional message types can be implemented on demand.
 
-*	<b>Most important</b>: apart from Google Translate API V2 (basic) we support V3 API (advanced) as well! For details have a look at [Google Cloud Translation Documentation](https://cloud.google.com/translate/docs/editions). This is a real game changer since it enables <b>batch translations</b>. Basically instead of translating text (be it utterance, entity or response) one by one, i.e. by invoking thousands of separate HTTP transactions, we can create CVS export and upload it to Google Servers which take care of the translation. Translated CVS file is then downloaded and applied to agent. The benefit is clear: this approach is much less error prone and <b>blazingly fast</b> in comparison with V2 translation. No more 30 minutes spent by looking at translation progressing and then crashing due to network issue or Google quota being hit! More technical explanation can be found in [Developer guide](https://github.com/jabber-tools/gdf_translate/blob/readme/README-devnotes.md).
+*	<b>Most important</b>: apart from Google Translate API V2 (basic) we support V3 API (advanced) as well! For details have a look at [Google Cloud Translation Documentation](https://cloud.google.com/translate/docs/editions). This is a real game changer since it enables <b>batch translations</b>. Basically instead of translating text (be it utterance, entity or response) one by one, i.e. by invoking thousands of separate HTTP transactions, we can create CVS export and upload it to Google Servers which take care of the translation. Translated CVS file is then downloaded and applied to agent. The benefit is clear: this approach is much less error prone and <b>blazingly fast</b> in comparison with V2 translation. No more 30 minutes spent by looking at translation progressing and then crashing due to network issue or Google quota being hit! More technical explanation can be found in [Developer guide](https://github.com/jabber-tools/gdf_translate/blob/master/README-devnotes.md).
 
 
 ## Where To Get Binaries
