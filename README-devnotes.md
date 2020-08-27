@@ -53,7 +53,7 @@ Table (i.e. data column) is translated. Two approaches are used:
 <ul>
   <li>Google V2 translation API
     <ul>
-      <li>Each row is translated as a separate HTTP transaction. We are running translation in parallel (4-10 translations executed at the same time) but still this approach is slow and error prone. TYpical agent can have thousands of translation to be executed. Running such a huge number of HTTP transactions will face the networking issues and possibly also Google API quotas issues (i.e. rate limiting by API due to too many concurrent invocations).</li>
+      <li>Each row is translated as a separate HTTP transaction. We are running translation in parallel (4-10 translations executed at the same time) but still this approach is slow and error prone. Typical agent can have thousands of translation to be executed. Running such a huge number of HTTP transactions will face the networking issues and possibly also Google API quotas issues (i.e. rate limiting by API due to too many concurrent invocations).</li>
     </ul>
   </li>
   <li>Google V3 translation API
