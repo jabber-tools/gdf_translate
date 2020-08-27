@@ -194,11 +194,11 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
             "{}{} <to_translate>{}</to_translate>{}\n",
             "\"",
             key,
-            val.replace("\r\n", " ")
-                .replace("\n", " ")
+            val.replace("\r\n", "<MULTILINE />") // tsv format does not allow mutlilines! => \n / \r\n -> <MULTILINE />
+                .replace("\n", "<MULTILINE />") // once we retrieve translation from google we will replace <MULTILINE /> -> \n in parse_tsv_line
                 .replace("\"", "\"\""),
             "\""
-        )); // tsv format does not allow mutlilines! => \n / \r\n -> " "
+        ));
     }
 
     s
@@ -324,8 +324,8 @@ fn parse_tsv_line(line: &str) -> Result<TsvLine> {
     Ok(TsvLine {
         line_no: line_no.to_owned(),
         ref_addr: address.to_owned(),
-        orig_text: orig_text.to_owned(),
-        translated_text: translated_text,
+        orig_text: orig_text.to_owned().replace("<MULTILINE />", "\n"),
+        translated_text: translated_text.replace("<MULTILINE />", "\n"),
     })
 }
 
