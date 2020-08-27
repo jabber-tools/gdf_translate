@@ -100,7 +100,7 @@ Table (i.e. data column) is translated. Two approaches are used:
 ## Serialization/deserialization process
 For deserialization of zip file and subsequent serialization of translated agent back into zip file we are using [Serde](https://serde.rs/) framework. Google DialogFlow ZIP file consists of may different JSON files. These files are all mapped into corresponding Rust [structures](https://doc.rust-lang.org/book/ch05-00-structs.html). There is always risk underlying format of ZIP file might change and we will not be able to serialize or deserialize the data correctly. Especially it might happen that zip file structures will be extended and corresponding rust structures will not contain new attributes. This would result in loss of new attributes in serialized agent! To detect such a situation we are doing following sanity check: 
 * every file is deserialized and then (without any change) serialized back to JSON. 
-* JSON’s (original JSON and new one after serialization) are <b>structurally</b> compared. 
+* JSON’s (original JSON and a new one after the serialization) are <b>structurally</b> compared. 
 * If they are not equal, exception is raised and translation process is aborted. Code then needs to be extended accordingly so that it matches to latest zip file structure. 
 
 If you witness serialization/deserialization issue let us know [here](https://github.com/jabber-tools/gdf_translate/issues)!
