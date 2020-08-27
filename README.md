@@ -120,16 +120,33 @@ It might happen your agent will be not translated properly or it will be not tra
 
 ## Examples
 
+Translate sample-agent.zip from english to german language. Translate all (i.e. utterances, entities, responses). Uses credential file credentials.json. Use default translation mode, i.e. Google Translate API V3.
+```
 gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json
+```
 
+Translate using Google Translate API V2.
+```
 gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json --api-version v2
+```
 
+Translate using Google Translate API V2. Use 4 parallel task executors (default is 10).
+```
 gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json --api-version v2 --task-count 4
+```
 
+Translate using Google Translate API V3. API version is explicitly specified via --api-version v3
+```
 gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json --api-version v3
+```
 
+Translate using Google Translate API V3. Preserve file with exact content of Google Cloud output content. This file can be used for troubleshooting, it is not intented to be used by ordinary users.
+```
 gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json --api-version v3 --create-output-tsv
+```
 
+Translate only reponses and utterances. Do not translate entities.
+```
 gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json --skip-entities
-
+```
 
