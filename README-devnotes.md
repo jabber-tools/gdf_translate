@@ -36,7 +36,7 @@ Command line tool for automated translation of Google DialogFlow agents
 First Google Dialogflow agent is exported into ZIP file and this file is provided to translation utility. Translation utility parses the file and deserialises its content into internal structures stored in memory.</br>
 <img width="600" height="200" src="./examples/docs/img/zip-to-struct.png" /></br>
 
-In fact structures themselves are stored on stack whereas its content is stored on heap. Each entry on heap has its address (referred from stack) and data/content (e.g. string that needs to be translated!)</br>
+In fact structures themselves are stored on stack whereas its content is stored on heap. Details on Rust memory management with nice visualization can be found [here](https://deepu.tech/memory-management-in-rust/). Each entry on heap has its address (referred from stack) and data/content (e.g. string that needs to be translated!)</br>
 <img width="400" height="600" src="./examples/docs/img/stack-and-heap.png" /></br>
 
 Translation utility traverses all structures created in deserialization step and creates table to be translated. This table (hashmap) has original heap address as a key and data/content as a value.</br>
