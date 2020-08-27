@@ -119,4 +119,17 @@ It might happen your agent will be not translated properly or it will be not tra
 * <b>DO NOT</b> attach service account JSON file! Contact us over email/skype/etc. so that we can agree on secure way of providing service account file.
 
 ## Examples
-TBD
+
+gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json
+
+gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json --api-version v2
+
+gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json --api-version v2 --task-count 4
+
+gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json --api-version v3
+
+gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json --api-version v3 --create-output-tsv
+
+gdf.translate.exe -- --agent-file C:/tmp/sample-agent.zip --output-folder c:/tmp/out --source-lang en --target-lang de --cred-file C:/tmp/cred/credentials.json --skip-entities
+
+
