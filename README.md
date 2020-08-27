@@ -1,5 +1,4 @@
 <img src="./examples/docs/img/rust-logo.png" align="right" />
-<img src="./examples/docs/img/translate-logo.png" align="right" />
 
 # Google DialogFlow Translate
 
