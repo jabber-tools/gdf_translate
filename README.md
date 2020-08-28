@@ -56,7 +56,7 @@ Google Translate is command line utility used for translation of Google DialogFl
 
 
 ## Where To Get Binaries
-Binaries are published under [Releases](https://github.com/jabber-tools/gdf_translate/releases) section of this github repository. Make sure to always use the latest release in order to get the latest fixes and features.
+Binaries are published under [Releases](../../releases) section of this github repository. Make sure to always use the latest release in order to get the latest fixes and features.
 
 Release overview:
 | Version           | Binary          | OS     |
