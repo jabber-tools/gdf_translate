@@ -104,7 +104,7 @@ For deserialization of zip file and subsequent serialization of translated agent
 * JSON’s (original JSON and a new one after the serialization) are <b>structurally</b> compared. 
 * If they are not equal, exception is raised and translation process is aborted. Code then needs to be extended accordingly so that it matches to latest zip file structure. 
 
-If you witness serialization/deserialization issue let us know [here](https://github.com/jabber-tools/gdf_translate/issues)!
+If you witness serialization/deserialization issue let us know [here](../../issues)!
 
 ## How to enable debug logging?
 In case of troubleshooting it might be handy to enable debug log messages. This can be done by setting following environment variables:
