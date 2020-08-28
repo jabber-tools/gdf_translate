@@ -23,7 +23,7 @@ Command line tool for automated translation of Google DialogFlow agents
       Developer guide
     </a>
     <span> | </span>
-    <a href="releases">
+    <a href="../../releases">
       Releases
     </a>
   </h3>
