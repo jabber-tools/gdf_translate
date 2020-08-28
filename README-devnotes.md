@@ -15,15 +15,15 @@ Command line tool for automated translation of Google DialogFlow agents
 
 <div align="center">
   <h3>
-    <a href="https://github.com/jabber-tools/gdf_translate/blob/master/README.md">
+    <a href="README.md">
       User guide
     </a>
     <span> | </span>
-    <a href="https://github.com/jabber-tools/gdf_translate/blob/master/README-devnotes.md">
+    <a href="README-devnotes.md">
       <i>Developer guide</i>
     </a>
     <span> | </span>
-    <a href="https://github.com/jabber-tools/gdf_translate/releases">
+    <a href="../../releases">
       Releases
     </a>
   </h3>
