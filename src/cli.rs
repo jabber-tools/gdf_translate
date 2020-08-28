@@ -94,7 +94,7 @@ pub fn get_cmd_line_parser<'a, 'b>() -> App<'a, 'b> {
                 .short("c")
                 .long("cred-file")
                 .value_name("FILE")
-                .help("Path to Google Cloud service account credentials used to run translation via Google Translate V2/V3 API. Must have respective priviledges: TBD...")
+                .help("Path to Google Cloud service account credentials used to run translation via Google Translate V2/V3 API. Must have respective priviledges: See github README for more details.")
                 .takes_value(true)
                 .required(true)
         )
