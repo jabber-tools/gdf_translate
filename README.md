@@ -73,8 +73,9 @@ We are using service accounts when interacting with Google Translation APIs. Res
 ## Command Line Interface
 Simply ask for help:
 ```
+
 C:\tmp>gdf_translate.exe -h
-Google DialogFlow Translate 0.1.0
+Google DialogFlow Translate v0.1.0-beta
 Adam Bezecny
 Tool for automated translation of Google DialogFlow agents.
 
@@ -94,7 +95,8 @@ FLAGS:
 OPTIONS:
     -s, --source-lang <lang ISO code>    ISO code of source language.E.g.: en
     -c, --cred-file <FILE>               Path to Google Cloud service account credentials used to run translation via
-                                         Google Translate V2/V3 API. Must have respective priviledges: TBD...
+                                         Google Translate V2/V3 API. Must have respective priviledges: See github README
+                                         for more details.
     -f, --agent-file <FILE>              ZIP file with exported GDF agent
     -o, --output-folder <FOLDER>         Path to folder where translated agent will be stored. Must be exiting (ideally
                                          empty) folder.
