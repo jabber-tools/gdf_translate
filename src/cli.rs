@@ -50,7 +50,7 @@ impl<'a> CommandLine<'a> {
 
 pub fn get_cmd_line_parser<'a, 'b>() -> App<'a, 'b> {
     App::new("Google DialogFlow Translate")
-        .version("0.1.0")
+        .version("v0.1.0-beta")
         .author("Adam Bezecny")
         .about("Tool for automated translation of Google DialogFlow agents.")
         .arg(
