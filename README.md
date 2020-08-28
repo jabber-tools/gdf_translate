@@ -19,7 +19,7 @@ Command line tool for automated translation of Google DialogFlow agents
       <i>User guide</i>
     </a>
     <span> | </span>
-    <a href="https://github.com/jabber-tools/gdf_translate/blob/master/README-devnotes.md">
+    <a href="README-devnotes.md">
       Developer guide
     </a>
     <span> | </span>
