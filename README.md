@@ -15,7 +15,7 @@ Command line tool for automated translation of Google DialogFlow agents
 
 <div align="center">
   <h3>
-    <a href="https://github.com/jabber-tools/gdf_translate/blob/master/README.md">
+    <a href="README.md">
       <i>User guide</i>
     </a>
     <span> | </span>
@@ -23,7 +23,7 @@ Command line tool for automated translation of Google DialogFlow agents
       Developer guide
     </a>
     <span> | </span>
-    <a href="https://github.com/jabber-tools/gdf_translate/releases">
+    <a href="releases">
       Releases
     </a>
   </h3>
