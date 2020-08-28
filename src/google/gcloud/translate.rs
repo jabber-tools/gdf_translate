@@ -6,6 +6,7 @@ use async_std::task;
 // while StreamExt is not used directly without it this line will not compile:
 // while let Some(future_value) = futures.next().await
 use crate::google::gcloud::ApiResponse;
+use crate::html;
 use futures::stream::{FuturesUnordered, StreamExt};
 use log::debug;
 use std::collections;
@@ -171,15 +172,16 @@ impl GoogleTranslateV2 {
             );
             send_progress(ProgressMessageType::ItemProcessed, &mpsc_sender);
 
+            let translation_format;
+            if html::is_html(val) == true {
+                translation_format = v2::TranslateFormat::Html;
+            } else {
+                translation_format = v2::TranslateFormat::Plain;
+            }
+
             let mut translation_response;
-            let mut translation_result = v2::translate(
-                token,
-                source_lang,
-                target_lang,
-                val,
-                v2::TranslateFormat::Plain,
-            )
-            .await;
+            let mut translation_result =
+                v2::translate(token, source_lang, target_lang, val, &translation_format).await;
 
             if let Err(translation_error) = translation_result {
                 debug!(
@@ -187,14 +189,8 @@ impl GoogleTranslateV2 {
                     translated_item_idx, translation_count, iter_idx, translation_error
                 );
                 task::sleep(Duration::from_secs(2)).await; // wait with this task execution before next try!
-                translation_result = v2::translate(
-                    token,
-                    source_lang,
-                    target_lang,
-                    val,
-                    v2::TranslateFormat::Plain,
-                )
-                .await;
+                translation_result =
+                    v2::translate(token, source_lang, target_lang, val, &translation_format).await;
             }
 
             if let Err(translation_error) = translation_result {
@@ -219,14 +215,8 @@ impl GoogleTranslateV2 {
                     translated_item_idx, translation_count, iter_idx, translation_response
                 );
                 task::sleep(Duration::from_secs(2)).await; // wait with this task execution before next try!
-                translation_result = v2::translate(
-                    token,
-                    source_lang,
-                    target_lang,
-                    val,
-                    v2::TranslateFormat::Plain,
-                )
-                .await;
+                translation_result =
+                    v2::translate(token, source_lang, target_lang, val, &translation_format).await;
 
                 if let Err(translation_error) = translation_result {
                     debug!(

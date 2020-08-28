@@ -8,6 +8,7 @@
 pub mod cli;
 pub mod errors;
 pub mod google;
+pub mod html;
 pub mod macros;
 pub mod ui;
 pub mod zip;

@@ -53,7 +53,7 @@ pub async fn translate(
     source_lang: &str,
     target_lang: &str,
     text: &str,
-    format: TranslateFormat,
+    format: &TranslateFormat,
 ) -> Result<TranslateResponse> {
     let api_url = "https://translation.googleapis.com/language/translate/v2";
 
@@ -104,7 +104,7 @@ mod tests {
                 source_lang,
                 target_lang,
                 text,
-                TranslateFormat::Plain,
+                &TranslateFormat::Plain,
             )
             .await?;
             println!("resp={:#?}", resp);
@@ -144,7 +144,7 @@ mod tests {
             "en",
             "de",
             "Rust is wonderfull programming language",
-            TranslateFormat::Plain,
+            &TranslateFormat::Plain,
         ));
         println!("result from translate: {:#?}", result.unwrap().body);
         Ok(())
