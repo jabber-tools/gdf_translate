@@ -9,8 +9,8 @@ Command line tool for automated translation of Google DialogFlow agents
 ---
 [![made-with-Rust](https://img.shields.io/badge/Made%20with-Rust-1f425f.svg)](https://www.rust-lang.org/)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/jabber-tools/gdf_translate/graphs/commit-activity)
-[![License](https://img.shields.io/badge/License-Apache-blue.svg)](https://github.com/jabber-tools/gdf_translate/blob/master/LICENSE-APACHE)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/jabber-tools/gdf_translate/blob/master/LICENSE-MIT)
+[![License](https://img.shields.io/badge/License-Apache-blue.svg)](LICENSE-APACHE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE-MIT)
 [![Build Status](https://travis-ci.org/jabber-tools/gdf_translate.svg?branch=master)](https://travis-ci.org/jabber-tools/gdf_translate)
 
 <div align="center">
