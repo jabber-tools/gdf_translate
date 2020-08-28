@@ -113,7 +113,7 @@ C:\tmp>
 ```
 
 ## Issues
-It might happen your agent will be not translated properly or it will be not translated at all due to some unexpected error. Should this happen raise the issue [here](https://github.com/jabber-tools/gdf_translate/issues). Don't forget to include following:
+It might happen your agent will be not translated properly or it will be not translated at all due to some unexpected error. Should this happen raise the issue [here](../../issues). Don't forget to include following:
 * Exact command you did use to run the translation
 * Standard output with error details
 * Don't forget to attach zip file with agent export!
