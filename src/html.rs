@@ -1,4 +1,6 @@
-const HTML_TAGS: [&str; 118] = [
+use lazy_static::lazy_static;
+
+const HTML_TAG_NAMES: [&str; 118] = [
     "a",
     "abbr",
     "address",
@@ -119,23 +121,25 @@ const HTML_TAGS: [&str; 118] = [
     "wbr",
 ];
 
-// this will be slow but we do not have to keep static list for
-// all the options like closing tags, standalone tags etc.
-// used by transaltion v2 only which not many people should be using anyway
-pub fn is_html(str_val: &str) -> bool {
-    let mut tags = vec![];
-    for tag in HTML_TAGS.iter() {
-        let starting_tag = format!("<{}>", tag);
-        let closing_tag = format!("</{}>", tag);
-        let standalone_tag_1 = format!("<{}/>", tag);
-        let standalone_tag_2 = format!("<{} />", tag);
-        tags.push(starting_tag);
-        tags.push(closing_tag);
-        tags.push(standalone_tag_1);
-        tags.push(standalone_tag_2);
-    }
+lazy_static! {
+    pub static ref HTML_TAGS: Vec<String> = {
+        let mut tags = vec![];
+        for tag in HTML_TAG_NAMES.iter() {
+            let starting_tag = format!("<{}>", tag);
+            let closing_tag = format!("</{}>", tag);
+            let standalone_tag_1 = format!("<{}/>", tag);
+            let standalone_tag_2 = format!("<{} />", tag);
+            tags.push(starting_tag);
+            tags.push(closing_tag);
+            tags.push(standalone_tag_1);
+            tags.push(standalone_tag_2);
+        }
+        tags
+    };
+}
 
-    for tag in tags.iter() {
+pub fn is_html(str_val: &str) -> bool {
+    for tag in HTML_TAGS.iter() {
         if str_val.to_lowercase().contains(tag) {
             return true;
         }

@@ -116,7 +116,12 @@ In case of troubleshooting it might be handy to enable debug log messages. This 
 * set RUST_LOG=gdf_translate::google::gcloud::storage_bucket_mgmt.rs=debug
 * set RUST_LOG=gdf_translate::google::dialogflow::agent=debug
 
-Also it might be handy to enable stacktrace printing via followin environment variable: <i>set RUST_BACKTRACE = 1</i>
+In order to enable *debug* for all modules us command:
+```
+set RUST_LOG=debug
+```
+
+Also it might be handy to enable stacktrace printing via following environment variable: <i>set RUST_BACKTRACE = 1</i>
 
 ## How to build?
 
