@@ -1171,8 +1171,9 @@ mod tests {
         ]       
         "#;
         let intent_utterances: Vec<IntentUtterance> = serde_json::from_str(intent_utterance_str)?;
+        let utterance_id = intent_utterances[0].id.as_ref().unwrap().to_owned();
         assert_eq!(
-            intent_utterances[0].id,
+            &utterance_id,
             "9dfa147d-d2d8-4703-a693-8edef11322a2"
         );
         assert_eq!(intent_utterances[0].data.len(), 1);
