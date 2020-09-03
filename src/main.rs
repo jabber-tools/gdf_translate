@@ -66,7 +66,8 @@ fn main() {
                 cmd_line_opts.output_folder.to_str().unwrap(),
                 &token,
                 &cmd_line_opts.from_lang,
-                &cmd_line_opts.to_lang,
+                // to_lang must be lower case! pt-BR in intent response instead of pt-br will cause message being not displayed in Dialogflow UI!
+                &cmd_line_opts.to_lang.to_lowercase(),
                 tx,
                 cmd_line_opts.v2_task_count,
                 cmd_line_opts.skip_entities_translation,
@@ -87,7 +88,8 @@ fn main() {
                 cmd_line_opts.output_folder.to_str().unwrap(),
                 &token,
                 &cmd_line_opts.from_lang,
-                &cmd_line_opts.to_lang,
+                // to_lang must be lower case! pt-BR in intent response instead of pt-br will cause message being not displayed in Dialogflow UI!
+                &cmd_line_opts.to_lang.to_lowercase(),
                 &gdf_credentials.project_id,
                 tx,
                 cmd_line_opts.create_output_tsv,
