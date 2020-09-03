@@ -68,21 +68,6 @@ lazy_static! {
     pub static ref RE_WORD_WITH_TRAILING_WHITE_CHARS: Regex = Regex::new(r"\w*(\s*)</to_translate>").unwrap();
 }
 
-#[allow(dead_code)]
-fn get_trailing_spaces(s: &str) -> String {
-    debug!("get_trailing_spaces checking:{}<<", s);
-    let caps_opt = RE_WORD_WITH_TRAILING_WHITE_CHARS.captures(s);
-    if let Some(caps) = caps_opt {
-        debug!("caps:{:#?}", caps);
-        let trailing_spaces = caps[1].to_owned();
-        debug!("returning >>{}<< trailing spaces", trailing_spaces);
-        return trailing_spaces;
-    } else {
-        debug!("returning zero trailing spaces");
-        return "".to_owned();
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoogleTranslateV3ResponseMetadata {
     #[serde(rename = "@type")]
@@ -175,15 +160,18 @@ pub struct GoogleTranslateV3WaitApiResponse {
 
 /// represents line fom output file of google translate v3 batch api
 /// Something like this:
-/// 0000000001	7f06092ac6d1 <to_translate>rust is great</to_translate>	7f06092ac6d1 <to_translate>Rost ist großartig</to_translate>
+/// 0x16f8c9bd8b0 <to_translate>translate me</to_translate>	<to_translate> übersetze mich </to_translate>
 #[derive(Debug, PartialEq)]
 struct TsvLine {
-    line_no: String,
     ref_addr: String,
     orig_text: String,
     translated_text: String,
 }
 
+/// converts translation hashmap into rows with following structure
+/// 0x16f8c9bd8b0 <to_translate>rust is great</to_translate>
+/// i.e. address of respective reference + its content wrapped in <to_translate></to_translate>  tags
+/// address must be separated from actual content by \t since it is TSV file!
 pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> String {
     let mut s = String::from("");
 
@@ -191,13 +179,11 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
         // value to translate will be wrapped in <to_translate> tag to preserve
         // all leading and trailing white characters from original value
         s.push_str(&format!(
-            "{}{} <to_translate>{}</to_translate>{}\n",
-            "\"",
+            "{}\t<to_translate>{}</to_translate>\n",
             key,
             val.replace("\r\n", "<MULTILINE />") // tsv format does not allow mutlilines! => \n / \r\n -> <MULTILINE />
                 .replace("\n", "<MULTILINE />") // once we retrieve translation from google we will replace <MULTILINE /> -> \n in parse_tsv_line
                 .replace("\"", "\"\""),
-            "\""
         ));
     }
 
@@ -211,18 +197,18 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
 /// Arguments:
 /// * `s`: String of translation map as produced by Google Translate V3 API. Example:
 /// ```ignore
-/// 0000000000	7f06092ac6d0 <to_translate>translate me</to_translate>	7f06092ac6d0 <to_translate>übersetze mich</to_translate>
-/// 0000000001	7f06092ac6d1 <to_translate>rust is great</to_translate>	7f06092ac6d1 <to_translate>Rost ist großartig</to_translate>
-/// 0000000002	7f06092ac6d2 <to_translate>let's have a weekend</to_translate>	7f06092ac6d2 <to_translate>Lass uns ein Wochenende haben</to_translate>
+/// 0x16f8c9bd8b1 <to_translate>translate me</to_translate>	<to_translate> übersetze mich </to_translate>
+/// 0x16f8c9bd8b2 <to_translate>rust is great</to_translate>	<to_translate> Rost ist großartig </to_translate>
+/// 0x16f8c9bd8b3 <to_translate>let's have a weekend</to_translate>	<to_translate> Lass uns ein Wochenende haben </to_translate>
 /// ```
 ///
 /// Returns: input above should return following map:
 /// ```ignore
 /// KEY                 VAL
 /// -------------------------------------------------
-/// 7f06092ac6d0        übersetze mich
-/// 7f06092ac6d1        Rost ist großartig
-/// 7f06092ac6d2        Lass uns ein Wochenende haben
+/// 0x16f8c9bd8b1        übersetze mich
+/// 0x16f8c9bd8b2        Rost ist großartig
+/// 0x16f8c9bd8b3        Lass uns ein Wochenende haben
 /// ```
 /// In this map KEY represents address of rust structure field reference
 /// and value represents translated text to be applied
@@ -267,37 +253,38 @@ pub fn string_to_map(s: String) -> Result<collections::HashMap<String, String>> 
 }
 
 /// converts:
-/// 0000000025	"0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=""http://mycompany.com"">again</a>?</to_translate>"	"0x1bb39b97460 <to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=""http://mycompany.com"">wieder</a> ? </to_translate>"
+/// "0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=""http://mycompany.com"">again</a>?</to_translate>"	"<to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=""http://mycompany.com"">wieder</a> ? </to_translate>"
 /// to:
-/// 0000000025	0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href="http://mycompany.com">again</a>?</to_translate>	0x1bb39b97460 <to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href="http://mycompany.com">wieder</a> ? </to_translate>
+/// 0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href="http://mycompany.com">again</a>?</to_translate>	<to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href="http://mycompany.com">wieder</a> ? </to_translate>
 fn normalize_tsv_line(line: &str) -> String {
     line.replace("\"\"", "__DOUBLE_QUOTES__")
         .replace("\"", "")
         .replace("__DOUBLE_QUOTES__", "\"")
 }
 
+/// Parse string line like this:
+/// 0x16f8c9bd8b1 <to_translate>translate me</to_translate>	<to_translate> übersetze mich </to_translate>
+/// into structure TsvLine, i.e.
+///  TsvLine {
+///     ref_addr: "0x16f8c9bd8b1",
+///     orig_text: "translate me",
+///     translated_text: " übersetze mich ",
+/// }
+/// Leading and trailing spaces from translated_text are removed by trim
+/// caller of parse_tsv_line (i.e. string_to_map) will reconstruct any potential
+/// leading and trailing spaces from original text
 fn parse_tsv_line(line: &str) -> Result<TsvLine> {
     debug!("parse_tsv_line processing item:{}<<<", line);
     let mut white_space_iter = line.split_whitespace();
 
-    let line_no; // get 0000000000
-    if let Some(line_no_val) = white_space_iter.next() {
-        line_no = line_no_val;
-    } else {
-        return Err(Error::new("Cannot retrieve line_no".to_owned()));
-    }
-
-    let address; // get 7f06092ac6d0
+    let address; // get 0x1bb39b97460
     if let Some(address_val) = white_space_iter.next() {
         address = address_val;
     } else {
         return Err(Error::new("Cannot retrieve address_val".to_owned()));
     }
 
-    let regex_str = format!(
-        r"^\s*\d\d\d\d\d\d\d\d\d\d\s+{}\s+(<to_translate>.*</to_translate>)\s+{}",
-        address, address
-    );
+    let regex_str = format!(r"^\s*{}\s+(<to_translate>.*</to_translate>)\s+", address);
 
     debug!("regex_str:{}", regex_str);
 
@@ -310,8 +297,8 @@ fn parse_tsv_line(line: &str) -> Result<TsvLine> {
     let orig_text = RE_TO_TRANSLATE_CONTENT.captures(&orig_text).unwrap()[1].to_owned();
     debug!("orig_text:{}<<<", orig_text);
 
-    let idx = line.rfind(address);
-    let idx = idx.unwrap() + address.len();
+    let idx = line.rfind("<to_translate>");
+    let idx = idx.unwrap();
     let translated_text = line[idx..line.len()].to_owned();
     debug!("translated_text:{}<<<", translated_text);
 
@@ -322,7 +309,6 @@ fn parse_tsv_line(line: &str) -> Result<TsvLine> {
     debug!("translated_text without span:{}<<<", translated_text);
 
     Ok(TsvLine {
-        line_no: line_no.to_owned(),
         ref_addr: address.to_owned(),
         orig_text: orig_text.to_owned().replace("<MULTILINE />", "\n"),
         translated_text: translated_text.replace("<MULTILINE />", "\n"),
@@ -437,6 +423,8 @@ mod tests {
     use crate::google::gcloud::auth::*;
     use crate::init_logging; // set RUST_LOG=gdf_translate::google::gcloud::translate::v3=debug
     use async_std::task;
+    use std::fs::File;
+    use std::io::Write;
 
     // cargo test -- --show-output test_batch_translate_text
     #[test]
@@ -586,10 +574,10 @@ mod tests {
     fn test_string_to_map_1() -> Result<()> {
         init_logging();
         let translated_map_str = r#"
-        0000000000	7f06092ac6d0 <to_translate>translate me</to_translate>      7f06092ac6d0 <to_translate>übersetze mich</to_translate>
-        0000000001	7f06092ac6d1 <to_translate>rust is great </to_translate>      7f06092ac6d1 <to_translate>Rost ist großartig </to_translate>
-        0000000002	7f06092ac6d2 <to_translate>let's have a weekend</to_translate>      7f06092ac6d2 <to_translate>Lass uns ein Wochenende haben</to_translate>
-        0000000003	7f06092ac6d3 <to_translate>   </to_translate>	7f06092ac6d3       <to_translate>   </to_translate>
+        0x16f8c9bd8b0 <to_translate>translate me</to_translate>      <to_translate>übersetze mich</to_translate>
+        0x16f8c9bd8b1 <to_translate>rust is great </to_translate>      <to_translate>Rost ist großartig </to_translate>
+        0x16f8c9bd8b2 <to_translate>let's have a weekend</to_translate>      <to_translate>Lass uns ein Wochenende haben</to_translate>
+        0x16f8c9bd8b3 <to_translate>   </to_translate>	      <to_translate>   </to_translate>
         "#;
 
         let translated_map = string_to_map(translated_map_str.to_string())?;
@@ -598,18 +586,18 @@ mod tests {
         println!("translated_map: {:#?}", translated_map);
 
         assert_eq!(
-            translated_map.get("7f06092ac6d0").unwrap(),
+            translated_map.get("0x16f8c9bd8b0").unwrap(),
             "übersetze mich"
         );
         assert_eq!(
-            translated_map.get("7f06092ac6d1").unwrap(),
+            translated_map.get("0x16f8c9bd8b1").unwrap(),
             "Rost ist großartig "
         );
         assert_eq!(
-            translated_map.get("7f06092ac6d2").unwrap(),
+            translated_map.get("0x16f8c9bd8b2").unwrap(),
             "Lass uns ein Wochenende haben"
         );
-        assert_eq!(translated_map.get("7f06092ac6d3").unwrap(), "  ");
+        assert_eq!(translated_map.get("0x16f8c9bd8b3").unwrap(), "  ");
         Ok(())
     }
 
@@ -617,9 +605,9 @@ mod tests {
     #[test]
     fn test_string_to_map_2() -> Result<()> {
         let translated_map_str = r#"
-        0000000000      7f06092ac6d0 <to_translate>translate me</to_translate>      7f06092ac6d0 <to_translate>翻譯我</to_translate>
-        0000000001      7f06092ac6d1 <to_translate>rust is great</to_translate>      7f06092ac6d1 <to_translate>銹很棒</to_translate>
-        0000000002      7f06092ac6d2 <to_translate>let's have a weekend</to_translate>      7f06092ac6d2 <to_translate>讓我們週末</to_translate>
+        0xf06092ac6d0 <to_translate>translate me</to_translate>      <to_translate>翻譯我</to_translate>
+        0xf06092ac6d1 <to_translate>rust is great</to_translate>      <to_translate>銹很棒</to_translate>
+        0xf06092ac6d2 <to_translate>let's have a weekend</to_translate>      <to_translate>讓我們週末</to_translate>
         "#;
 
         let translated_map = string_to_map(translated_map_str.to_string())?;
@@ -627,9 +615,9 @@ mod tests {
 
         println!("translated_map: {:#?}", translated_map);
 
-        assert_eq!(translated_map.get("7f06092ac6d0").unwrap(), "翻譯我");
-        assert_eq!(translated_map.get("7f06092ac6d1").unwrap(), "銹很棒");
-        assert_eq!(translated_map.get("7f06092ac6d2").unwrap(), "讓我們週末");
+        assert_eq!(translated_map.get("0xf06092ac6d0").unwrap(), "翻譯我");
+        assert_eq!(translated_map.get("0xf06092ac6d1").unwrap(), "銹很棒");
+        assert_eq!(translated_map.get("0xf06092ac6d2").unwrap(), "讓我們週末");
         Ok(())
     }
 
@@ -637,9 +625,9 @@ mod tests {
     #[test]
     fn test_string_to_map_3() -> Result<()> {
         let translated_map_str = r#"
-        0000000000	7f06092ac6d0 <to_translate>переведите меня</to_translate>	7f06092ac6d0 <to_translate>ترجمة لي</to_translate>
-        0000000001	7f06092ac6d1 <to_translate>ржавчина это здорово</to_translate>	7f06092ac6d1 <to_translate>الصدأ رائع</to_translate>
-        0000000002	7f06092ac6d2 <to_translate>давай проведем выходные</to_translate>	7f06092ac6d2 <to_translate>لنحصل على عطلة نهاية أسبوع</to_translate>
+        0xf06092ac6d0 <to_translate>переведите меня</to_translate>	<to_translate>ترجمة لي</to_translate>
+        0xf06092ac6d1 <to_translate>ржавчина это здорово</to_translate>	<to_translate>الصدأ رائع</to_translate>
+        0xf06092ac6d2 <to_translate>давай проведем выходные</to_translate>	<to_translate>لنحصل على عطلة نهاية أسبوع</to_translate>
         "#;
 
         let translated_map = string_to_map(translated_map_str.to_string())?;
@@ -647,10 +635,10 @@ mod tests {
 
         println!("translated_map: {:#?}", translated_map);
 
-        assert_eq!(translated_map.get("7f06092ac6d0").unwrap(), "ترجمة لي");
-        assert_eq!(translated_map.get("7f06092ac6d1").unwrap(), "الصدأ رائع");
+        assert_eq!(translated_map.get("0xf06092ac6d0").unwrap(), "ترجمة لي");
+        assert_eq!(translated_map.get("0xf06092ac6d1").unwrap(), "الصدأ رائع");
         assert_eq!(
-            translated_map.get("7f06092ac6d2").unwrap(),
+            translated_map.get("0xf06092ac6d2").unwrap(),
             "لنحصل على عطلة نهاية أسبوع"
         );
         Ok(())
@@ -660,61 +648,50 @@ mod tests {
     #[test]
     fn test_parse_tsv_line() {
         init_logging();
-        assert_eq!(parse_tsv_line("0000000000      0x2253f4530b0 <to_translate>convert it into inches</to_translate>       0x2253f4530b0 <to_translate>es in Zoll umwandeln</to_translate>").unwrap(), TsvLine {
-            line_no: "0000000000".to_owned(),
+        assert_eq!(parse_tsv_line("0x2253f4530b0 <to_translate>convert it into inches</to_translate>       <to_translate>es in Zoll umwandeln</to_translate>").unwrap(), TsvLine {
             ref_addr: "0x2253f4530b0".to_owned(),
             orig_text: "convert it into inches".to_owned(),
             translated_text: "es in Zoll umwandeln".to_owned()
         });
 
         // google translate api sometimes puts , in front of second span :(
-        assert_eq!(parse_tsv_line("0000000058      0x28c2af58fd0 <to_translate>what's the currency exchange </to_translate>        0x28c2af58fd0 , <to_translate>was der Wechsel ist</to_translate>").unwrap(), TsvLine {
-            line_no: "0000000058".to_owned(),
+        assert_eq!(parse_tsv_line("0x28c2af58fd0 <to_translate>what's the currency exchange </to_translate>        , <to_translate>was der Wechsel ist</to_translate>").unwrap(), TsvLine {
             ref_addr: "0x28c2af58fd0".to_owned(),
             orig_text: "what's the currency exchange ".to_owned(),
             translated_text: "was der Wechsel ist".to_owned()
         });
 
         // must work also with leading white chars just for any case (e.g. to work in unit tests like test_string_to_map_1)
-        assert_eq!(parse_tsv_line("     0000000000	7f06092ac6d0 <to_translate>translate me</to_translate>      7f06092ac6d0 <to_translate>übersetze mich</to_translate>").unwrap(), TsvLine {
-            line_no: "0000000000".to_owned(),
+        assert_eq!(parse_tsv_line("     7f06092ac6d0 <to_translate>translate me</to_translate>      <to_translate>übersetze mich</to_translate>").unwrap(), TsvLine {
             ref_addr: "7f06092ac6d0".to_owned(),
             orig_text: "translate me".to_owned(),
             translated_text: "übersetze mich".to_owned()
         });
     }
 
-    // cargo test -- --show-output test_get_trailing_spaces
-    #[test]
-    fn test_get_trailing_spaces() {
-        init_logging();
-        assert_eq!(
-            get_trailing_spaces("<to_translate>some text   </to_translate>"),
-            "   ".to_owned()
-        );
-        assert_eq!(
-            get_trailing_spaces("<to_translate>1234</to_translate>"),
-            "".to_owned()
-        );
-        assert_eq!(
-            get_trailing_spaces("<to_translate>     </to_translate>"),
-            "     ".to_owned()
-        );
-    }
-
     // cargo test -- --show-output test_normalize_tsv_line_1
     #[test]
     fn test_normalize_tsv_line_1() {
-        let input = "0000000000      0x2253f4530b0 <to_translate>convert it into inches</to_translate>       0x2253f4530b0 <to_translate>es in Zoll umwandeln</to_translate>";
-        let expected = "0000000000      0x2253f4530b0 <to_translate>convert it into inches</to_translate>       0x2253f4530b0 <to_translate>es in Zoll umwandeln</to_translate>";
+        let input = "0x2253f4530b0 <to_translate>convert it into inches</to_translate>       <to_translate>es in Zoll umwandeln</to_translate>";
+        let expected = "0x2253f4530b0 <to_translate>convert it into inches</to_translate>       <to_translate>es in Zoll umwandeln</to_translate>";
         assert_eq!(normalize_tsv_line(input), expected);
     }
 
     // cargo test -- --show-output test_normalize_tsv_line_2
     #[test]
     fn test_normalize_tsv_line_2() {
-        let input = "0000000025	\"0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=\"\"http://mycompany.com\"\">again</a>?</to_translate>\"	\"0x1bb39b97460 <to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=\"\"http://mycompany.com\"\">wieder</a> ? </to_translate>\"";
-        let expected = "0000000025	0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=\"http://mycompany.com\">again</a>?</to_translate>	0x1bb39b97460 <to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=\"http://mycompany.com\">wieder</a> ? </to_translate>";
+        let input = "\"0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=\"\"http://mycompany.com\"\">again</a>?</to_translate>\"	\"<to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=\"\"http://mycompany.com\"\">wieder</a> ? </to_translate>\"";
+        let expected = "0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=\"http://mycompany.com\">again</a>?</to_translate>	<to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=\"http://mycompany.com\">wieder</a> ? </to_translate>";
         assert_eq!(normalize_tsv_line(input), expected);
+    }
+
+    // cargo test -- --show-output test_create_sample_tsv_file
+    #[test]
+    #[ignore]
+    fn test_create_sample_tsv_file() -> Result<()> {
+        let content = "0x1bb39b97461\t<to_translate>translate me</to_translate>\n0x1bb39b97462\t<to_translate>rust is great</to_translate>\n0x1bb39b97463\t<to_translate>let's have a weekend</to_translate>\n".to_string();
+        let mut agent_file_handle = File::create("c:/tmp/sample_tsv.tsv")?;
+        agent_file_handle.write_all(content.as_bytes())?;
+        Ok(())
     }
 }
