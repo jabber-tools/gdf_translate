@@ -183,7 +183,7 @@ pub fn map_to_string(translation_map: &collections::HashMap<String, String>) -> 
             key,
             val.replace("\r\n", "<MULTILINE />") // tsv format does not allow mutlilines! => \n / \r\n -> <MULTILINE />
                 .replace("\n", "<MULTILINE />") // once we retrieve translation from google we will replace <MULTILINE /> -> \n in parse_tsv_line
-                .replace("\"", "\"\""),
+                .replace("\"", "&quot;"),
         ));
     }
 
@@ -225,9 +225,7 @@ pub fn string_to_map(s: String) -> Result<collections::HashMap<String, String>> 
         }
         debug!("string_to_map processing item:{}<<<", item);
 
-        let parsed_line = parse_tsv_line(&normalize_tsv_line(item))?;
-        // not working reliably, let's do it quick & dirty
-        // let trailing_spaces = get_trailing_spaces(&parsed_line.orig_text);
+        let parsed_line = parse_tsv_line(&item.replace("&quot;", "\""))?;
         let mut leading_space = "";
         let mut trailing_space = "";
 
@@ -250,16 +248,6 @@ pub fn string_to_map(s: String) -> Result<collections::HashMap<String, String>> 
     }
 
     Ok(translation_map)
-}
-
-/// converts:
-/// "0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=""http://mycompany.com"">again</a>?</to_translate>"	"<to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=""http://mycompany.com"">wieder</a> ? </to_translate>"
-/// to:
-/// 0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href="http://mycompany.com">again</a>?</to_translate>	<to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href="http://mycompany.com">wieder</a> ? </to_translate>
-fn normalize_tsv_line(line: &str) -> String {
-    line.replace("\"\"", "__DOUBLE_QUOTES__")
-        .replace("\"", "")
-        .replace("__DOUBLE_QUOTES__", "\"")
 }
 
 /// Parse string line like this:
@@ -667,22 +655,6 @@ mod tests {
             orig_text: "translate me".to_owned(),
             translated_text: "übersetze mich".to_owned()
         });
-    }
-
-    // cargo test -- --show-output test_normalize_tsv_line_1
-    #[test]
-    fn test_normalize_tsv_line_1() {
-        let input = "0x2253f4530b0 <to_translate>convert it into inches</to_translate>       <to_translate>es in Zoll umwandeln</to_translate>";
-        let expected = "0x2253f4530b0 <to_translate>convert it into inches</to_translate>       <to_translate>es in Zoll umwandeln</to_translate>";
-        assert_eq!(normalize_tsv_line(input), expected);
-    }
-
-    // cargo test -- --show-output test_normalize_tsv_line_2
-    #[test]
-    fn test_normalize_tsv_line_2() {
-        let input = "\"0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=\"\"http://mycompany.com\"\">again</a>?</to_translate>\"	\"<to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=\"\"http://mycompany.com\"\">wieder</a> ? </to_translate>\"";
-        let expected = "0x1bb39b97460 <to_translate>I didn't get that. Can you say it <a href=\"http://mycompany.com\">again</a>?</to_translate>	<to_translate> Das habe ich nicht verstanden. Können Sie sagen , es <a href=\"http://mycompany.com\">wieder</a> ? </to_translate>";
-        assert_eq!(normalize_tsv_line(input), expected);
     }
 
     // cargo test -- --show-output test_create_sample_tsv_file
