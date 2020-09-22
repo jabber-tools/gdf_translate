@@ -9,7 +9,9 @@ use std::fs;
 use crate::google::gcloud::ApiResponse;
 use crate::html;
 use futures::stream::{FuturesUnordered, StreamExt};
+use lazy_static::lazy_static;
 use log::debug;
+use regex::Regex;
 use std::collections;
 use std::fs::File;
 use std::io::prelude::*;
@@ -21,6 +23,11 @@ use std::{thread, time};
 pub mod v2;
 pub mod v3;
 
+// see https://rustexp.lpil.uk/
+lazy_static! {
+    pub static ref RE_RESPONSE_PARAMETER: Regex = Regex::new(r"(\$\w*\.original|\$\w*)").unwrap();
+}
+
 /// This trait is implemented by all agent's structs that should be translated
 pub trait Translate {
     /// for given struct representing part of GDF agent creates
@@ -29,6 +36,26 @@ pub trait Translate {
 
     /// from master translation map retrieves respective translated entry
     fn from_translation(&mut self, translations_map: &collections::HashMap<String, String>);
+}
+
+/// checks the translation map and retrieves all parameters, e.g. $edd, $edd.original
+/// these parameters will be then added to translation glossary since we cannot translate them!
+pub fn get_all_parameters(
+    translation_map: &collections::HashMap<String, String>,
+) -> collections::HashSet<&str> {
+    let mut parameters: collections::HashSet<&str> = collections::HashSet::new();
+
+    for (_, val) in translation_map.iter() {
+        let params: collections::HashSet<&str> = RE_RESPONSE_PARAMETER
+            .find_iter(val)
+            .map(|mat| mat.as_str())
+            .collect();
+        if params.len() > 0 {
+            parameters.extend(params);
+        }
+    }
+
+    parameters
 }
 
 /// dummy translation method which just adds _translated postfix to every text that should be translated
@@ -319,13 +346,26 @@ impl GoogleTranslateV3 {
         );
         debug!("translation_map {:#?}", translation_map);
 
+        let glossary_parameters = get_all_parameters(&translation_map);
+        let mut glossary_parameters_str: String = "".to_owned();
+        for item in glossary_parameters.iter() {
+            glossary_parameters_str = format!(
+                "{}{}\t{}\n",
+                glossary_parameters_str,
+                item.to_owned(),
+                item.to_owned()
+            );
+        }
+
+        debug!("glossary_parameters_str {:#?}", glossary_parameters_str);
+
         // partitioning translation map into subsets due to limitation / quotas of Google Translate V3 API
         let mut translation_maps: Vec<collections::HashMap<String, String>> = Vec::new();
         progress("partitioning translation map");
 
-        // FIRST APPORACH: divide translation map by fixed row count. simple but inefficient
-        // large agent smight be devided into dozens of submaps with no reasons
-        // (each submap character count will be not reaching character limit)
+        // FIRST APPROACH: divide translation map by fixed row count. simple but inefficient
+        // large agent might be divided into dozens of sub-maps with no reasons
+        // (each sub-map character count will be not reaching character limit)
         //
         /*let rows_per_map = 100;
         let mut row_counter = 0;
@@ -385,6 +425,8 @@ impl GoogleTranslateV3 {
         progress(&format!("bucket {} created", glossary_bucket_name));
 
         let mut translation_glossary = TranslationGlossary::new(&glossary_bucket_name); // glossary name will be same as the bucket name
+        translation_glossary.add(glossary_parameters_str);
+
         if let Some(glossary) = glossary_path {
             progress("loading glossary file");
             let glossary_str = fs::read_to_string(glossary)?;
@@ -863,6 +905,50 @@ mod tests {
 
     const SAMPLE_AGENTS_FOLDER: &str =
         "C:/Users/abezecny/adam/WORK/_DEV/Rust/gdf_translate/examples/sample_agents/";
+
+    // cargo test -- --show-output test_get_all_parameters
+    #[test]
+    fn test_get_all_parameters() {
+        let mut map: collections::HashMap<String, String> = collections::HashMap::new();
+        map.insert(
+            "addr1".to_owned(),
+            "This is text without parameters".to_owned(),
+        );
+        map.insert(
+            "addr2".to_owned(),
+            "Now we have param $edd! And Another one: $edd.original".to_owned(),
+        );
+        map.insert(
+            "addr3".to_owned(),
+            "Single param: $trackingId. Thats it! no more params".to_owned(),
+        );
+
+        map.insert(
+            "addr4".to_owned(),
+            "XX: $terminal.original. Next one: $terminal. Last one: $some_param".to_owned(),
+        );
+
+        map.insert("addr5".to_owned(), "just $xxx $someparam".to_owned());
+
+        let param_map = get_all_parameters(&map);
+        println!("param_map is {:#?}", param_map);
+
+        assert_eq!(param_map.len(), 8);
+        assert_eq!(param_map.contains("$edd.original"), true);
+        assert_eq!(param_map.contains("$xxx"), true);
+        assert_eq!(param_map.contains("$terminal"), true);
+        assert_eq!(param_map.contains("$some_param"), true);
+        assert_eq!(param_map.contains("$someparam"), true);
+        assert_eq!(param_map.contains("$trackingId"), true);
+        assert_eq!(param_map.contains("$edd"), true);
+        assert_eq!(param_map.contains("$terminal.original"), true);
+
+        let mut s: String = "".to_owned();
+        for item in param_map.iter() {
+            s = format!("{}{}\t{}\n", s, item.to_owned(), item.to_owned());
+        }
+        println!("s is \n{}", s);
+    }
 
     // cargo test -- --show-output test_execute_translation_dummy
     #[test]

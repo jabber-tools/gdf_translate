@@ -60,12 +60,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections;
 
+// see https://rustexp.lpil.uk/
 lazy_static! {
-    pub static ref RE_TO_TRANSLATE_CONTENT: Regex = Regex::new(r"<to_translate>(.*)</to_translate>").unwrap();
-
-    // represents any word with 0..n white characters at the end terminated by triple semicolon
-    // specific case is ' ;' i.e. jsut white spaces with colon without any leading letters/digits (hence \w* and not \w+)
-    pub static ref RE_WORD_WITH_TRAILING_WHITE_CHARS: Regex = Regex::new(r"\w*(\s*)</to_translate>").unwrap();
+    pub static ref RE_TO_TRANSLATE_CONTENT: Regex =
+        Regex::new(r"<to_translate>(.*)</to_translate>").unwrap();
 }
 
 #[derive(Debug, Serialize, Deserialize)]
