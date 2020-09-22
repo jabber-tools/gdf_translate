@@ -432,7 +432,7 @@ impl GoogleTranslateV3 {
                 .as_millis();
 
             // wait 2s to ensure:
-            // - next iteration will get uniqueue bucket names!
+            // - next iteration will get unique bucket names!
             // - buckets will be created OK. It seems Google Cloud API is very sensitive when creating buckets rapidly in sequence
             thread::sleep(time::Duration::from_millis(20_000));
 
@@ -483,6 +483,7 @@ impl GoogleTranslateV3 {
                 iter_idx,
                 storage_bucket_name_in.to_owned(),
                 storage_bucket_name_out.to_owned(),
+                Some(&translation_glossary.glossary_name),
             );
             futures.push(future);
         } // while let Some(map) = translation_maps.pop()
@@ -657,6 +658,7 @@ impl GoogleTranslateV3 {
         iter_idx: usize,
         storage_bucket_name_in: String,
         storage_bucket_name_out: String,
+        glossary: Option<&str>,
     ) -> Result<collections::HashMap<String, String>> {
         let progress = |msg: String| {
             send_progress(ProgressMessageType::TextMessage(msg), &mpsc_sender);
@@ -691,7 +693,7 @@ impl GoogleTranslateV3 {
             "text/html", // always HTML, we are wrapping text to translate in <span> tag
             &format!("gs://{}/translation_map.tsv", storage_bucket_name_in),
             &format!("gs://{}/", storage_bucket_name_out),
-            Some("glossary-en-sv"),
+            glossary,
         )
         .await?;
         debug!("translation_result {:#?}", translation_result);
