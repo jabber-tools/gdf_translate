@@ -749,7 +749,7 @@ mod tests {
 
     // cargo test -- --show-output test_create_glossary
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_create_glossary() -> Result<()> {
         init_logging();
         let token: Result<GoogleApisOauthToken> =
@@ -779,7 +779,7 @@ mod tests {
 
     // cargo test -- --show-output test_delete_glossary
     #[test]
-    //#[ignore]
+    #[ignore]
     fn test_delete_glossary() -> Result<()> {
         init_logging();
         let token: Result<GoogleApisOauthToken> =
