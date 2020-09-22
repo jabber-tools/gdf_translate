@@ -80,7 +80,6 @@ fn main() {
                 cmd_line_opts.skip_entities_translation,
                 cmd_line_opts.skip_utterances_translation,
                 cmd_line_opts.skip_responses_translation,
-                glossary_path,
             );
             let duration = start.elapsed();
             match result {

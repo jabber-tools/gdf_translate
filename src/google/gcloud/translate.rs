@@ -119,7 +119,6 @@ impl GoogleTranslateV2 {
         skip_entities_translation: bool,
         skip_utterances_translation: bool,
         skip_responses_translation: bool,
-        glossary_path: Option<&str>,
     ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
@@ -990,7 +989,6 @@ mod tests {
             false,
             false,
             false,
-            None,
         );
 
         Ok(())

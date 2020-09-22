@@ -254,6 +254,9 @@ impl GoogleDialogflowAgent {
         let mut translations_map: collections::HashMap<String, String> =
             collections::HashMap::new();
 
+        // for regex entities
+        let mut entity_entry_files_to_skip: Vec<String> = vec![];
+
         if skip_entities_translation == false {
             // create new entity entry files and add their content to map to translate
             let mut new_entity_entry_files = vec![];
@@ -273,17 +276,25 @@ impl GoogleDialogflowAgent {
                     .filter(|entity| entity.file_name == entity_file_name)
                     .cloned()
                     .collect();
-                if entity_files[0].file_content.is_regexp == true {
-                    // we are skipping regex entities
-                    continue;
-                }
 
                 if &caps[2] == lang_from {
-                    new_entity_entry_files.push(entity_entry_file.to_new_language(lang_to));
+                    let new_file = entity_entry_file.to_new_language(lang_to);
+                    if entity_files[0].file_content.is_regexp == true {
+                        // we will be skipping regex entities
+                        entity_entry_files_to_skip.push(new_file.file_name.clone());
+                    }
+
+                    new_entity_entry_files.push(new_file);
                 }
             }
-
+            debug!(
+                "entity_entry_files_to_skip: {:#?}",
+                entity_entry_files_to_skip
+            );
             for new_entity_entry_file in new_entity_entry_files.iter() {
+                if entity_entry_files_to_skip.contains(&new_entity_entry_file.file_name) {
+                    continue; // skip entity entry files for regex entities!
+                }
                 for new_entity_entry in new_entity_entry_file.file_content.iter() {
                     if RE_COMPOSITE_ENTITY.is_match(&new_entity_entry.value) == false
                         && RE_COMPOSITE_ENTITY_NO_ALIAS.is_match(&new_entity_entry.value) == false
