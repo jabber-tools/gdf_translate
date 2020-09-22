@@ -57,6 +57,13 @@ fn main() {
         ui.progress_update_handler();
     });
 
+    let glossary_path;
+    if let Some(val) = cmd_line_opts.glossary_path {
+        glossary_path = Some(val.to_str().unwrap());
+    } else {
+        glossary_path = None;
+    }
+
     match cmd_line_opts.translation_mode {
         TranslationProviders::GoogleTranslateV2 => {
             println!("Starting V2 translation...");
@@ -73,6 +80,7 @@ fn main() {
                 cmd_line_opts.skip_entities_translation,
                 cmd_line_opts.skip_utterances_translation,
                 cmd_line_opts.skip_responses_translation,
+                glossary_path,
             );
             let duration = start.elapsed();
             match result {
@@ -96,6 +104,7 @@ fn main() {
                 cmd_line_opts.skip_entities_translation,
                 cmd_line_opts.skip_utterances_translation,
                 cmd_line_opts.skip_responses_translation,
+                glossary_path,
             );
             let duration = start.elapsed();
             match result {

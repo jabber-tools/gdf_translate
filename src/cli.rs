@@ -16,6 +16,7 @@ pub struct CommandLine<'a> {
     pub skip_entities_translation: bool,
     pub skip_utterances_translation: bool,
     pub skip_responses_translation: bool,
+    pub glossary_path: Option<&'a Path>,
 }
 
 impl<'a> CommandLine<'a> {
@@ -31,6 +32,7 @@ impl<'a> CommandLine<'a> {
         skip_entities_translation: bool,
         skip_utterances_translation: bool,
         skip_responses_translation: bool,
+        glossary_path: Option<&'a Path>,
     ) -> Self {
         CommandLine {
             gdf_agent_zip_path,
@@ -44,13 +46,14 @@ impl<'a> CommandLine<'a> {
             skip_entities_translation,
             skip_utterances_translation,
             skip_responses_translation,
+            glossary_path,
         }
     }
 }
 
 pub fn get_cmd_line_parser<'a, 'b>() -> App<'a, 'b> {
     App::new("Google DialogFlow Translate")
-        .version("v0.1.3-beta")
+        .version("v0.1.4-beta")
         .author("Adam Bezecny")
         .about("Tool for automated translation of Google DialogFlow agents.")
         .arg(
@@ -145,6 +148,15 @@ pub fn get_cmd_line_parser<'a, 'b>() -> App<'a, 'b> {
                 .help("If present responses are not translated")
                 .takes_value(false)
         )
+        .arg(
+            Arg::with_name("glossary_file")
+                .short("g")
+                .long("glossary")
+                .value_name("FILE")
+                .help("Path to file where glossary in TSV format is stored.")
+                .takes_value(true)
+                .required(false)
+        )
 }
 
 pub fn get_cmdl_options<'a>(matches: &'a ArgMatches) -> CommandLine<'a> {
@@ -178,6 +190,11 @@ pub fn get_cmdl_options<'a>(matches: &'a ArgMatches) -> CommandLine<'a> {
         translation_mode = TranslationProviders::GoogleTranslateV3;
     }
 
+    let mut glossary = None;
+    if let Some(val) = matches.value_of("glossary_file") {
+        glossary = Some(Path::new(val));
+    }
+
     CommandLine::new(
         gdf_agent_zip_path,
         output_folder,
@@ -190,5 +207,6 @@ pub fn get_cmdl_options<'a>(matches: &'a ArgMatches) -> CommandLine<'a> {
         skip_entities_translation,
         skip_utterances_translation,
         skip_responses_translation,
+        glossary,
     )
 }

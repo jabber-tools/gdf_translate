@@ -3,6 +3,7 @@ use crate::google::dialogflow::agent::parse_gdf_agent_zip;
 use crate::google::gcloud::storage_bucket_mgmt;
 use crate::ui::ProgressMessageType;
 use async_std::task;
+use std::fs;
 // while StreamExt is not used directly without it this line will not compile:
 // while let Some(future_value) = futures.next().await
 use crate::google::gcloud::ApiResponse;
@@ -49,6 +50,32 @@ pub enum TranslationProviders {
     DummyTranslate,
 }
 
+pub struct TranslationGlossary {
+    pub content: String,
+    pub glossary_name: String,
+    pub glossary_bucket_name: String,
+}
+
+impl TranslationGlossary {
+    pub fn new(glossary_name: &str) -> Self {
+        let content = format!(
+            "{}\n{}\n{}\n",
+            "<to_translate>\t<to_translate>",
+            "</to_translate>\t</to_translate>",
+            "<MULTILINE />\t<MULTILINE />"
+        );
+        TranslationGlossary {
+            content,
+            glossary_name: glossary_name.to_owned(),
+            glossary_bucket_name: format!("gs://{}/{}", glossary_name, glossary_name),
+        }
+    }
+
+    pub fn add(&mut self, content: String) {
+        self.content = format!("{}{}", self.content, content);
+    }
+}
+
 pub struct GoogleTranslateV2;
 pub struct GoogleTranslateV3;
 pub struct DummyTranslate;
@@ -65,6 +92,7 @@ impl GoogleTranslateV2 {
         skip_entities_translation: bool,
         skip_utterances_translation: bool,
         skip_responses_translation: bool,
+        glossary_path: Option<&str>,
     ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
         let mut agent = parse_gdf_agent_zip(gdf_agent_path)?;
@@ -267,6 +295,7 @@ impl GoogleTranslateV3 {
         skip_entities_translation: bool,
         skip_utterances_translation: bool,
         skip_responses_translation: bool,
+        glossary_path: Option<&str>,
     ) -> Result<()> {
         debug!("processing agent {}", gdf_agent_path);
 
@@ -335,6 +364,62 @@ impl GoogleTranslateV3 {
             &mpsc_sender,
         );
 
+        let ts_millis = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
+        let glossary_bucket_name = format!("gdf_translate_glossary_{}", ts_millis.to_string());
+
+        progress(&format!("creating bucket {}", glossary_bucket_name));
+
+        let bucket_creation_result_glossary = task::block_on(
+            GoogleTranslateV3::create_glossary_bucket(&glossary_bucket_name, token, project_id),
+        )?;
+
+        debug!(
+            "bucket {} result {:?}",
+            glossary_bucket_name, bucket_creation_result_glossary
+        );
+
+        progress(&format!("bucket {} created", glossary_bucket_name));
+
+        let mut translation_glossary = TranslationGlossary::new(&glossary_bucket_name); // glossary name will be same as the bucket name
+        if let Some(glossary) = glossary_path {
+            progress("loading glossary file");
+            let glossary_str = fs::read_to_string(glossary)?;
+            translation_glossary.add(glossary_str);
+        }
+
+        let bucket_upload_result = task::block_on(storage_bucket_mgmt::upload_object(
+            token,
+            &glossary_bucket_name,
+            &format!("{}.tsv", &translation_glossary.glossary_name),
+            &translation_glossary.content,
+        ))?;
+
+        debug!("bucket_upload_result {:#?}", bucket_upload_result);
+
+        if bucket_upload_result.status_code != "200" {
+            return Err(Error::new(format!(
+                "GoogleTranslateV3.execute_translation error when uploading bucket {:#?}",
+                bucket_upload_result
+            )));
+        }
+
+        debug!("glossary content:\n{}", translation_glossary.content);
+
+        progress("creating glossary");
+        task::block_on(v3::create_glossary(
+            token,
+            project_id,
+            source_lang,
+            target_lang,
+            &translation_glossary.glossary_name,
+            &format!("{}.tsv", &translation_glossary.glossary_bucket_name),
+        ))?;
+        progress("glossary created");
+
         let mut futures = FuturesUnordered::new();
 
         let mut iter_idx = 0;
@@ -356,6 +441,7 @@ impl GoogleTranslateV3 {
 
             progress(&format!("creating bucket {}", storage_bucket_name_in));
             progress(&format!("creating bucket {}", storage_bucket_name_out));
+
             let (bucket_creation_result_in, bucket_creation_result_out) =
                 task::block_on(GoogleTranslateV3::create_translation_buckets(
                     &storage_bucket_name_in,
@@ -371,6 +457,7 @@ impl GoogleTranslateV3 {
                 "bucket {} result {:?}",
                 storage_bucket_name_out, bucket_creation_result_out
             );
+
             progress(&format!("bucket {} created", storage_bucket_name_in));
             progress(&format!("bucket {} created", storage_bucket_name_out));
 
@@ -398,7 +485,7 @@ impl GoogleTranslateV3 {
                 storage_bucket_name_out.to_owned(),
             );
             futures.push(future);
-        }
+        } // while let Some(map) = translation_maps.pop()
 
         // inspired by https://www.philipdaniels.com/blog/2019/async-std-demo1/
         // https://users.rust-lang.org/t/futuresunordered/39461/4
@@ -417,6 +504,50 @@ impl GoogleTranslateV3 {
 
         debug!("translation finished. updated translation map");
         debug!("{:#?}", translation_map);
+
+        progress("deleting glossary");
+        let glossary_deletion_result = task::block_on(v3::delete_glossary(
+            token,
+            project_id,
+            &glossary_bucket_name,
+        ));
+        if let Err(glossary_deletion_error) = glossary_deletion_result {
+            // do not terminate processing in case of failure!
+            // glossary deletion is not really important from user perspective
+            progress("glossary deletion failed. Delete it manually!");
+            debug!("glossary deletion error {:#?}", glossary_deletion_error);
+        } else {
+            progress("glossary deleted");
+        }
+
+        debug!("deleting {}.tsv", &translation_glossary.glossary_name);
+        let delete_object_result = task::block_on(storage_bucket_mgmt::delete_object(
+            token,
+            &glossary_bucket_name,
+            &format!("{}.tsv", &translation_glossary.glossary_name),
+        ));
+        debug!(
+            "delete {}.tsv result: {:#?}",
+            &translation_glossary.glossary_name, delete_object_result
+        );
+
+        debug!("deleting {}", &glossary_bucket_name);
+        let delete_glossary_bucket_result = task::block_on(storage_bucket_mgmt::delete_bucket(
+            token,
+            &glossary_bucket_name,
+        ));
+        if let Err(glossary_bucket_deletion_error) = delete_glossary_bucket_result {
+            progress("glossary bucket deletion failed. Delete it manually!");
+            debug!(
+                "glossary bucket deletion error {:#?}",
+                glossary_bucket_deletion_error
+            );
+        } else {
+            debug!(
+                "delete_bucket_result_out {:#?}",
+                delete_glossary_bucket_result
+            );
+        }
 
         progress("translation finished, updating DialogFlow agent");
 
@@ -486,6 +617,34 @@ impl GoogleTranslateV3 {
         Ok((bucket_creation_result_in, bucket_creation_result_out))
     }
 
+    async fn create_glossary_bucket(
+        glossary_bucket_name: &str,
+        token: &str,
+        project_id: &str,
+    ) -> Result<ApiResponse> {
+        let bucket_creation_result_glossary = storage_bucket_mgmt::create_bucket(
+            token,
+            project_id,
+            &glossary_bucket_name,
+            "EUROPE-WEST3",
+            "STANDARD",
+        )
+        .await?;
+        debug!(
+            "bucket_creation_result_glossary {:#?}",
+            bucket_creation_result_glossary
+        );
+
+        if bucket_creation_result_glossary.status_code != "200" {
+            return Err(Error::new(format!(
+                "GoogleTranslateV3.execute_translation error when creating bucket {:#?}",
+                bucket_creation_result_glossary
+            )));
+        }
+
+        Ok(bucket_creation_result_glossary)
+    }
+
     async fn execute_translation_impl(
         translated_gdf_agent_folder: &str,
         token: &str,
@@ -532,6 +691,7 @@ impl GoogleTranslateV3 {
             "text/html", // always HTML, we are wrapping text to translate in <span> tag
             &format!("gs://{}/translation_map.tsv", storage_bucket_name_in),
             &format!("gs://{}/", storage_bucket_name_out),
+            Some("glossary-en-sv"),
         )
         .await?;
         debug!("translation_result {:#?}", translation_result);
@@ -742,6 +902,7 @@ mod tests {
             false,
             false,
             false,
+            None,
         );
 
         Ok(())
@@ -774,6 +935,7 @@ mod tests {
             false,
             false,
             false,
+            None,
         );
 
         debug!("translation_result: {:#?}", translation_result);

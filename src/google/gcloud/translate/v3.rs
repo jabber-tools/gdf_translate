@@ -102,7 +102,7 @@ pub struct GoogleTranslateV3WaitResponseMetadata {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GoogleTranslateV3WaitResponseMeResponse {
+pub struct GoogleTranslateV3WaitResponseResponse {
     #[serde(rename = "@type")]
     pub type_attr: String,
 
@@ -149,13 +149,72 @@ pub struct GoogleTranslateV3WaitResponse {
     pub error: Option<GoogleTranslateV3WaitResponseError>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub response: Option<GoogleTranslateV3WaitResponseMeResponse>,
+    pub response: Option<GoogleTranslateV3WaitResponseResponse>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoogleTranslateV3WaitApiResponse {
     pub status_code: String,
     pub body: GoogleTranslateV3WaitResponse,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleCreateGlossaryWaitResponseResponseInputConfig {
+    #[serde(rename = "gcsSource")]
+    pub gcs_source: GoogleCreateGlossaryWaitResponseResponseInputConfigGcsSource,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleCreateGlossaryWaitResponseResponseInputConfigGcsSource {
+    #[serde(rename = "inputUri")]
+    pub input_uri: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleCreateGlossaryWaitResponseResponseLanguagePair {
+    #[serde(rename = "sourceLanguageCode")]
+    pub source_language_code: String,
+    #[serde(rename = "targetLanguageCode")]
+    pub target_language_code: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleCreateGlossaryWaitResponseResponse {
+    #[serde(rename = "@type")]
+    pub type_attr: String,
+
+    pub name: String,
+
+    #[serde(rename = "languagePair")]
+    pub language_pair: GoogleCreateGlossaryWaitResponseResponseLanguagePair,
+
+    #[serde(rename = "inputConfig")]
+    pub input_config: GoogleCreateGlossaryWaitResponseResponseInputConfig,
+
+    #[serde(rename = "entryCount")]
+    pub entry_count: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleCreateGlossaryWaitResponse {
+    pub name: String,
+    pub metadata: GoogleTranslateV3WaitResponseMetadata,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub done: Option<bool>,
+
+    // not really tested whether we can get this and in this structure
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<GoogleTranslateV3WaitResponseError>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response: Option<GoogleCreateGlossaryWaitResponseResponse>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoogleCreateGlossaryWaitApiResponse {
+    pub status_code: String,
+    pub body: GoogleCreateGlossaryWaitResponse,
 }
 
 /// represents line fom output file of google translate v3 batch api
@@ -316,6 +375,7 @@ fn parse_tsv_line(line: &str) -> Result<TsvLine> {
 /// * `mime_type`: text/html or text/plain
 /// * `input_uri`: e.g. gs://translate_v3_test_in/input.tsv
 /// * `output_uri_prefix`: e.g. gs://translate_v3_test_out/
+/// * `glossary`: name of the glossary, same as glossary bucket name
 pub async fn batch_translate_text(
     token: &str,
     project_id: &str,
@@ -324,27 +384,53 @@ pub async fn batch_translate_text(
     mime_type: &str,
     input_uri: &str,
     output_uri_prefix: &str,
+    glossary: Option<&str>,
 ) -> Result<GoogleTranslateV3ApiResponse> {
     let url = format!(
         "https://translation.googleapis.com/v3/projects/{}/locations/us-central1:batchTranslateText",
         project_id
     );
 
-    let body = json!({
-        "sourceLanguageCode": source_lang,
-        "targetLanguageCodes": target_lang,
-        "inputConfigs": [{
-            "mimeType":  mime_type,
-            "gcsSource": {
-                "inputUri": input_uri
+    let body;
+    if let Some(glossary_name) = glossary {
+        body = json!({
+            "sourceLanguageCode": source_lang,
+            "targetLanguageCodes": target_lang,
+            "inputConfigs": [{
+                "mimeType":  mime_type,
+                "gcsSource": {
+                    "inputUri": input_uri
+                }
+            }],
+            "glossaries": {
+                target_lang: {
+                    "glossary": format!("projects/{}/locations/us-central1/glossaries/{}", project_id, glossary_name),
+                    "ignoreCase": true
+                }
+            },
+            "outputConfig": {
+                "gcsDestination": {
+                    "outputUriPrefix": output_uri_prefix
+                }
             }
-        }],
-        "outputConfig": {
-            "gcsDestination": {
-                "outputUriPrefix": output_uri_prefix
+        });
+    } else {
+        body = json!({
+            "sourceLanguageCode": source_lang,
+            "targetLanguageCodes": target_lang,
+            "inputConfigs": [{
+                "mimeType":  mime_type,
+                "gcsSource": {
+                    "inputUri": input_uri
+                }
+            }],
+            "outputConfig": {
+                "gcsDestination": {
+                    "outputUriPrefix": output_uri_prefix
+                }
             }
-        }
-    });
+        });
+    }
 
     debug!("body: {}", body);
     debug!("url: {}", url);
@@ -405,6 +491,111 @@ pub async fn batch_translate_text_check_status(
     })
 }
 
+pub async fn create_glossary(
+    token: &str,
+    project_id: &str,
+    source_lang: &str,
+    target_lang: &str,
+    glossary_id: &str,
+    bucket_name: &str,
+) -> Result<GoogleTranslateV3Response> {
+    let url = format!(
+        "https://translation.googleapis.com/v3/projects/{}/locations/us-central1/glossaries",
+        project_id
+    );
+
+    let glossary_name = format!(
+        "projects/{}/locations/us-central1/glossaries/{}",
+        project_id, glossary_id
+    );
+    let body = json!({
+      "name": glossary_name,
+      "languagePair": {
+        "sourceLanguageCode": source_lang,
+        "targetLanguageCode": target_lang
+        },
+      "inputConfig": {
+        "gcsSource": {
+          "inputUri": bucket_name
+        }
+      }
+    });
+
+    debug!("body: {}", body);
+    debug!("url: {}", url);
+
+    let mut resp = surf::post(url)
+        .set_header("Authorization", token)
+        .body_json(&body)?
+        .await?;
+
+    let body_str = resp.body_string().await?;
+    debug!("create_glossary.body_str: {}", body_str);
+
+    let response_body: GoogleTranslateV3Response = serde_json::from_str(&body_str)?;
+
+    debug!("create_glossary.response_body: {:#?}", response_body);
+
+    Ok(response_body)
+}
+
+pub async fn create_glossary_check_status(
+    token: &str,
+    long_running_operation: &str,
+) -> Result<GoogleCreateGlossaryWaitApiResponse> {
+    let url = format!(
+        "https://translation.googleapis.com/v3/{}:wait",
+        long_running_operation
+    );
+
+    let body = json!({
+        "timeout": "60s"
+    });
+
+    debug!("url: {}", url);
+    debug!("body: {}", body);
+
+    let mut resp = surf::post(url)
+        .set_header("Authorization", token)
+        .body_json(&body)?
+        .await?;
+
+    let body_str = resp.body_string().await?;
+
+    debug!("response body: {}", body_str);
+
+    let response_body: GoogleCreateGlossaryWaitResponse = serde_json::from_str(&body_str)?;
+
+    Ok(GoogleCreateGlossaryWaitApiResponse {
+        status_code: resp.status().as_str().to_string(),
+        body: response_body,
+    })
+}
+
+pub async fn delete_glossary(
+    token: &str,
+    project_id: &str,
+    glossary_id: &str,
+) -> Result<GoogleTranslateV3Response> {
+    let url = format!(
+        "https://translation.googleapis.com/v3/projects/{}/locations/us-central1/glossaries/{}",
+        project_id, glossary_id
+    );
+
+    debug!("url: {}", url);
+
+    let mut resp = surf::delete(url).set_header("Authorization", token).await?;
+
+    let body_str = resp.body_string().await?;
+    debug!("delete_glossary.body_str: {}", body_str);
+
+    let response_body: GoogleTranslateV3Response = serde_json::from_str(&body_str)?;
+
+    debug!("delete_glossary.response_body: {:#?}", response_body);
+
+    Ok(response_body)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -433,6 +624,7 @@ mod tests {
                 "text/html",
                 "gs://translate_v3_test/translation_map.tsv",
                 "gs://translate_v3_test_out/",
+                None,
             ));
 
         let api_response = api_response.unwrap();
@@ -557,6 +749,55 @@ mod tests {
         Ok(())
     }
 
+    // cargo test -- --show-output test_create_glossary
+    #[test]
+    //#[ignore]
+    fn test_create_glossary() -> Result<()> {
+        init_logging();
+        let token: Result<GoogleApisOauthToken> =
+            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
+        let token = format!("Bearer {}", token.unwrap().access_token);
+
+        println!("access_token {:#?}", token);
+        let api_response: Result<GoogleTranslateV3Response> = task::block_on(create_glossary(
+            &token,
+            "express-tracking",
+            "en",
+            "sv",
+            "glossary-en-sv",
+            "gs://translate_v3_test/my-glossary.tsv",
+        ));
+
+        let api_response = api_response.unwrap();
+        println!("api_response {:#?}", api_response);
+
+        let api_response2: Result<GoogleCreateGlossaryWaitApiResponse> =
+            task::block_on(create_glossary_check_status(&token, &api_response.name));
+
+        println!("api_response2 {:#?}", api_response2);
+
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_delete_glossary
+    #[test]
+    //#[ignore]
+    fn test_delete_glossary() -> Result<()> {
+        init_logging();
+        let token: Result<GoogleApisOauthToken> =
+            task::block_on(get_google_api_token("./examples/testdata/credentials.json"));
+        let token = format!("Bearer {}", token.unwrap().access_token);
+
+        println!("access_token {:#?}", token);
+        let api_response: Result<GoogleTranslateV3Response> =
+            task::block_on(delete_glossary(&token, "express-tracking", "my-glossary"));
+
+        let api_response = api_response.unwrap();
+        println!("api_response {:#?}", api_response);
+
+        Ok(())
+    }
+
     // cargo test -- --show-output test_string_to_map_1
     #[test]
     fn test_string_to_map_1() -> Result<()> {
@@ -663,6 +904,30 @@ mod tests {
     fn test_create_sample_tsv_file() -> Result<()> {
         let content = "0x1bb39b97461\t<to_translate>translate me</to_translate>\n0x1bb39b97462\t<to_translate>rust is great</to_translate>\n0x1bb39b97463\t<to_translate>let's have a weekend</to_translate>\n".to_string();
         let mut agent_file_handle = File::create("c:/tmp/sample_tsv.tsv")?;
+        agent_file_handle.write_all(content.as_bytes())?;
+        Ok(())
+    }
+
+    // cargo test -- --show-output test_create_sample_glossary_file
+    #[test]
+    #[ignore]
+    fn test_create_sample_glossary_file() -> Result<()> {
+        /*
+        $trackingId\t$trackingId\n
+        $length\t$length\n
+        $cityFrom\t $cityFrom\n
+        $countryFrom\t$countryFrom\n
+        $cityTo\t$cityTo\n
+        $countryTo\t$countryTo\n
+        $edd\t$edd\n
+        $dispatchTerminal\t$dispatchTerminal\n
+        $eventDate\t$eventDate\n
+        $byeText\t$byeText\n
+        $date\t$date\n
+        $languageCode\t$languageCode\n
+        */
+        let content = "$trackingId\t$trackingId\n$length\t$length\n$cityFrom\t $cityFrom\n$countryFrom\t$countryFrom\n$cityTo\t$cityTo\n$countryTo\t$countryTo\n$edd\t$edd\n$dispatchTerminal\t$dispatchTerminal\n$eventDate\t$eventDate\n$byeText\t$byeText\n$date\t$date\n$languageCode\t$languageCode\n".to_string();
+        let mut agent_file_handle = File::create("c:/tmp/sample_glossary.tsv")?;
         agent_file_handle.write_all(content.as_bytes())?;
         Ok(())
     }
