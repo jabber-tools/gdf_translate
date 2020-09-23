@@ -30,7 +30,7 @@ fn main() {
 
     if let Err(some_error) = gdf_credentials {
         println!(
-            "unable to parse credenials file due to following error: {:#?}",
+            "unable to parse credentials file due to following error: {:#?}",
             some_error
         );
         process::exit(1);

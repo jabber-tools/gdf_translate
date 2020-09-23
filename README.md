@@ -50,8 +50,8 @@ Google Translate is command line utility used for translation of Google DialogFl
 *	We are doing translation only, nothing else. Tool is because of that more intuitive, lightweight and easier to use.
 *	Tool was written in technology that requires no underlying runtime. Original agent toolkit requires [Node.JS](https://nodejs.org/en/) to be installed, together with [windows-build-tools](https://www.npmjs.com/package/windows-build-tools) npm package. Making this to work on corporate laptop with lot of restrictions is usually very challenging, especially for non-IT users. New tool is single executable (by default exe file for windows) which is not requiring anything else. Just download and use!
 *	Translation of intent training phrases is done piece by piece and it does not require manual annotation of entities once translated. This greatly simplifies overall translation process. If original way of translating training phrases will be needed it can be implanted as well with possibility to specify which one to use during translation.
-* Original Agent Toolkit does support only following Google DialogFlow message types: <i>0, 1, 2, 3, 4</i>. We do support much more currently: <i>0, 4, 2, 1, 3, table_card, custom_payload, basic_card, suggestion_chips, list_card, link_out_chip, carousel_card, browse_carousel_card, media_content, simple_response</i>. Additional message types can be implemented on demand.
-
+*   Original Agent Toolkit does support only following Google DialogFlow message types: <i>0, 1, 2, 3, 4</i>. We do support much more currently: <i>0, 4, 2, 1, 3, table_card, custom_payload, basic_card, suggestion_chips, list_card, link_out_chip, carousel_card, browse_carousel_card, media_content, simple_response</i>. Additional message types can be implemented on demand.
+* 	Support for glossaries. Starting from version v0.1.4-bea we are supporting translation glossaries (mapping files telling how exactly to translate particular phrase.) for v3 API!. Simply create TSV file and use --glossary switch. More details [here](https://cloud.google.com/translate/docs/advanced/glossary).
 *	<b>Most important</b>: apart from Google Translate API V2 (basic) we support V3 API (advanced) as well! For details have a look at [Google Cloud Translation Documentation](https://cloud.google.com/translate/docs/editions). This is a real game changer since it enables <b>batch translations</b>. Basically instead of translating text (be it utterance, entity or response) one by one, i.e. by invoking thousands of separate HTTP transactions, we can create CVS export and upload it to Google Servers which take care of the translation. Translated CVS file is then downloaded and applied to agent. The benefit is clear: this approach is much less error prone and <b>blazingly fast</b> in comparison with V2 translation. No more 30 minutes spent by looking at translation progressing and then crashing due to network issue or Google quota being hit! More technical explanation can be found in [Developer guide](https://github.com/jabber-tools/gdf_translate/blob/master/README-devnotes.md).
 
 
@@ -65,6 +65,7 @@ Release overview:
 | v0.1.1-beta       | [Download here](../../releases/download/v0.1.1-beta/gdf_translate_v0.1.1-beta.zip) | Windows |
 | v0.1.2-beta       | [Download here](../../releases/download/v0.1.2-beta/gdf_translate_v0.1.2-beta.zip) | Windows |
 | v0.1.3-beta       | [Download here](../../releases/download/v0.1.3-beta/gdf_translate_v0.1.3-beta.zip) | Windows |
+| v0.1.4-beta       | [Download here](../../releases/download/v0.1.4-beta/gdf_translate_v0.1.4-beta.zip) | Windows |
 
 ## Service Account Requirements
 We are using service accounts when interacting with Google Translation APIs. Respective Google Cloud Project must have Google Translation API enabled and billing configured accordingly. Service account should have ideally following role assigned: <b>Cloud Translation API Admin</b>. More details on permissions can be found [here](https://cloud.google.com/translate/docs/intro-to-v3#iam). For V3 translations service account should also include roles for managing Google Storage Buckets (creation of the bucked, upload into bucket and deletion of buckets). Details [here](https://cloud.google.com/storage/docs/access-control/iam-roles). Additional links:
@@ -78,7 +79,7 @@ Simply ask for help:
 ```
 
 C:\tmp>gdf_translate.exe -h
-Google DialogFlow Translate v0.1.3-beta
+Google DialogFlow Translate v0.1.4-beta
 Adam Bezecny
 Tool for automated translation of Google DialogFlow agents.
 
@@ -101,6 +102,7 @@ OPTIONS:
                                          Google Translate V2/V3 API. Must have respective priviledges: See github README
                                          for more details.
     -f, --agent-file <FILE>              ZIP file with exported GDF agent
+    -g, --glossary <FILE>                Path to file where glossary in TSV format is stored.
     -o, --output-folder <FOLDER>         Path to folder where translated agent will be stored. Must be exiting (ideally
                                          empty) folder.
     -t, --target-lang <lang ISO code>    ISO code of destination/target language to which agent will be translated
