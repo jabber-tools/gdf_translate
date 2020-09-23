@@ -39,6 +39,8 @@ Command line tool for automated translation of Google DialogFlow agents
 
 [Command Line Interface](#command-line-interface)
 
+[Proxy Support](#proxy-support)
+
 [Issues](#issues)
 
 [Examples](#examples)
@@ -117,6 +119,13 @@ C:\tmp>
 
 ```
 
+## Proxy support
+When running behind corporate proxy server don't forget to set HTTPS_PROXY variable before running the tool. Example:
+```
+set HTTPS_PROXY=http://cloudproxy.dhl.com:10123
+gdf_translate.exe --agent-file C:/tmp/sample-agent.zip ...
+```
+
 ## Issues
 It might happen your agent will be not translated properly or it will be not translated at all due to some unexpected error. Should this happen raise the issue [here](../../issues). Don't forget to include following:
 * Exact command you did use to run the translation
@@ -124,6 +133,10 @@ It might happen your agent will be not translated properly or it will be not tra
 * Don't forget to attach zip file with agent export!
 * <b>DO NOT</b> attach service account JSON file! Contact us over email/skype/etc. so that we can agree on secure way of providing service account file.
 
+### Known Issues
+* Parameters (e.g. $edd, $shipmentId.original, etc.) will currently not be translated properly with V 
+translations. Solution will be provided for this in the future. For V3 this is fully addressed by glossary feature. Glossary is automatically expanded (if no glossary is provided by user app creates it on the fly) with all parameters spotted in responses(e.g. for $ edd we create translation pair *$edd   $edd*). Thus parameters will be never crippled during translation but preserved untouched.
+ 
 ## Examples
 
 Translate sample-agent.zip from english to german language. Translate all (i.e. utterances, entities, responses). Uses credential file credentials.json. Use default translation mode, i.e. Google Translate API V3.
