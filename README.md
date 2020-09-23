@@ -134,8 +134,8 @@ It might happen your agent will be not translated properly or it will be not tra
 * <b>DO NOT</b> attach service account JSON file! Contact us over email/skype/etc. so that we can agree on secure way of providing service account file.
 
 ### Known Issues
-* Parameters (e.g. $edd, $shipmentId.original, etc.) will currently not be translated properly with V 
-translations. Solution will be provided for this in the future. For V3 this is fully addressed by glossary feature. Glossary is automatically expanded (if no glossary is provided by user app creates it on the fly) with all parameters spotted in responses(e.g. for $ edd we create translation pair *$edd   $edd*). Thus parameters will be never crippled during translation but preserved untouched.
+* Parameters (e.g. $edd, $shipmentId.original, etc.) will currently not be translated properly with V2 
+translations. Solution will be provided for this in the future. For V3 this is fully addressed by glossary feature. Glossary is automatically expanded (if no glossary is provided by user app creates it on the fly) with all parameters spotted in responses(e.g. for *$edd* we create translation pair *$edd   $edd*). Thus parameters will be never crippled during translation but preserved untouched.
  
 ## Examples
 
