@@ -29,9 +29,9 @@ use std::time::SystemTime;
 
 lazy_static! {
     pub static ref RE_ENTITY_ENTRY_FILE: Regex =
-        Regex::new(r"(\w+entries_)([a-zA-Z-]+).json").unwrap();
+        Regex::new(r"(\w+entries_)([a-zA-Z-\d]+).json").unwrap();
     pub static ref RE_INTENT_UTTERANCE_FILE: Regex =
-        Regex::new(r"(\w+usersays_)([a-zA-Z-]+).json").unwrap();
+        Regex::new(r"(\w+usersays_)([a-zA-Z-\d]+).json").unwrap();
     pub static ref RE_COMPOSITE_ENTITY: Regex = Regex::new(r"@\w+:\w+").unwrap();
     pub static ref RE_COMPOSITE_ENTITY_NO_ALIAS: Regex = Regex::new(r"@\w+").unwrap();
 }
@@ -261,6 +261,7 @@ impl GoogleDialogflowAgent {
             // create new entity entry files and add their content to map to translate
             let mut new_entity_entry_files = vec![];
             for entity_entry_file in self.entity_entries.iter() {
+                debug!("GoogleDialogFLowAgent::to_translation, processing file {}", &entity_entry_file.file_name);
                 let caps = RE_ENTITY_ENTRY_FILE
                     .captures(&entity_entry_file.file_name)
                     .unwrap();
