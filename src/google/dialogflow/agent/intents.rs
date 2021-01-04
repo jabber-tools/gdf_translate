@@ -13,7 +13,7 @@ pub struct IntentResponseAffectedContext {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parameters: Option<collections::HashMap<String, String>>,
-    pub lifespan: i8,
+    pub lifespan: u16,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
