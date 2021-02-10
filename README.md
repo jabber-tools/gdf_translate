@@ -72,7 +72,23 @@ Release overview:
 | v1.0.1            | [Download here](../../releases/download/v1.0.1/gdf_translate_v1.0.1.zip)           | Windows |
 
 ## Service Account Requirements
-We are using service accounts when interacting with Google Translation APIs. Respective Google Cloud Project must have Google Translation API enabled and billing configured accordingly. Service account should have ideally following role assigned: <b>Cloud Translation API Admin</b>. More details on permissions can be found [here](https://cloud.google.com/translate/docs/intro-to-v3#iam). For V3 translations service account should also include roles for managing Google Storage Buckets (creation of the bucked, upload into bucket and deletion of buckets). Details [here](https://cloud.google.com/storage/docs/access-control/iam-roles). Additional links:
+Following Google APIs must be enabled on respective Google Cloud project:
+
+*	Cloud Storage API
+*	Cloud Translation API
+
+We are using service accounts when interacting with Google APIs. Respective service account should have following roles assigned: 
+
+*	Cloud Translation API Admin
+*	Dialogflow API Admin
+*	Storage Admin
+*	Storage Object Admin
+
+Additional info can be found here: 
+
+[Intro to Google Cloud IAM](https://cloud.google.com/translate/docs/intro-to-v3#iam) 
+
+[IAM Roles](https://cloud.google.com/storage/docs/access-control/iam-roles)
 
 [Managing Google Cloud Service Accounts](https://cloud.google.com/iam/docs/creating-managing-service-accounts)
 
