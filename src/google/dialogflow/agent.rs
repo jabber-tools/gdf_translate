@@ -191,6 +191,11 @@ pub struct AgentManifest {
 
     #[serde(rename = "baseActionPackagesUrl")]
     pub base_action_packages_url: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "enableSpellCorrection")]
+    pub enable_spell_correction: Option<bool>,
+
 }
 
 #[derive(Debug)]

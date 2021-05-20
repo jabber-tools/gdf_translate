@@ -70,6 +70,7 @@ Release overview:
 | v0.1.4-beta       | [Download here](../../releases/download/v0.1.4-beta/gdf_translate_v0.1.4-beta.zip) | Windows |
 | v1.0.0            | [Download here](../../releases/download/v1.0.0/gdf_translate_v1.0.0.zip)           | Windows |
 | v1.0.1            | [Download here](../../releases/download/v1.0.1/gdf_translate_v1.0.1.zip)           | Windows |
+| v1.0.2            | [Download here](../../releases/download/v1.0.2/gdf_translate_v1.0.2.zip)           | Windows |
 
 ## Service Account Requirements
 Following Google APIs must be enabled on respective Google Cloud project:
